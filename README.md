@@ -71,3 +71,80 @@ export default defineConfig([
   },
 ])
 ```
+
+```
+supreme-tech-new
+├─ README.md
+├─ assets
+│  ├─ ai-background-hero.jpg
+│  ├─ ai-face-hero.jpg
+│  ├─ ai-hero-new.webp
+│  ├─ ai-hero.jpg
+│  ├─ ai-robot-hero.jpg
+│  ├─ blog-ai-agent-what-is-it.jpg
+│  ├─ blog-ai-agents-productivity.jpg
+│  ├─ blog-elecyar-ai-agent.jpg
+│  ├─ blog-ram-price-ai.jpg
+│  ├─ service-analytics-cyber.jpg
+│  ├─ service-analytics.jpg
+│  ├─ service-business-cyber.jpg
+│  ├─ service-business.jpg
+│  ├─ service-creative-cyber.jpg
+│  ├─ service-creative.jpg
+│  ├─ slide-analytics.jpg
+│  ├─ slide-consultation.jpg
+│  ├─ slide-content-creation.jpg
+│  ├─ slide-lumen-ai-final.jpg
+│  ├─ slide-lumen-ai-new.jpg
+│  ├─ slide-lumen-ai-themed.jpg
+│  ├─ slide-lumen-ai-updated.jpg
+│  ├─ slide-lumen-ai.jpg
+│  ├─ slide-time-saving-new.jpg
+│  ├─ slide-time-saving-updated.jpg
+│  └─ slide-time-saving.jpg
+├─ index.html
+├─ lib
+│  └─ utils.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.js
+├─ public
+│  ├─ favicon.svg
+│  ├─ icons.svg
+│  └─ sup.png
+├─ src
+│  ├─ App.tsx
+│  ├─ components
+│  │  ├─ layout
+│  │  │  ├─ Footer.tsx
+│  │  │  ├─ Header.tsx
+│  │  │  └─ Layout.tsx
+│  │  ├─ sections
+│  │  │  └─ Hero.tsx
+│  │  └─ ui
+│  │     ├─ GlassButton.tsx
+│  │     ├─ LiquidGlassCard.tsx
+│  │     └─ liquid-glass.tsx
+│  ├─ constants
+│  │  ├─ data.ts
+│  │  └─ slides.ts
+│  ├─ hooks
+│  ├─ index.css
+│  ├─ lib
+│  │  └─ utils.ts
+│  ├─ main.tsx
+│  ├─ pages
+│  │  ├─ About.tsx
+│  │  ├─ Blog.tsx
+│  │  ├─ Contact.tsx
+│  │  ├─ Home.tsx
+│  │  └─ Services.tsx
+│  └─ types
+│     └─ index.ts
+├─ tailwind.config.js
+├─ tsconfig.app.json
+├─ tsconfig.json
+├─ tsconfig.node.json
+└─ vite.config.ts
+
+```

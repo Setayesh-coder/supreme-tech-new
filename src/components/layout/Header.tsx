@@ -9,6 +9,7 @@ export default function Header() {
   const menuItems = [
     { name: "خانه", href: "/" },
     { name: "خدمات", href: "/services" },
+    { name: " رویکرد ما", href: "/approach" },
     { name: "درباره ما", href: "/about" },
     { name: "تماس با ما", href: "/contact" },
   ];
