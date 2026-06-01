@@ -116,7 +116,6 @@ export default function Hero() {
              bg-gradient-to-r from-blue-500/80 to-blue-600/80 
              backdrop-blur-sm border border-blue-400/30"
             >
-              {" "}
               در خواست مشاوره
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
@@ -185,7 +184,7 @@ export default function Hero() {
             <LiquidGlassCard
               draggable={false}
               blurIntensity="md"
-              borderRadius="12px"
+              borderRadius="20px"
               glowIntensity="sm"
               className="px-6 py-3 text-center min-w-[100px]"
             >
@@ -199,7 +198,7 @@ export default function Hero() {
             <LiquidGlassCard
               draggable={false}
               blurIntensity="md"
-              borderRadius="12px"
+              borderRadius="20px"
               glowIntensity="sm"
               className="px-6 py-3 text-center min-w-[100px]"
             >
@@ -213,7 +212,7 @@ export default function Hero() {
             <LiquidGlassCard
               draggable={false}
               blurIntensity="md"
-              borderRadius="12px"
+              borderRadius="20px"
               glowIntensity="sm"
               className="px-6 py-3 text-center min-w-[100px]"
             >

@@ -5,7 +5,7 @@ export const slides = [
     subtitle: "فراتر از یک دوست",
     description:
       "همراه هوشمند شما که نه تنها سوالات پاسخ می‌دهد، بلکه احساسات و نیازهای شما را درک می‌کند",
-    image: "src/assets/ai-background-hero.jpg",
+    image: "./assets/slide-content-creation.jpg",
     buttonText: "بیشتر بدانید",
     buttonLink: "/contact",
     color: "from-blue-400 to-cyan-400",
@@ -16,7 +16,7 @@ export const slides = [
     subtitle: "انجام هوشمند کارهای تکراری",
     description:
       "AI Agent پیشرفته ما کلیه کارهای تکراری، روزمره و وقت‌گیر شما را انجام می‌دهد",
-    image: "src/assets/slide-time-saving.jpg",
+    image: "./assets/slide-time-saving.jpg",
     buttonText: "بیشتر بدانید",
     buttonLink: "/contact",
     color: "from-purple-400 to-pink-400",
@@ -27,7 +27,7 @@ export const slides = [
     subtitle: "خلاقیت بی‌حد و حصر",
     description:
       "AI Agent خلاق ما ایده‌های شما را به محتوای با کیفیت تبدیل می‌کند",
-    image: "src/assets/slide-consultation.jpg",
+    image: "./assets/slide-consultation.jpg",
     buttonText: "بیشتر بدانید",
     buttonLink: "/contact",
     color: "from-green-400 to-emerald-400",

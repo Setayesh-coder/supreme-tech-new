@@ -1,42 +1,49 @@
-// src/components/layout/Header.tsx
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
-import { LiquidGlassCard } from "../ui/LiquidGlassCard"; // فایل اصلی بدون تغییر
+import { useState, useEffect } from "react";
+import { Menu, X, Bot } from "lucide-react";
+import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 
 export default function Header() {
+  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const menuItems = [
+  const navItems = [
     { name: "خانه", href: "/" },
     { name: "خدمات", href: "/services" },
-    { name: " رویکرد ما", href: "/approach" },
+    { name: "رویکرد ما", href: "/approach" },
     { name: "درباره ما", href: "/about" },
     { name: "تماس با ما", href: "/contact" },
   ];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4">
       <div className="max-w-7xl mx-auto">
         <LiquidGlassCard
           draggable={false}
-          expandable={false}
           blurIntensity="lg"
           borderRadius="100px"
+          glowIntensity="sm"
           className="px-4 py-2"
         >
-          <div className=" z-30 flex items-center  text-white  justify-between">
-            <a href="/">
-              {/* <img
-                src=""
-                alt="SUPREME TECH"
-                className="w-8 h-8 text-blue-400"
-              /> */}
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <a href="/" className="flex items-center gap-2">
+              <Bot className="w-8 h-8 text-blue-400" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 Supreme Tech
               </span>
             </a>
+
+            {/* Desktop Menu */}
             <nav className="hidden md:flex items-center gap-1">
-              {menuItems.map((item) => (
+              {navItems.map((item) => (
                 <a
                   key={item.name}
                   href={item.href}
@@ -46,13 +53,29 @@ export default function Header() {
                 </a>
               ))}
             </nav>
+
+            {/* Desktop Button - شیشه‌ای */}
             <div className="hidden md:block">
-              <a href="/signup">
-                <button className="bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-2 rounded-full text-white text-sm font-medium">
-                  شروع رایگان
-                </button>
-              </a>
+              <LiquidGlassCard
+                draggable={false}
+                blurIntensity="lg"
+                borderRadius="16px"
+                glowIntensity="sm"
+                className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300"
+              >
+                <a href="/signup">
+                  <button
+                    className="px-6 py-2 text-white font-bold flex items-center gap-2 justify-center 
+                    bg-gradient-to-r from-blue-500/80 to-blue-600/80 
+                    backdrop-blur-sm border border-blue-400/30 text-sm"
+                  >
+                    شروع رایگان
+                  </button>
+                </a>
+              </LiquidGlassCard>
             </div>
+
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 rounded-full bg-white/10"
@@ -66,17 +89,18 @@ export default function Header() {
           </div>
         </LiquidGlassCard>
       </div>
+
+      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden mt-4">
           <LiquidGlassCard
             draggable={false}
-            expandable={false}
             blurIntensity="lg"
             borderRadius="24px"
             className="p-4"
           >
             <nav className="flex flex-col gap-2">
-              {menuItems.map((item) => (
+              {navItems.map((item) => (
                 <a
                   key={item.name}
                   href={item.href}
@@ -86,11 +110,25 @@ export default function Header() {
                   {item.name}
                 </a>
               ))}
-              <a href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                <button className="mt-2 w-full bg-gradient-to-r from-blue-600 to-cyan-600 py-3 rounded-full text-white text-sm font-medium">
-                  شروع رایگان
-                </button>
-              </a>
+
+              {/* Mobile Button - شیشه‌ای */}
+              <LiquidGlassCard
+                draggable={false}
+                blurIntensity="lg"
+                borderRadius="16px"
+                glowIntensity="sm"
+                className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300 mt-2"
+              >
+                <a href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                  <button
+                    className="w-full py-3 text-white font-bold flex items-center gap-2 justify-center 
+                    bg-gradient-to-r from-blue-500/80 to-blue-600/80 
+                    backdrop-blur-sm border border-blue-400/30 text-sm"
+                  >
+                    شروع رایگان
+                  </button>
+                </a>
+              </LiquidGlassCard>
             </nav>
           </LiquidGlassCard>
         </div>
