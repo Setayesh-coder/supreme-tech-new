@@ -1,4 +1,4 @@
-import { LiquidGlassCard } from "../ui/LiquidGlassCard";
+import { LiquidGlassCard } from "./../ui/LiquidGlassCard";
 import {
   Bot,
   Brain,

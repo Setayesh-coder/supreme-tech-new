@@ -9,6 +9,8 @@ export default function Header() {
   const navItems = [
     { name: "خانه", href: "/" },
     { name: "خدمات", href: "/services" },
+    { name: "رویداد", href: "/event" },
+    { name: "وبلاگ", href: "/blog" },
     { name: "رویکرد ما", href: "/approach" },
     { name: "درباره ما", href: "/about" },
     { name: "تماس با ما", href: "/contact" },
