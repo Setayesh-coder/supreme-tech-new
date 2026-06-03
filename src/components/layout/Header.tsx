@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Menu, X, Bot } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
+// import { favicon } from "assets/favicon-96x96.png";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -37,7 +38,11 @@ export default function Header() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <a href="/" className="flex items-center gap-2">
-              <Bot className="w-8 h-8 text-blue-400" />
+              <img
+                src="assets/favicon-96x96.png"
+                alt="supreme tech"
+                className="w-8 h-8 text-blue-400"
+              />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 Supreme Tech
               </span>
