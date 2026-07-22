@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
-import { Menu, X, Bot } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 // import { favicon } from "assets/favicon-96x96.png";
 
 export default function Header() {
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { name: "خانه", href: "/" },
     { name: "خدمات", href: "/services" },
-    { name: "رویداد", href: "/event" },
+    { name: "رویداد", href: "/events" },
     { name: "وبلاگ", href: "/blog" },
     { name: "رویکرد ما", href: "/approach" },
     { name: "درباره ما", href: "/about" },
@@ -29,7 +29,7 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4">
       <div className="max-w-7xl mx-auto">
         <LiquidGlassCard
-          draggable={false}
+          // draggable={false}
           blurIntensity="lg"
           borderRadius="100px"
           glowIntensity="sm"
@@ -64,7 +64,7 @@ export default function Header() {
             {/* Desktop Button - شیشه‌ای */}
             <div className="hidden md:block">
               <LiquidGlassCard
-                draggable={false}
+                // draggable={false}
                 blurIntensity="lg"
                 borderRadius="16px"
                 glowIntensity="sm"
@@ -101,7 +101,7 @@ export default function Header() {
       {isMobileMenuOpen && (
         <div className="md:hidden mt-4">
           <LiquidGlassCard
-            draggable={false}
+            // draggable={false}
             blurIntensity="lg"
             borderRadius="24px"
             className="p-4"
@@ -120,7 +120,7 @@ export default function Header() {
 
               {/* Mobile Button - شیشه‌ای */}
               <LiquidGlassCard
-                draggable={false}
+                // draggable={false}
                 blurIntensity="lg"
                 borderRadius="16px"
                 glowIntensity="sm"

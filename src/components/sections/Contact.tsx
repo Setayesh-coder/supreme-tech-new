@@ -1,6 +1,8 @@
+// src/components/sections/Contact.tsx
 import { useState } from "react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import { Mail, Phone, MapPin, Send, MessageCircle, Copy } from "lucide-react";
+import { GlassButton } from "../ui/GlassButton";
+import { Mail, Phone, MapPin, Send, Copy } from "lucide-react";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -11,7 +13,7 @@ export default function Contact() {
     description: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  // ✅ حذف شد: const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
 
   const copyToClipboard = async (text: string, type: string) => {
     try {
@@ -44,9 +46,9 @@ export default function Contact() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageError = (index: number) => {
-    setImgErrors((prev) => ({ ...prev, [index]: true }));
-  };
+  // ✅ حذف شد: const handleImageError = (index: number) => {
+  // ✅ حذف شد:   setImgErrors((prev) => ({ ...prev, [index]: true }));
+  // ✅ حذف شد: };
 
   return (
     <section id="contact" className="py-24 px-6">
@@ -55,7 +57,6 @@ export default function Contact() {
         <div className="text-center mb-8">
           <div className="flex justify-center">
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="md"
               borderRadius="100px"
               glowIntensity="sm"
@@ -83,9 +84,8 @@ export default function Contact() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* فرم تماس - به همین صورت میمونه */}
+          {/* فرم تماس */}
           <LiquidGlassCard
-            draggable={false}
             blurIntensity="lg"
             borderRadius="32px"
             glowIntensity="md"
@@ -155,21 +155,23 @@ export default function Contact() {
                   className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                 />
               </div>
-              <button
+              <GlassButton
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 py-3 rounded-xl text-white font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50"
+                fullWidth
+                variant="primary"
+                size="lg"
+                loading={isSubmitting}
+                icon={<Send className="w-4 h-4" />}
+                iconPosition="left"
               >
                 {isSubmitting ? "در حال ارسال..." : "ارسال درخواست"}
-                <Send className="w-4 h-4" />
-              </button>
+              </GlassButton>
             </form>
           </LiquidGlassCard>
 
           {/* اطلاعات تماس */}
           <div className="space-y-6">
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="lg"
               borderRadius="32px"
               glowIntensity="md"
@@ -182,18 +184,18 @@ export default function Contact() {
                 نیاز به مشاوره فوری دارید؟ با یک کلیک، جلسه مشاوره رایگان خود را
                 شروع کنید.
               </p>
-              <button
+              <GlassButton
+                variant="primary"
+                size="md"
                 onClick={() =>
                   window.open("https://mentor.supremetech.ir", "_blank")
                 }
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-2 rounded-xl text-white font-medium transition-all duration-300 hover:scale-105"
               >
                 شروع مشاوره رایگان
-              </button>
+              </GlassButton>
             </LiquidGlassCard>
 
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="lg"
               borderRadius="24px"
               glowIntensity="sm"
@@ -217,7 +219,6 @@ export default function Contact() {
             </LiquidGlassCard>
 
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="lg"
               borderRadius="24px"
               glowIntensity="sm"
@@ -237,7 +238,6 @@ export default function Contact() {
             </LiquidGlassCard>
 
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="lg"
               borderRadius="24px"
               glowIntensity="sm"
@@ -255,13 +255,12 @@ export default function Contact() {
                     کانال تلگرام
                   </h4>
                   <p className="text-gray-400 text-xs">@SupremeTech_co</p>
-                </div>{" "}
+                </div>
                 <Copy className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition" />
               </div>
             </LiquidGlassCard>
 
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="lg"
               borderRadius="24px"
               glowIntensity="sm"

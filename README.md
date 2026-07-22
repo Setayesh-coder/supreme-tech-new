@@ -17,9 +17,9 @@ If you are developing a production application, we recommend updating the config
 
 ```js
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(["dist"]),
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ["**/*.{ts,tsx}"],
     extends: [
       // Other configs...
 
@@ -34,46 +34,47 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: ["./tsconfig.node.json", "./tsconfig.app.json"],
         tsconfigRootDir: import.meta.dirname,
       },
       // other options...
     },
   },
-])
+]);
 ```
 
 You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js
 // eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+import reactX from "eslint-plugin-react-x";
+import reactDom from "eslint-plugin-react-dom";
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(["dist"]),
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ["**/*.{ts,tsx}"],
     extends: [
       // Other configs...
       // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
+      reactX.configs["recommended-typescript"],
       // Enable lint rules for React DOM
       reactDom.configs.recommended,
     ],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: ["./tsconfig.node.json", "./tsconfig.app.json"],
         tsconfigRootDir: import.meta.dirname,
       },
       // other options...
     },
   },
-])
+]);
 ```
 
 ```
 supreme-tech-new
+├─ .env
 ├─ README.md
 ├─ assets
 │  ├─ ai-background-hero.jpg
@@ -85,6 +86,10 @@ supreme-tech-new
 │  ├─ blog-ai-agents-productivity.jpg
 │  ├─ blog-elecyar-ai-agent.jpg
 │  ├─ blog-ram-price-ai.jpg
+│  ├─ favicon-96x96.png
+│  ├─ favicon.svg
+│  ├─ partners
+│  │  └─ iau-svgrepo-com.svg
 │  ├─ service-analytics-cyber.jpg
 │  ├─ service-analytics.jpg
 │  ├─ service-business-cyber.jpg
@@ -102,25 +107,66 @@ supreme-tech-new
 │  ├─ slide-time-saving-new.jpg
 │  ├─ slide-time-saving-updated.jpg
 │  └─ slide-time-saving.jpg
+├─ favicon
+│  ├─ apple-touch-icon.png
+│  ├─ favicon-96x96.png
+│  ├─ favicon.ico
+│  ├─ favicon.svg
+│  ├─ site.webmanifest
+│  ├─ web-app-manifest-192x192.png
+│  └─ web-app-manifest-512x512.png
+├─ favicon_io
+│  ├─ android-chrome-192x192.png
+│  ├─ android-chrome-512x512.png
+│  ├─ apple-touch-icon.png
+│  ├─ favicon-16x16.png
+│  ├─ favicon-32x32.png
+│  ├─ favicon.ico
+│  └─ site.webmanifest
 ├─ index.html
 ├─ lib
 │  └─ utils.ts
 ├─ package-lock.json
 ├─ package.json
 ├─ postcss.config.js
+├─ prisma
+│  ├─ migrations
+│  │  ├─ 20260720205038_fix_phone_field_type
+│  │  │  └─ migration.sql
+│  │  └─ migration_lock.toml
+│  └─ schema.prisma
 ├─ public
-│  ├─ favicon.svg
-│  ├─ icons.svg
-│  └─ sup.png
+│  ├─ favicon
+│  │  ├─ apple-touch-icon.png
+│  │  ├─ favicon-96x96.png
+│  │  ├─ favicon.ico
+│  │  ├─ favicon.svg
+│  │  ├─ site.webmanifest
+│  │  ├─ web-app-manifest-192x192.png
+│  │  └─ web-app-manifest-512x512.png
+│  ├─ favicon.ico
+│  ├─ partners
+│  ├─ slides
+│  └─ team
+├─ server
+│  ├─ lib
+│  ├─ middleware
+│  └─ routes
 ├─ src
 │  ├─ App.tsx
 │  ├─ components
+│  │  ├─ admin
 │  │  ├─ layout
 │  │  │  ├─ Footer.tsx
 │  │  │  ├─ Header.tsx
 │  │  │  └─ Layout.tsx
 │  │  ├─ sections
-│  │  │  └─ Hero.tsx
+│  │  │  ├─ Approach.tsx
+│  │  │  ├─ Contact.tsx
+│  │  │  ├─ Footer.tsx
+│  │  │  ├─ Hero.tsx
+│  │  │  ├─ Partners.tsx
+│  │  │  └─ Services.tsx
 │  │  └─ ui
 │  │     ├─ GlassButton.tsx
 │  │     ├─ LiquidGlassCard.tsx
@@ -131,16 +177,50 @@ supreme-tech-new
 │  ├─ hooks
 │  ├─ index.css
 │  ├─ lib
+│  │  ├─ api
+│  │  ├─ db
 │  │  └─ utils.ts
 │  ├─ main.tsx
 │  ├─ pages
 │  │  ├─ About.tsx
+│  │  ├─ Admin.tsx
 │  │  ├─ Blog.tsx
 │  │  ├─ Contact.tsx
 │  │  ├─ Home.tsx
-│  │  └─ Services.tsx
-│  └─ types
-│     └─ index.ts
+│  │  ├─ Services.tsx
+│  │  ├─ admin
+│  │  └─ public
+│  ├─ types
+│  │  └─ index.ts
+│  └─ utils
+├─ supreme-tech-backend
+│  ├─ .env
+│  ├─ package-lock.json
+│  ├─ package.json
+│  ├─ prisma
+│  │  └─ schema.prisma
+│  ├─ server.js
+│  └─ src
+│     ├─ app.js
+│     ├─ controllers
+│     │  ├─ admin.controller.js
+│     │  ├─ blog.controller.js
+│     │  ├─ enrollment.controller.js
+│     │  └─ event.controller.js
+│     ├─ middleware
+│     │  ├─ auth.js
+│     │  └─ errorHandler.js
+│     ├─ routes
+│     │  ├─ admin.routes.js
+│     │  ├─ blog.routes.js
+│     │  ├─ enrollment.routes.js
+│     │  ├─ event.routes.js
+│     │  ├─ hero.routes.js
+│     │  ├─ partner.routes.js
+│     │  ├─ stats.routes.js
+│     │  └─ team.routes.js
+│     └─ utils
+│        └─ prisma.js
 ├─ tailwind.config.js
 ├─ tsconfig.app.json
 ├─ tsconfig.json

@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  direction: rtl;
+}
+
 @layer base {
   body {
     background-color: #000023;

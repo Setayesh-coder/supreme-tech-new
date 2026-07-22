@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ArrowLeft, Target } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { slides } from "../../constants/slides";
+import { GlassButton } from "../ui/GlassButton";
 
 export default function Hero() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,7 +45,7 @@ export default function Hero() {
         {/* تگ بالایی - شیشه‌ای */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 mt-16">
           <LiquidGlassCard
-            draggable={false}
+            // draggable={false}
             blurIntensity="lg"
             borderRadius="100px"
             className="px-4 py-2"
@@ -58,7 +59,7 @@ export default function Hero() {
         {/* عنوان */}
         <div className="mb-6">
           <LiquidGlassCard
-            draggable={false}
+            // draggable={false}
             blurIntensity="md"
             borderRadius="100px"
             glowIntensity="sm"
@@ -87,24 +88,18 @@ export default function Hero() {
 
         {/* دکمه‌های شیشه‌ای */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <LiquidGlassCard
-            draggable={false}
-            blurIntensity="lg"
-            borderRadius="16px"
-            glowIntensity="sm"
-            className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300"
+          <GlassButton
+            icon={<Target className="w-5 h-5" />}
+            iconPosition="right"
+            variant="primary"
+            size="md"
+            onClick={scrollToContact}
           >
-            <button
-              onClick={scrollToContact}
-              className="px-8 py-3 text-white font-bold flex items-center gap-2 w-full justify-center bg-white/10 backdrop-blur-sm"
-            >
-              {currentSlide.buttonText}
+            {currentSlide.buttonText}
+          </GlassButton>
 
-              <Target className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            </button>
-          </LiquidGlassCard>
           <LiquidGlassCard
-            draggable={false}
+            // draggable={false}
             blurIntensity="lg"
             borderRadius="16px"
             glowIntensity="sm"
@@ -129,7 +124,7 @@ export default function Hero() {
         className="absolute left-4 top-1/2 -translate-y-1/2 z-20"
       >
         <LiquidGlassCard
-          draggable={false}
+          // draggable={false}
           blurIntensity="lg"
           borderRadius="100px"
           glowIntensity="sm"
@@ -144,7 +139,7 @@ export default function Hero() {
         className="absolute right-4 top-1/2 -translate-y-1/2 z-20"
       >
         <LiquidGlassCard
-          draggable={false}
+          // draggable={false}
           blurIntensity="lg"
           borderRadius="100px"
           glowIntensity="sm"
@@ -163,7 +158,7 @@ export default function Hero() {
             className="transition-all duration-300"
           >
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="100px"
               className={`p-0.5 ${index === currentIndex ? "w-8" : "w-2"} transition-all duration-300`}
@@ -182,7 +177,7 @@ export default function Hero() {
           <div className="flex justify-center gap-8 sm:gap-16">
             {/* آمار 1 */}
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="20px"
               glowIntensity="sm"
@@ -196,7 +191,7 @@ export default function Hero() {
 
             {/* آمار 2 */}
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="20px"
               glowIntensity="sm"
@@ -210,7 +205,7 @@ export default function Hero() {
 
             {/* آمار 3 */}
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="20px"
               glowIntensity="sm"

@@ -1,0 +1,212 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// مدل‌های اصلی
+// ============================================================
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String?  @unique 
+  password  String
+  name      String
+  role      AdminRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blogPosts  BlogPost[] @relation("Author")
+  events     Event[]    @relation("Organizer")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// ============================================================
+// بلاگ
+// ============================================================
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String   @db.Text
+  excerpt     String   @db.Text
+  coverImage  String?
+  published   Boolean  @default(false)
+  aiGenerated Boolean  @default(false)
+  views       Int      @default(0)
+  
+  authorId    String?
+  author      Admin?   @relation("Author", fields: [authorId], references: [id])
+  
+  tags        BlogTag[] @relation("PostTags")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BlogTag {
+  id    String   @id @default(cuid())
+  name  String   @unique
+  slug  String   @unique
+  
+  posts BlogPost[] @relation("PostTags")
+}
+
+// ============================================================
+// رویدادها
+// ============================================================
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String   @db.Text
+  image       String?
+  date        DateTime
+  duration    String?
+  capacity    Int      @default(30)
+  price       Int      @default(0)
+  location    String?
+  isActive    Boolean  @default(true)
+  type        EventType @default(WORKSHOP)
+  featured    Boolean  @default(false)
+  
+  organizerId String?
+  organizer   Admin?   @relation("Organizer", fields: [organizerId], references: [id])
+  
+  enrollments Enrollment[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum EventType {
+  WORKSHOP
+  COURSE
+  WEBINAR
+  CONFERENCE
+  MEETUP
+  BOOTCAMP
+}
+
+// ============================================================
+// ثبت‌نام
+// ============================================================
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  
+  name      String
+  email     String
+  phone     String
+  message   String?  @db.Text
+  
+  status    EnrollmentStatus @default(PENDING)
+  notes     String?  @db.Text
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EnrollmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  WAITING
+  ATTENDED
+}
+
+// ============================================================
+// تیم
+// ============================================================
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  name        String
+  role        String
+  bio         String?  @db.Text
+  avatar      String?
+  email       String?
+  linkedin    String?
+  github      String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  isFounder   Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// همکاران
+// ============================================================
+
+model Partner {
+  id          String   @id @default(cuid())
+  name        String
+  logo        String?
+  website     String?
+  description String?  @db.Text
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// آمار
+// ============================================================
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  userAgent String?
+  ip        String?
+  sessionId String?
+  createdAt DateTime @default(now())
+}
+
+model DailyStat {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  views     Int      @default(0)
+  visitors  Int      @default(0)
+  enrollments Int    @default(0)
+}
+
+// ============================================================
+// اسلایدهای هیرو
+// ============================================================
+
+model HeroSlide {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  description String?  @db.Text
+  image       String
+  buttonText  String?
+  buttonLink  String?
+  color       String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -1,29 +1,116 @@
+// src/components/sections/Partners.tsx
+import { useEffect, useState } from "react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import { Building2 } from "lucide-react";
+import { Building2, Loader2 } from "lucide-react";
 
-const partners = [
-  {
-    name: "دانشگاه آزاد اسلامی",
-    logo: "/assets/partners/iau-svgrepo-com.svg",
-    url: "https://iau.ir/",
-  },
-  { name: "همکار ۲", logo: "", url: "#" },
-  { name: "همکار ۳", logo: "", url: "#" },
-  { name: "همکار ۴", logo: "", url: "#" },
-  { name: "همکار ۵", logo: "", url: "#" },
-  { name: "همکار ۶", logo: "", url: "#" },
-];
+// ========== Interface ==========
+interface Partner {
+  id: string;
+  name: string;
+  logo?: string;
+  url?: string;
+  order: number;
+  isActive: boolean;
+}
 
 export default function Partners() {
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ========== دریافت از API ==========
+  useEffect(() => {
+    const fetchPartners = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/partners?isActive=true`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setPartners(data);
+      } catch (err) {
+        console.error("خطا در دریافت همکاران:", err);
+        setError("خطا در دریافت اطلاعات همکاران");
+        // استفاده از داده‌های پیش‌فرض در صورت خطا
+        setPartners([
+          {
+            id: "1",
+            name: "دانشگاه آزاد اسلامی",
+            logo: "/assets/partners/iau-svgrepo-com.svg",
+            url: "https://iau.ir/",
+            order: 1,
+            isActive: true,
+          },
+          {
+            id: "2",
+            name: "همکار ۲",
+            logo: "",
+            url: "#",
+            order: 2,
+            isActive: true,
+          },
+          {
+            id: "3",
+            name: "همکار ۳",
+            logo: "",
+            url: "#",
+            order: 3,
+            isActive: true,
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPartners();
+  }, []);
+
+  // ========== نمایش لودینگ ==========
+  if (loading) {
+    return (
+      <section className="py-8 px-3 md:py-16 md:px-6">
+        <div className="container mx-auto text-center">
+          <div className="flex justify-center items-center gap-3">
+            <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+            <span className="text-gray-400">بارگذاری همکاران...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ========== نمایش خطا ==========
+  if (error && partners.length === 0) {
+    return (
+      <section className="py-8 px-3 md:py-16 md:px-6">
+        <div className="container mx-auto text-center">
+          <p className="text-red-400">{error}</p>
+        </div>
+      </section>
+    );
+  }
+
+  // ========== رندر اصلی ==========
   return (
     <section className="py-8 px-3 md:py-16 md:px-6">
       <div className="container mx-auto">
-        
         {/* Header */}
         <div className="text-center mb-4 md:mb-8">
           <div className="flex justify-center">
             <LiquidGlassCard
-              draggable={false}
               blurIntensity="md"
               borderRadius="100px"
               glowIntensity="sm"
@@ -45,42 +132,51 @@ export default function Partners() {
           </p>
         </div>
 
-        {/* لیست همکاران - افقی با wrap */}
-        <div className="flex flex-wrap justify-center gap-2 md:gap-4 lg:gap-6">
-          {partners.map((partner, index) => (
-            <a
-              key={index}
-              href={partner.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-            >
-              <LiquidGlassCard
-                draggable={false}
-                blurIntensity="lg"
-                glowIntensity="sm"
-                borderRadius="9999px"
-                className="w-16 h-16 md:w-28 md:h-28 lg:w-32 lg:h-32 flex flex-col items-center justify-center group hover:scale-105 transition-all duration-300"
+        {/* لیست همکاران */}
+        {partners.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p>هنوز همکاری ثبت نشده است</p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4 lg:gap-6">
+            {partners.map((partner) => (
+              <a
+                key={partner.id}
+                href={partner.url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
               >
-                {partner.logo ? (
-                  <img
-                    src={partner.logo}
-                    alt={partner.name}
-                    className="w-8 h-8 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <Building2 className="w-5 h-5 md:w-10 md:h-10 text-gray-500" />
-                )}
-              </LiquidGlassCard>
-              <div className="text-gray-400 text-[8px] md:text-xs group-hover:text-blue-400 transition mt-1 text-center">
-                {partner.name.length > 12 ? partner.name.slice(0, 10) + '...' : partner.name}
-              </div>
-            </a>
-          ))}
-        </div>
+                <LiquidGlassCard
+                  blurIntensity="lg"
+                  glowIntensity="sm"
+                  borderRadius="9999px"
+                  className="w-16 h-16 md:w-28 md:h-28 lg:w-32 lg:h-32 flex flex-col items-center justify-center group hover:scale-105 transition-all duration-300"
+                  hoverScale={1.05}
+                >
+                  {partner.logo ? (
+                    <img
+                      src={partner.logo}
+                      alt={partner.name}
+                      className="w-8 h-8 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <Building2 className="w-5 h-5 md:w-10 md:h-10 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                  )}
+                </LiquidGlassCard>
+                <div className="text-gray-400 text-[8px] md:text-xs group-hover:text-blue-400 transition mt-1 text-center">
+                  {partner.name.length > 12
+                    ? partner.name.slice(0, 10) + "..."
+                    : partner.name}
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
 
         <div className="text-center mt-4 md:mt-6">
           <p className="text-[8px] md:text-xs text-gray-500">
