@@ -106,7 +106,7 @@ export default function Services() {
           {services.map((service) => (
             <LiquidGlassCard
               key={service.id}
-              draggable={false}
+              // draggable={false}
               blurIntensity="lg"
               borderRadius="24px"
               glowIntensity="sm"
@@ -155,7 +155,7 @@ export default function Services() {
         {/* Custom Solution Banner */}
         <div className="mt-12">
           <LiquidGlassCard
-            draggable={false}
+            // draggable={false}
             blurIntensity="lg"
             borderRadius="32px"
             glowIntensity="md"
@@ -169,7 +169,7 @@ export default function Services() {
               نیازهای خاص کسب‌وکار شما طراحی و توسعه دهد
             </p>
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="lg"
               borderRadius="16px"
               glowIntensity="sm"

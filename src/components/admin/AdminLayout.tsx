@@ -1,5 +1,5 @@
 // src/components/admin/AdminLayout.tsx
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
@@ -15,9 +15,12 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  // User,
-  Bell,
+  // Bell,
   Search,
+  Building2,
+  User,
+  Mail,
+  Ticket,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -26,9 +29,22 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
-  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+  const adminStr = localStorage.getItem("admin");
+  const admin = adminStr ? JSON.parse(adminStr) : {};
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // 🔥 بررسی دسترسی ادمین
+  useEffect(() => {
+    if (!adminStr) {
+      navigate("/access-denied", { replace: true });
+    }
+  }, [adminStr, navigate]);
+
+  // اگر ادمین نیست، چیزی نمایش نده (تا useEffect هدایت کنه)
+  if (!adminStr) {
+    return null;
+  }
 
   const handleLogout = () => {
     authAPI.logout();
@@ -45,6 +61,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { icon: <FileText size={20} />, label: "بلاگ", path: "/admin/blog" },
     { icon: <Calendar size={20} />, label: "رویدادها", path: "/admin/events" },
     { icon: <Users size={20} />, label: "کاربران", path: "/admin/users" },
+    {
+      icon: <Building2 size={20} />,
+      label: "همکاران",
+      path: "/admin/partners",
+    },
+    { icon: <Ticket size={20} />, label: "تیکت‌ها", path: "/admin/tickets" }, // ← اضافه کنید
+    { icon: <Mail size={20} />, label: "پیام‌ها", path: "/admin/messages" },
+    { icon: <User size={20} />, label: "پروفایل", path: "/admin/profile" },
     { icon: <Settings size={20} />, label: "تنظیمات", path: "/admin/settings" },
   ];
 
@@ -54,15 +78,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <nav className="sticky top-0 z-50 p-4">
         <LiquidGlassCard
           className="px-4 py-2 md:px-6 md:py-3"
-          borderRadius="100px"  // ← گرد مثل هدر عمومی
-          blurIntensity="lg"    // ← تاری بیشتر
-          glowIntensity="md"    // ← درخشش بیشتر
+          borderRadius="100px"
+          blurIntensity="lg"
+          glowIntensity="md"
           shadowIntensity="md"
         >
           <div className="flex justify-between items-center">
             {/* سمت راست - منو و لوگو */}
             <div className="flex items-center gap-2 md:gap-4">
-              {/* دکمه منو - با استایل شیشه‌ای */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="hidden md:flex p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white/70 hover:text-white"
@@ -70,7 +93,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
 
-              {/* دکمه منو موبایل */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="md:hidden p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white/70 hover:text-white"
@@ -78,11 +100,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
 
-              {/* لوگو */}
-              <Link
-                to="/admin/dashboard"
-                className="flex items-center gap-2"
-              >
+              <Link to="/admin/dashboard" className="flex items-center gap-2">
                 <span className="text-xl md:text-2xl">🚀</span>
                 <span className="text-base md:text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hidden sm:inline">
                   Supreme Admin
@@ -93,7 +111,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </Link>
             </div>
 
-            {/* وسط - نوار جستجو (اختیاری) */}
+            {/* نوار جستجو */}
             <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
               <div className="relative w-full">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -107,13 +125,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* سمت چپ - اطلاع‌ها و پروفایل */}
             <div className="flex items-center gap-2 md:gap-3">
-              {/* دکمه اطلاع‌رسانی */}
-              <button className="relative p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white/70 hover:text-white">
+              {/* <button className="relative p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white/70 hover:text-white">
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              </button>
+              </button> */}
 
-              {/* پروفایل */}
               <div className="hidden sm:flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
@@ -128,7 +144,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
               </div>
 
-              {/* دکمه خروج - با GlassButton */}
               <GlassButton
                 icon={<LogOut size={18} />}
                 iconPosition="left"
@@ -167,14 +182,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 ))}
               </nav>
 
-              {/* پروفایل موبایل */}
               <div className="mt-4 pt-4 border-t border-white/10">
                 <div className="flex items-center gap-3 px-4 py-2">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                     {admin.name?.charAt(0) || "A"}
                   </div>
                   <div>
-                    <p className="text-white font-medium">{admin.name || "مدیر"}</p>
+                    <p className="text-white font-medium">
+                      {admin.name || "مدیر"}
+                    </p>
                     <p className="text-white/40 text-sm">مدیر سیستم</p>
                   </div>
                 </div>
@@ -216,7 +232,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 ))}
               </nav>
 
-              {/* دکمه جمع کردن سایدبار */}
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-white/40 hover:text-white/70 hover:bg-white/5 transition-all duration-200"
@@ -228,7 +243,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           )}
         </aside>
 
-        {/* دکمه باز کردن سایدبار (وقتی بسته باشه) */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}

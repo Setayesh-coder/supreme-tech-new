@@ -1,14 +1,22 @@
-// src/pages/admin/events/EventCreate.tsx
-import { useState } from "react";
+// src/pages/admin/events/EventEdit.tsx
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { eventsAPI } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
+import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
-import { Upload, X, Loader2 } from "lucide-react";
 
-export default function EventCreate() {
+export default function EventEdit() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -20,13 +28,64 @@ export default function EventCreate() {
     location: "",
     type: "WORKSHOP",
     featured: false,
+    isActive: true,
   });
-
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [currentImage, setCurrentImage] = useState<string>("");
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const response = await eventsAPI.getById(id);
+        console.log("📥 داده دریافت شد:", response);
+
+        // 🔥 اگر داده داخل data.data بود
+        const data = response.data || response;
+
+        setFormData({
+          title: data.title || "",
+          description: data.description || "",
+          content: data.content || "",
+          date: data.date ? new Date(data.date).toISOString().slice(0, 16) : "",
+          duration: data.duration || "",
+          capacity: data.capacity?.toString() || "",
+          price: data.price?.toString() || "",
+          location: data.location || "",
+          type: data.type || "WORKSHOP",
+          featured: data.featured || false,
+          isActive: data.isActive !== undefined ? data.isActive : true,
+        });
+        if (data.image) {
+          setCurrentImage(data.image);
+          setImagePreview(data.image);
+        }
+      } catch (err: any) {
+        console.error("❌ خطا:", err);
+        setError(err.response?.data?.error || "خطا در دریافت اطلاعات رویداد");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvent();
+  }, [id]);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value, type } = e.target;
+    setFormData({
+      ...formData,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+    });
+    if (error) setError("");
+    if (success) setSuccess("");
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,7 +106,7 @@ export default function EventCreate() {
 
   const handleRemoveImage = () => {
     setImage(null);
-    setImagePreview("");
+    setImagePreview(currentImage || "");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -68,13 +127,21 @@ export default function EventCreate() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError("");
+    setSuccess("");
 
     try {
-      let imageUrl = "";
+      let imageUrl = currentImage;
       if (image) {
         imageUrl = await uploadImage(image);
+      }
+
+      // 🔥 اطمینان از اینکه تاریخ وجود داره
+      if (!formData.date) {
+        setError("لطفاً تاریخ رویداد را انتخاب کنید");
+        setSubmitting(false);
+        return;
       }
 
       const eventData = {
@@ -88,65 +155,64 @@ export default function EventCreate() {
         location: formData.location,
         type: formData.type,
         featured: formData.featured,
+        isActive: formData.isActive,
         image: imageUrl,
       };
 
-      console.log("📤 ارسال داده:", eventData);
+      console.log("📤 ارسال داده برای ویرایش:", eventData);
 
-      await eventsAPI.create(eventData);
+      await eventsAPI.update(id!, eventData);
+      setSuccess("رویداد با موفقیت ویرایش شد!");
 
-      alert("رویداد با موفقیت ایجاد شد!");
-
-      setFormData({
-        title: "",
-        description: "",
-        content: "",
-        date: "",
-        duration: "",
-        capacity: "",
-        price: "",
-        location: "",
-        type: "WORKSHOP",
-        featured: false,
-      });
-      handleRemoveImage();
+      // بعد از ۲ ثانیه به لیست برگرد
+      setTimeout(() => {
+        navigate("/admin/events");
+      }, 1500);
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ایجاد رویداد");
+      setError(err.response?.data?.error || "خطا در ویرایش رویداد");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData({
-      ...formData,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    });
-  };
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={() => navigate("/admin/events")}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          >
+            <ArrowLeft size={24} className="text-white" />
+          </button>
+          <h1 className="text-2xl font-bold text-white">✏️ ویرایش رویداد</h1>
+        </div>
+
         <LiquidGlassCard
           className="p-6 md:p-8"
           borderRadius="16px"
           blurIntensity="lg"
           glowIntensity="md"
         >
-          <h1 className="text-2xl font-bold text-white mb-6">
-            ایجاد رویداد جدید
-          </h1>
-
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
+              ✅ {success}
             </div>
           )}
 
@@ -203,72 +269,72 @@ export default function EventCreate() {
               )}
             </div>
 
-            {/* عنوان */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان رویداد
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                required
-              />
+            {/* اطلاعات پایه */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  عنوان رویداد
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  نوع رویداد
+                </label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                >
+                  <option value="WORKSHOP">کارگاه</option>
+                  <option value="COURSE">دوره</option>
+                  <option value="WEBINAR">وبینار</option>
+                  <option value="CONFERENCE">کنفرانس</option>
+                  <option value="MEETUP">دیدار</option>
+                  <option value="BOOTCAMP">بوت‌کمپ</option>
+                </select>
+              </div>
             </div>
 
-            {/* 🔥 تاریخ با PersianDatePicker */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                تاریخ رویداد
-              </label>
-              <PersianDatePicker
-                value={formData.date}
-                onChange={(date) => setFormData({ ...formData, date })}
-                placeholder="انتخاب تاریخ و زمان"
-                includeTime={true}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
-
-            {/* مدت زمان */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                مدت زمان
-              </label>
-              <input
-                type="text"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                placeholder="مثلاً: ۲ ساعت"
-              />
-            </div>
-
-            {/* نوع رویداد */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                نوع رویداد
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-              >
-                <option value="WORKSHOP">کارگاه</option>
-                <option value="COURSE">دوره</option>
-                <option value="WEBINAR">وبینار</option>
-                <option value="CONFERENCE">کنفرانس</option>
-                <option value="MEETUP">دیدار</option>
-                <option value="BOOTCAMP">بوت‌کمپ</option>
-              </select>
+            {/* تاریخ و مکان */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  تاریخ رویداد
+                </label>
+                <PersianDatePicker
+                  value={formData.date}
+                  onChange={(date) => setFormData({ ...formData, date })}
+                  placeholder="انتخاب تاریخ و زمان"
+                  includeTime={true}
+                  className="bg-white/10 border-white/20 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  مدت زمان
+                </label>
+                <input
+                  type="text"
+                  name="duration"
+                  value={formData.duration}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="مثلاً: ۲ ساعت"
+                />
+              </div>
             </div>
 
             {/* ظرفیت و قیمت */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   ظرفیت
@@ -326,7 +392,6 @@ export default function EventCreate() {
               />
             </div>
 
-            {/* محتوای کامل */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 محتوای کامل
@@ -341,7 +406,7 @@ export default function EventCreate() {
             </div>
 
             {/* گزینه‌ها */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <label className="flex items-center gap-2 text-white/80 cursor-pointer">
                 <input
                   type="checkbox"
@@ -352,19 +417,40 @@ export default function EventCreate() {
                 />
                 رویداد ویژه
               </label>
+              <label className="flex items-center gap-2 text-white/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onChange={handleChange}
+                  className="w-4 h-4 accent-blue-500"
+                />
+                فعال
+              </label>
             </div>
 
-            {/* دکمه ثبت */}
-            <GlassButton
-              type="submit"
-              fullWidth
-              variant="primary"
-              size="lg"
-              loading={loading || uploading}
-              disabled={loading || uploading}
-            >
-              {uploading ? "در حال آپلود عکس..." : "ایجاد رویداد"}
-            </GlassButton>
+            {/* دکمه‌ها */}
+            <div className="flex gap-3 pt-4">
+              <GlassButton
+                type="button"
+                variant="white"
+                size="md"
+                onClick={() => navigate("/admin/events")}
+              >
+                انصراف
+              </GlassButton>
+              <GlassButton
+                type="submit"
+                variant="primary"
+                size="md"
+                loading={submitting || uploading}
+                icon={<Save className="w-5 h-5" />}
+                iconPosition="left"
+                disabled={submitting || uploading}
+              >
+                {uploading ? "در حال آپلود..." : "ذخیره تغییرات"}
+              </GlassButton>
+            </div>
           </form>
         </LiquidGlassCard>
       </div>

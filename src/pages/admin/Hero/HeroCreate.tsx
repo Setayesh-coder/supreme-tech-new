@@ -1,32 +1,43 @@
-// src/pages/admin/events/EventCreate.tsx
+// src/pages/admin/Hero/HeroCreate.tsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { eventsAPI } from "../../../lib/api/events";
+import { heroAPI } from "../../../lib/api/hero";
 import { uploadAPI } from "../../../lib/api/upload";
-import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
-import { Upload, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, X, Loader2, Image } from "lucide-react";
 
-export default function EventCreate() {
+export default function HeroCreate() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     title: "",
+    subtitle: "",
     description: "",
-    content: "",
-    date: "",
-    duration: "",
-    capacity: "",
-    price: "",
-    location: "",
-    type: "WORKSHOP",
-    featured: false,
+    buttonText: "",
+    buttonLink: "",
+    color: "#3b82f6",
+    order: 0,
+    isActive: true,
   });
-
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value, type } = e.target;
+    setFormData({
+      ...formData,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+    });
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,7 +71,7 @@ export default function EventCreate() {
       const response = await uploadAPI.uploadImage(formData);
       return response.url;
     } catch (error) {
-      throw new Error("خطا در آپلود عکس");
+      throw new Error("خطا در آپلود تصویر");
     } finally {
       setUploading(false);
     }
@@ -77,73 +88,42 @@ export default function EventCreate() {
         imageUrl = await uploadImage(image);
       }
 
-      const eventData = {
-        title: formData.title,
-        description: formData.description,
-        content: formData.content || "",
-        date: new Date(formData.date).toISOString(),
-        duration: formData.duration,
-        capacity: Number(formData.capacity),
-        price: Number(formData.price),
-        location: formData.location,
-        type: formData.type,
-        featured: formData.featured,
+      const slideData = {
+        ...formData,
+        order: Number(formData.order),
         image: imageUrl,
       };
 
-      console.log("📤 ارسال داده:", eventData);
-
-      await eventsAPI.create(eventData);
-
-      alert("رویداد با موفقیت ایجاد شد!");
-
-      setFormData({
-        title: "",
-        description: "",
-        content: "",
-        date: "",
-        duration: "",
-        capacity: "",
-        price: "",
-        location: "",
-        type: "WORKSHOP",
-        featured: false,
-      });
-      handleRemoveImage();
+      await heroAPI.create(slideData);
+      navigate("/admin/hero");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ایجاد رویداد");
+      setError(err.response?.data?.error || "خطا در ایجاد اسلاید");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData({
-      ...formData,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    });
-  };
-
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={() => navigate("/admin/hero")}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          >
+            <ArrowLeft size={24} className="text-white" />
+          </button>
+          <h1 className="text-2xl font-bold text-white">
+            ➕ ایجاد اسلاید جدید
+          </h1>
+        </div>
+
         <LiquidGlassCard
           className="p-6 md:p-8"
           borderRadius="16px"
           blurIntensity="lg"
           glowIntensity="md"
         >
-          <h1 className="text-2xl font-bold text-white mb-6">
-            ایجاد رویداد جدید
-          </h1>
-
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
               {error}
@@ -154,7 +134,7 @@ export default function EventCreate() {
             {/* تصویر */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                تصویر رویداد
+                تصویر اسلاید
               </label>
               {imagePreview ? (
                 <div className="relative">
@@ -175,13 +155,10 @@ export default function EventCreate() {
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
                   <div className="flex flex-col items-center justify-center py-4">
                     {uploading ? (
-                      <>
-                        <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
-                        <p className="text-sm text-blue-400">در حال آپلود...</p>
-                      </>
+                      <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
                     ) : (
                       <>
-                        <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                        <Image className="w-10 h-10 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-400">
                           برای آپلود کلیک کنید
                         </p>
@@ -206,7 +183,7 @@ export default function EventCreate() {
             {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان رویداد
+                عنوان
               </label>
               <input
                 type="text"
@@ -218,94 +195,15 @@ export default function EventCreate() {
               />
             </div>
 
-            {/* 🔥 تاریخ با PersianDatePicker */}
+            {/* زیرعنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                تاریخ رویداد
-              </label>
-              <PersianDatePicker
-                value={formData.date}
-                onChange={(date) => setFormData({ ...formData, date })}
-                placeholder="انتخاب تاریخ و زمان"
-                includeTime={true}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
-
-            {/* مدت زمان */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                مدت زمان
+                زیرعنوان
               </label>
               <input
                 type="text"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                placeholder="مثلاً: ۲ ساعت"
-              />
-            </div>
-
-            {/* نوع رویداد */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                نوع رویداد
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-              >
-                <option value="WORKSHOP">کارگاه</option>
-                <option value="COURSE">دوره</option>
-                <option value="WEBINAR">وبینار</option>
-                <option value="CONFERENCE">کنفرانس</option>
-                <option value="MEETUP">دیدار</option>
-                <option value="BOOTCAMP">بوت‌کمپ</option>
-              </select>
-            </div>
-
-            {/* ظرفیت و قیمت */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  ظرفیت
-                </label>
-                <input
-                  type="number"
-                  name="capacity"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  قیمت (تومان)
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* مکان */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                مکان برگزاری
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
+                name="subtitle"
+                value={formData.subtitle}
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
               />
@@ -314,7 +212,7 @@ export default function EventCreate() {
             {/* توضیحات */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                توضیحات کوتاه
+                توضیحات
               </label>
               <textarea
                 name="description"
@@ -322,49 +220,113 @@ export default function EventCreate() {
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
-                required
               />
             </div>
 
-            {/* محتوای کامل */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                محتوای کامل
-              </label>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleChange}
-                rows={6}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
-              />
+            {/* دکمه */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  متن دکمه
+                </label>
+                <input
+                  type="text"
+                  name="buttonText"
+                  value={formData.buttonText}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="مثلاً: شروع کنید"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  لینک دکمه
+                </label>
+                <input
+                  type="text"
+                  name="buttonLink"
+                  value={formData.buttonLink}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="/services"
+                />
+              </div>
             </div>
 
-            {/* گزینه‌ها */}
+            {/* رنگ و ترتیب */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  رنگ پس‌زمینه
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    className="w-12 h-12 rounded-xl border border-white/20 cursor-pointer bg-transparent"
+                  />
+                  <input
+                    type="text"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  ترتیب
+                </label>
+                <input
+                  type="number"
+                  name="order"
+                  value={formData.order}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            {/* فعال */}
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-white/80 cursor-pointer">
                 <input
                   type="checkbox"
-                  name="featured"
-                  checked={formData.featured}
+                  name="isActive"
+                  checked={formData.isActive}
                   onChange={handleChange}
                   className="w-4 h-4 accent-blue-500"
                 />
-                رویداد ویژه
+                فعال
               </label>
             </div>
 
-            {/* دکمه ثبت */}
-            <GlassButton
-              type="submit"
-              fullWidth
-              variant="primary"
-              size="lg"
-              loading={loading || uploading}
-              disabled={loading || uploading}
-            >
-              {uploading ? "در حال آپلود عکس..." : "ایجاد رویداد"}
-            </GlassButton>
+            {/* دکمه‌ها */}
+            <div className="flex gap-3 pt-4">
+              <GlassButton
+                type="button"
+                variant="white"
+                size="md"
+                onClick={() => navigate("/admin/hero")}
+              >
+                انصراف
+              </GlassButton>
+              <GlassButton
+                type="submit"
+                variant="primary"
+                size="md"
+                loading={loading || uploading}
+                icon={<Save className="w-5 h-5" />}
+                iconPosition="left"
+                disabled={loading || uploading}
+              >
+                {uploading ? "در حال آپلود..." : "ایجاد اسلاید"}
+              </GlassButton>
+            </div>
           </form>
         </LiquidGlassCard>
       </div>

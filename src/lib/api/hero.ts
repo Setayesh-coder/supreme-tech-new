@@ -1,23 +1,38 @@
+// src/lib/api/hero.ts
 import { apiClient } from "./client";
 
 export const heroAPI = {
-  getAll: () => {
-    return apiClient.get("/hero");
+  getAll: async () => {
+    const response = await apiClient.get("/hero");
+    return response;
   },
 
-  getById: (id: string) => {
-    return apiClient.get(`/hero/${id}`);
+  getById: async (id: string) => {
+    const response = await apiClient.get(`/hero/${id}`);
+    return response;
   },
 
-  create: (data: any, token: string) => {
-    return apiClient.post("/hero", data, token);
+  create: async (data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.post("/hero", data, token);
+    return response;
   },
 
-  update: (id: string, data: any, token: string) => {
-    return apiClient.put(`/hero/${id}`, data, token);
+  update: async (id: string, data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.put(`/hero/${id}`, data, token);
+    return response;
   },
 
-  delete: (id: string, token: string) => {
-    return apiClient.delete(`/hero/${id}`, token);
+  delete: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.delete(`/hero/${id}`, token);
+    return response;
+  },
+
+  reorder: async (items: { id: string; order: number }[]) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.put("/hero/reorder", { items }, token);
+    return response;
   },
 };

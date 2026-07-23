@@ -1,79 +1,116 @@
-import { useEffect, useState } from "react";
-import { heroAPI } from "../../../lib/api/hero";
+// src/pages/admin/Hero/HeroList.tsx
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
+import { GlassButton } from "../../../components/ui/GlassButton";
+import { heroAPI } from "../../../lib/api/hero";
+// import { uploadAPI } from "../../../lib/api/upload";
 import {
   Plus,
   Edit,
   Trash2,
-  //   Image,
-  MoveUp,
-  MoveDown,
-  //   Eye,
-  //   EyeOff,
+  Loader2,
+  Image,
+  Check,
+  X,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 interface HeroSlide {
   id: string;
   title: string;
   subtitle?: string;
+  description?: string;
   image: string;
   buttonText?: string;
   buttonLink?: string;
+  color?: string;
   order: number;
   isActive: boolean;
+  createdAt: string;
 }
 
 export default function HeroList() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const token = localStorage.getItem("token") || "";
 
   useEffect(() => {
-    const fetchSlides = async () => {
-      try {
-        const data = await heroAPI.getAll();
-        setSlides(data || []);
-      } catch (err) {
-        setError("خطا در دریافت اسلایدها");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSlides();
   }, []);
 
+  const fetchSlides = async () => {
+    try {
+      setLoading(true);
+      const data = await heroAPI.getAll();
+      setSlides(data);
+    } catch (err) {
+      setError("خطا در دریافت اسلایدها");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("آیا از حذف این اسلاید مطمئن هستید؟")) return;
-
     try {
-      await heroAPI.delete(id, token);
+      await heroAPI.delete(id);
       setSlides(slides.filter((s) => s.id !== id));
     } catch (err) {
       alert("خطا در حذف اسلاید");
     }
   };
 
-  const handleMove = (id: string, direction: "up" | "down") => {
+  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      await heroAPI.update(id, { isActive: !currentStatus });
+      setSlides(
+        slides.map((s) =>
+          s.id === id ? { ...s, isActive: !currentStatus } : s,
+        ),
+      );
+    } catch (err) {
+      alert("خطا در تغییر وضعیت");
+    }
+  };
+
+  const handleMove = async (id: string, direction: "up" | "down") => {
     const index = slides.findIndex((s) => s.id === id);
-    if (direction === "up" && index === 0) return;
-    if (direction === "down" && index === slides.length - 1) return;
+    if (
+      (direction === "up" && index === 0) ||
+      (direction === "down" && index === slides.length - 1)
+    )
+      return;
 
     const newSlides = [...slides];
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    [newSlides[index], newSlides[newIndex]] = [
-      newSlides[newIndex],
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    [newSlides[index], newSlides[targetIndex]] = [
+      newSlides[targetIndex],
       newSlides[index],
     ];
-    setSlides(newSlides);
+
+    // به‌روزرسانی order
+    const updatedSlides = newSlides.map((s, i) => ({ ...s, order: i }));
+    setSlides(updatedSlides);
+
+    try {
+      await heroAPI.reorder(
+        updatedSlides.map((s) => ({ id: s.id, order: s.order })),
+      );
+    } catch (err) {
+      console.error("خطا در ذخیره ترتیب:", err);
+      fetchSlides();
+    }
   };
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
         </div>
       </AdminLayout>
     );
@@ -84,15 +121,21 @@ export default function HeroList() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-white">
               🎨 مدیریت اسلایدها
             </h1>
-            <p className="text-white/60 mt-1">اسلایدهای صفحه اصلی</p>
+            <p className="text-white/60 text-sm">اسلایدهای صفحه اصلی</p>
           </div>
-          <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl transition-all duration-200 flex items-center gap-2">
-            <Plus size={18} />
-            اسلاید جدید
-          </button>
+          <Link to="/admin/hero/create">
+            <GlassButton
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4" />}
+              iconPosition="left"
+            >
+              اسلاید جدید
+            </GlassButton>
+          </Link>
         </div>
 
         {error && (
@@ -101,63 +144,121 @@ export default function HeroList() {
           </div>
         )}
 
-        <div className="space-y-4">
-          {slides.map((slide) => (
+        <div className="grid grid-cols-1 gap-4">
+          {slides.map((slide, index) => (
             <LiquidGlassCard
               key={slide.id}
-              className="p-4 hover:scale-[1.01] transition-all duration-300"
+              className="p-4"
               borderRadius="16px"
               blurIntensity="sm"
               glowIntensity="sm"
-              shadowIntensity="md"
             >
-              <div className="flex items-center gap-6">
-                <div className="w-32 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                {/* تصویر */}
+                <div className="w-32 h-20 bg-white/5 rounded-lg overflow-hidden shrink-0">
                   <img
                     src={slide.image}
                     alt={slide.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/128x80?text=No+Image";
+                    }}
                   />
                 </div>
 
+                {/* اطلاعات */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-medium">{slide.title}</h3>
-                  {slide.subtitle && (
-                    <p className="text-white/40 text-sm">{slide.subtitle}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-white/40">
-                      ترتیب: {slide.order}
-                    </span>
-                    <span
-                      className={`text-xs ${slide.isActive ? "text-green-400" : "text-red-400"}`}
-                    >
-                      {slide.isActive ? "فعال" : "غیرفعال"}
-                    </span>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">
+                        {slide.title}
+                      </h3>
+                      {slide.subtitle && (
+                        <p className="text-sm text-gray-400">
+                          {slide.subtitle}
+                        </p>
+                      )}
+                      {slide.description && (
+                        <p className="text-sm text-gray-500 line-clamp-1">
+                          {slide.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          slide.isActive
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
+                        {slide.isActive ? (
+                          <span className="flex items-center gap-1">
+                            <Check className="w-3 h-3" /> فعال
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <X className="w-3 h-3" /> غیرفعال
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ترتیب: {slide.order + 1}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+                    {slide.buttonText && <span>🔗 {slide.buttonText}</span>}
+                    {slide.color && (
+                      <span className="flex items-center gap-1">
+                        🎨
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/10"
+                          style={{ backgroundColor: slide.color }}
+                        />
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* عملیات */}
+                <div className="flex flex-wrap items-center gap-1">
                   <button
                     onClick={() => handleMove(slide.id, "up")}
-                    className="p-2 bg-white/10 hover:bg-white/20 text-white/60 rounded-lg transition-all duration-200"
+                    disabled={index === 0}
+                    className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <MoveUp size={16} />
+                    <ArrowUp size={18} />
                   </button>
                   <button
                     onClick={() => handleMove(slide.id, "down")}
-                    className="p-2 bg-white/10 hover:bg-white/20 text-white/60 rounded-lg transition-all duration-200"
+                    disabled={index === slides.length - 1}
+                    className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <MoveDown size={16} />
-                  </button>
-                  <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all duration-200">
-                    <Edit size={16} />
+                    <ArrowDown size={18} />
                   </button>
                   <button
-                    onClick={() => handleDelete(slide.id)}
-                    className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all duration-200"
+                    onClick={() => handleToggleStatus(slide.id, slide.isActive)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      slide.isActive
+                        ? "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400"
+                        : "bg-green-500/20 hover:bg-green-500/30 text-green-400"
+                    }`}
                   >
-                    <Trash2 size={16} />
+                    {slide.isActive ? <X size={18} /> : <Check size={18} />}
+                  </button>
+                  <Link to={`/admin/hero/edit/${slide.id}`}>
+                    <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
+                      <Edit size={18} />
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(slide.id)}
+                    className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </div>
@@ -166,9 +267,10 @@ export default function HeroList() {
         </div>
 
         {slides.length === 0 && (
-          <div className="text-center py-12 text-white/40">
-            <p className="text-2xl mb-2">🎨</p>
-            <p>هنوز اسلایدی ایجاد نشده است</p>
+          <div className="text-center py-12 text-gray-500">
+            <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="text-lg">هیچ اسلایدی ایجاد نشده است</p>
+            <p className="text-sm text-gray-600">اولین اسلاید را اضافه کنید</p>
           </div>
         )}
       </div>

@@ -23,7 +23,15 @@ export default function AdminLogin() {
 
       if (result.token) {
         authAPI.saveToken(result.token);
-        localStorage.setItem("admin", JSON.stringify(result.admin));
+        localStorage.setItem(
+          "admin",
+          JSON.stringify({
+            id: result.admin.id,
+            name: result.admin.name,
+            phone: result.admin.phone,
+            role: result.admin.role || "ADMIN",
+          }),
+        );
         navigate("/admin/dashboard");
       } else {
         setError(result.error || "خطا در ورود");

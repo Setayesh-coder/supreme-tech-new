@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { Building2, Loader2 } from "lucide-react";
 
-// ========== Interface ==========
 interface Partner {
   id: string;
   name: string;
@@ -18,15 +17,15 @@ export default function Partners() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ========== دریافت از API ==========
   useEffect(() => {
     const fetchPartners = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        // ✅ اصلاح: حذف /api اضافی
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/partners?isActive=true`,
+          `${import.meta.env.VITE_API_URL}/partners?isActive=true`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -43,7 +42,6 @@ export default function Partners() {
       } catch (err) {
         console.error("خطا در دریافت همکاران:", err);
         setError("خطا در دریافت اطلاعات همکاران");
-        // استفاده از داده‌های پیش‌فرض در صورت خطا
         setPartners([
           {
             id: "1",
@@ -78,7 +76,6 @@ export default function Partners() {
     fetchPartners();
   }, []);
 
-  // ========== نمایش لودینگ ==========
   if (loading) {
     return (
       <section className="py-8 px-3 md:py-16 md:px-6">
@@ -92,7 +89,6 @@ export default function Partners() {
     );
   }
 
-  // ========== نمایش خطا ==========
   if (error && partners.length === 0) {
     return (
       <section className="py-8 px-3 md:py-16 md:px-6">
@@ -103,11 +99,9 @@ export default function Partners() {
     );
   }
 
-  // ========== رندر اصلی ==========
   return (
     <section className="py-8 px-3 md:py-16 md:px-6">
       <div className="container mx-auto">
-        {/* Header */}
         <div className="text-center mb-4 md:mb-8">
           <div className="flex justify-center">
             <LiquidGlassCard
@@ -132,7 +126,6 @@ export default function Partners() {
           </p>
         </div>
 
-        {/* لیست همکاران */}
         {partners.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />

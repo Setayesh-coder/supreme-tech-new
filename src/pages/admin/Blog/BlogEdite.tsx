@@ -1,23 +1,64 @@
-// src/pages/admin/Blog/BlogCreate.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { blogAPI } from "../../../lib/api/blog";
+// src/pages/admin/Blog/BlogEdit.tsx
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { BlogEditor } from "../../../components/admin/BlogEditor";
-import { ArrowLeft, Save, X, Plus } from "lucide-react";
+import { blogAPI } from "../../../lib/api/blog";
+import { uploadAPI } from "../../../lib/api/upload";
+import { ArrowLeft, Save, X, Upload, Loader2, Plus } from "lucide-react";
 
-export default function BlogCreate() {
+export default function BlogEdit() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [published, setPublished] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [currentImage, setCurrentImage] = useState<string>("");
+
+  // ========== دریافت اطلاعات پست ==========
+  useEffect(() => {
+    const fetchPost = async () => {
+      if (!id) return;
+      try {
+        const data = await blogAPI.getById(id);
+        setTitle(data.title);
+        setContent(data.content || "");
+        setExcerpt(data.excerpt || "");
+        setTags(data.tags?.map((t: any) => t.name) || []);
+        setPublished(data.published || false);
+        if (data.coverImage) {
+          setCurrentImage(data.coverImage);
+          setImagePreview(data.coverImage);
+        }
+      } catch (err) {
+        setError("خطا در دریافت اطلاعات پست");
+      } finally {
+        setLoading(false);
+      }
+
+      // src/pages/admin/Blog/BlogEdit.tsx
+      // در قسمت fetchPost:
+
+      const data = await blogAPI.getById(id);
+      console.log("📥 کل داده:", data);
+      console.log("📥 محتوای دریافتی:", data.content);
+      console.log("📥 نوع محتوا:", typeof data.content);
+
+      setContent(data.content || "");
+    };
+    fetchPost();
+  }, [id]);
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -30,28 +71,84 @@ export default function BlogCreate() {
     setTags(tags.filter((t) => t !== tag));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("لطفاً یک فایل تصویری انتخاب کنید");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
+        return;
+      }
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setError("");
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(currentImage || "");
+    const input = document.getElementById("image-input") as HTMLInputElement;
+    if (input) input.value = "";
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      setUploading(true);
+      const response = await uploadAPI.uploadImage(formData);
+      return response.url;
+    } catch (error) {
+      throw new Error("خطا در آپلود عکس");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError("");
 
     try {
-      const data = {
-        title,
-        content,
-        excerpt,
-        tags: tags.map((name) => ({ name })),
-        published,
-      };
+      let imageUrl = currentImage;
 
-      await blogAPI.create(data);
+      if (image) {
+        imageUrl = await uploadImage(image);
+      }
+
+      await blogAPI.update(id!, {
+        title,
+        excerpt,
+        content,
+        coverImage: imageUrl,
+        published,
+        tags: tags.map((name) => ({ name })),
+      });
+
       navigate("/admin/blog");
-    } catch (err: any) {
-      setError(err.error || "خطا در ایجاد پست");
+    } catch (err) {
+      setError("خطا در ویرایش پست");
+      console.error(err);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -63,7 +160,7 @@ export default function BlogCreate() {
           >
             <ArrowLeft size={24} className="text-white" />
           </button>
-          <h1 className="text-2xl font-bold text-white">✏️ ایجاد پست جدید</h1>
+          <h1 className="text-2xl font-bold text-white">✏️ ویرایش پست</h1>
         </div>
 
         <LiquidGlassCard
@@ -79,6 +176,48 @@ export default function BlogCreate() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* تصویر کاور */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                تصویر کاور
+              </label>
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="پیش‌نمایش"
+                    className="w-full h-48 object-cover rounded-xl"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-400">
+                      برای آپلود کلیک کنید
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PNG, JPG, WEBP (حداکثر ۵MB)
+                    </p>
+                  </div>
+                  <input
+                    id="image-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
             {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
@@ -154,7 +293,7 @@ export default function BlogCreate() {
 
             {/* محتوا */}
             <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">
+              <label className="block text-sm font-medium text-white/80 mb-2">
                 محتوا
               </label>
               <BlogEditor value={content} onChange={setContent} />
@@ -169,7 +308,7 @@ export default function BlogCreate() {
                   onChange={(e) => setPublished(e.target.checked)}
                   className="w-4 h-4 accent-blue-500"
                 />
-                منتشر شود
+                منتشر شده
               </label>
             </div>
 
@@ -187,12 +326,12 @@ export default function BlogCreate() {
                 type="submit"
                 variant="primary"
                 size="md"
-                loading={loading}
+                loading={submitting || uploading}
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
-                disabled={loading}
+                disabled={submitting || uploading}
               >
-                {loading ? "در حال ایجاد..." : "ایجاد پست"}
+                {uploading ? "در حال آپلود..." : "ذخیره تغییرات"}
               </GlassButton>
             </div>
           </form>

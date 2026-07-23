@@ -10,10 +10,10 @@ import {
   Users,
   Clock,
   Star,
-  Loader2,
   Ticket,
   ChevronLeft,
   ImageOff,
+  Flame,
 } from "lucide-react";
 
 interface Event {
@@ -35,8 +35,70 @@ interface Event {
   };
 }
 
-// 🔥 آدرس پایه برای عکس‌ها
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
+
+const getImageUrl = (imagePath?: string) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith("http")) return imagePath;
+  return `${BASE_URL}${imagePath}`;
+};
+
+const getEventTypeLabel = (type: string) => {
+  const types: { [key: string]: string } = {
+    WORKSHOP: "کارگاه",
+    COURSE: "دوره",
+    WEBINAR: "وبینار",
+    CONFERENCE: "کنفرانس",
+    MEETUP: "دیدار",
+    BOOTCAMP: "بوت‌کمپ",
+  };
+  return types[type] || type;
+};
+
+const getEventTypeColor = (type: string) => {
+  const colors: { [key: string]: string } = {
+    WORKSHOP: "from-blue-500 to-cyan-500",
+    COURSE: "from-green-500 to-emerald-500",
+    WEBINAR: "from-purple-500 to-pink-500",
+    CONFERENCE: "from-orange-500 to-red-500",
+    MEETUP: "from-yellow-500 to-amber-500",
+    BOOTCAMP: "from-red-500 to-rose-500",
+  };
+  return colors[type] || "from-gray-500 to-gray-600";
+};
+
+// 🔥 چند روز تا برگزاری رویداد مانده — برای نمایش نشان شمارش‌معکوس
+const getDaysLeft = (dateString: string) => {
+  const diffMs = new Date(dateString).getTime() - Date.now();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+};
+
+// 🔥 رنگ نوار ظرفیت بر اساس درصد پر شدن (اطلاعات واقعی، نه صرفاً تزیین)
+const getCapacityColor = (ratio: number) => {
+  if (ratio >= 0.9) return "bg-red-400";
+  if (ratio >= 0.6) return "bg-amber-400";
+  return "bg-emerald-400";
+};
+
+function EventCardSkeleton() {
+  return (
+    <LiquidGlassCard
+      className="overflow-hidden h-full"
+      borderRadius="16px"
+      blurIntensity="sm"
+      glowIntensity="sm"
+    >
+      <div className="h-48 bg-white/5 animate-pulse" />
+      <div className="p-6 space-y-3">
+        <div className="h-3 w-1/2 bg-white/10 rounded animate-pulse" />
+        <div className="h-5 w-3/4 bg-white/10 rounded animate-pulse" />
+        <div className="h-3 w-full bg-white/10 rounded animate-pulse" />
+        <div className="h-3 w-2/3 bg-white/10 rounded animate-pulse" />
+        <div className="h-9 w-full bg-white/10 rounded-full animate-pulse mt-4" />
+      </div>
+    </LiquidGlassCard>
+  );
+}
 
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -48,9 +110,7 @@ export default function Events() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const data = await eventsAPI.getAll({
-          limit: 20,
-        });
+        const data = await eventsAPI.getAll({ limit: 20 });
         const activeEvents = (data.events || []).filter(
           (event: Event) => event.isActive === true,
         );
@@ -66,9 +126,7 @@ export default function Events() {
 
   const filteredEvents = events.filter((event) => {
     if (filter === "featured") return event.featured;
-    if (filter === "upcoming") {
-      return new Date(event.date) > new Date();
-    }
+    if (filter === "upcoming") return new Date(event.date) > new Date();
     return true;
   });
 
@@ -81,52 +139,9 @@ export default function Events() {
     });
   };
 
-  const getEventTypeLabel = (type: string) => {
-    const types: { [key: string]: string } = {
-      WORKSHOP: "کارگاه",
-      COURSE: "دوره",
-      WEBINAR: "وبینار",
-      CONFERENCE: "کنفرانس",
-      MEETUP: "دیدار",
-      BOOTCAMP: "بوت‌کمپ",
-    };
-    return types[type] || type;
-  };
-
-  const getEventTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      WORKSHOP: "from-blue-500 to-cyan-500",
-      COURSE: "from-green-500 to-emerald-500",
-      WEBINAR: "from-purple-500 to-pink-500",
-      CONFERENCE: "from-orange-500 to-red-500",
-      MEETUP: "from-yellow-500 to-amber-500",
-      BOOTCAMP: "from-red-500 to-rose-500",
-    };
-    return colors[type] || "from-gray-500 to-gray-600";
-  };
-
-  // 🔥 تابع ساخت آدرس کامل عکس
-  const getImageUrl = (imagePath?: string) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return imagePath;
-    return `${BASE_URL}${imagePath}`;
-  };
-
-  // 🔥 تابع مدیریت خطای عکس
   const handleImageError = (eventId: string) => {
     setImageErrors((prev) => ({ ...prev, [eventId]: true }));
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-          <span className="text-gray-400">بارگذاری رویدادها...</span>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -218,7 +233,13 @@ export default function Events() {
           </button>
         </div>
 
-        {filteredEvents.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredEvents.length === 0 ? (
           <div className="flex justify-center items-center py-20">
             <LiquidGlassCard
               className="p-12 text-center max-w-md"
@@ -244,17 +265,20 @@ export default function Events() {
             {filteredEvents.map((event) => {
               const imageUrl = getImageUrl(event.image);
               const hasError = imageErrors[event.id];
+              const daysLeft = getDaysLeft(event.date);
+              const enrolled = event._count?.enrollments || 0;
+              const ratio = event.capacity > 0 ? enrolled / event.capacity : 0;
+              const isFull = enrolled >= event.capacity && event.capacity > 0;
 
               return (
                 <LiquidGlassCard
                   key={event.id}
-                  className="overflow-hidden h-full group"
+                  className="overflow-hidden h-full group flex flex-col"
                   borderRadius="16px"
                   blurIntensity="sm"
                   glowIntensity="sm"
                   hoverScale={1.03}
                 >
-                  {/* 🔥 تصویر با مدیریت خطا */}
                   {event.image && imageUrl && !hasError ? (
                     <div className="relative overflow-hidden h-48">
                       <img
@@ -263,7 +287,8 @@ export default function Events() {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={() => handleImageError(event.id)}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
                       <div className="absolute top-3 right-3">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium text-white bg-gradient-to-r ${getEventTypeColor(
@@ -273,6 +298,7 @@ export default function Events() {
                           {getEventTypeLabel(event.type)}
                         </span>
                       </div>
+
                       {event.featured && (
                         <div className="absolute top-3 left-3">
                           <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/80 text-white backdrop-blur-sm flex items-center gap-1">
@@ -281,15 +307,27 @@ export default function Events() {
                           </span>
                         </div>
                       )}
+
+                      {/* 🔥 نشان شمارش‌معکوس — فقط وقتی معنادار است نمایش داده می‌شود */}
+                      {daysLeft >= 0 && daysLeft <= 14 && (
+                        <div className="absolute bottom-3 right-3">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/50 text-orange-300 backdrop-blur-sm flex items-center gap-1 border border-orange-400/30">
+                            <Flame className="w-3 h-3" />
+                            {daysLeft === 0
+                              ? "امروز برگزار می‌شود"
+                              : `${daysLeft} روز مانده`}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="h-48 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-2">
                       <ImageOff className="w-12 h-12 text-white/20" />
-                      <span className="text-white/10 text-sm">بدون تصویر</span>
+                      <span className="text-white/30 text-sm">بدون تصویر</span>
                     </div>
                   )}
 
-                  <div className="p-6 space-y-3">
+                  <div className="p-6 space-y-3 flex flex-col flex-1">
                     <div className="flex items-center gap-4 text-sm text-gray-400">
                       <span className="flex items-center gap-1">
                         <Calendar size={14} />
@@ -311,20 +349,35 @@ export default function Events() {
                       {event.description}
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 pt-2">
-                      {event.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin size={14} />
-                          {event.location}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Users size={14} />
-                        {event._count?.enrollments || 0} / {event.capacity}
+                    {event.location && (
+                      <span className="flex items-center gap-1 text-sm text-gray-400">
+                        <MapPin size={14} />
+                        {event.location}
                       </span>
+                    )}
+
+                    {/* 🔥 نوار ظرفیت — رنگ بر اساس میزان پر شدن تغییر می‌کند */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <Users size={12} />
+                          {enrolled} / {event.capacity} نفر
+                        </span>
+                        {isFull && (
+                          <span className="text-red-400 font-medium">
+                            تکمیل ظرفیت
+                          </span>
+                        )}
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${getCapacityColor(ratio)}`}
+                          style={{ width: `${Math.min(ratio, 1) * 100}%` }}
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-between pt-4 mt-auto border-t border-white/5">
                       <span className="text-lg font-bold text-white">
                         {event.price === 0 ? (
                           <span className="text-green-400 text-sm">رایگان</span>
@@ -333,17 +386,31 @@ export default function Events() {
                         )}
                       </span>
 
-                      <Link to={`/events/${event.slug}`}>
+                      {event.slug ? (
+                        <Link to={`/events/${event.slug}`}>
+                          <GlassButton
+                            variant="primary"
+                            size="sm"
+                            disabled={isFull}
+                            icon={<Ticket className="w-4 h-4" />}
+                            iconPosition="left"
+                            className="!rounded-full !px-4 !py-1.5"
+                          >
+                            {isFull ? "تکمیل" : "ثبت نام"}
+                          </GlassButton>
+                        </Link>
+                      ) : (
                         <GlassButton
+                          disabled
                           variant="primary"
                           size="sm"
                           icon={<Ticket className="w-4 h-4" />}
                           iconPosition="left"
-                          className="rounded-full px-4 py-1.5"
+                          className="!rounded-full !px-4 !py-1.5"
                         >
                           ثبت نام
                         </GlassButton>
-                      </Link>
+                      )}
                     </div>
                   </div>
                 </LiquidGlassCard>

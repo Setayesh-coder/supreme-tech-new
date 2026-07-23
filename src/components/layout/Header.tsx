@@ -70,13 +70,13 @@ export default function Header() {
                 glowIntensity="sm"
                 className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300"
               >
-                <a href="/signup">
+                <a href="/profile">
                   <button
                     className="px-6 py-2 text-white font-bold flex items-center gap-2 justify-center 
                     bg-gradient-to-r from-blue-500/80 to-blue-600/80 
                     backdrop-blur-sm border border-blue-400/30 text-sm"
                   >
-                    شروع رایگان
+                    ورود
                   </button>
                 </a>
               </LiquidGlassCard>
@@ -126,13 +126,13 @@ export default function Header() {
                 glowIntensity="sm"
                 className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300 mt-2"
               >
-                <a href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                <a href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
                   <button
                     className="w-full py-3 text-white font-bold flex items-center gap-2 justify-center 
                     bg-gradient-to-r from-blue-500/80 to-blue-600/80 
                     backdrop-blur-sm border border-blue-400/30 text-sm"
                   >
-                    شروع رایگان
+                    ورود
                   </button>
                 </a>
               </LiquidGlassCard>

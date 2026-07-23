@@ -1,38 +1,68 @@
+// src/lib/api/enrollments.ts
 import { apiClient } from "./client";
 
 export const enrollmentsAPI = {
-  // ثبت نام در رویداد (عمومی)
-  create: (data: {
-    eventId: string;
-    name: string;
-    email: string;
-    phone: string;
-    message?: string;
-  }) => {
-    return apiClient.post("/enrollments", data);
+  // دریافت ثبت‌نام‌های کاربر جاری
+  getMyEnrollments: async () => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.get("/enrollments/my", token);
+    return response;
   },
 
-  // دریافت همه ثبت‌نام‌ها (ادمین)
-  getAll: (params?: { eventId?: string; status?: string }, token?: string) => {
-    const query = new URLSearchParams(params as any).toString();
-    return apiClient.get(`/enrollments${query ? "?" + query : ""}`, token);
+  // ثبت‌نام در رویداد
+  create: async (data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.post("/enrollments", data, token);
+    return response;
   },
 
-  // دریافت یک ثبت‌نام (ادمین)
-  getById: (id: string, token: string) => {
-    return apiClient.get(`/enrollments/${id}`, token);
+  // 🔥 پرداخت
+  processPayment: async (enrollmentId: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.post(
+      `/enrollments/${enrollmentId}/pay`,
+      {},
+      token,
+    );
+    return response;
   },
 
-  // تغییر وضعیت (ادمین)
-  updateStatus: (
-    id: string,
-    data: { status: string; notes?: string },
-    token: string,
-  ) => {
-    return apiClient.put(`/enrollments/${id}`, data, token);
+  // 🔥 دریافت لینک جلسه
+  getMeetingLink: async (enrollmentId: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.get(
+      `/enrollments/${enrollmentId}/meeting`,
+      token,
+    );
+    return response;
   },
 
-  delete: (id: string, token: string) => {
-    return apiClient.delete(`/enrollments/${id}`, token);
+  // به‌روزرسانی وضعیت
+  updateStatus: async (id: string, status: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.patch(
+      `/enrollments/${id}/status`,
+      { status },
+      token,
+    );
+    return response;
+  },
+
+  // به‌روزرسانی وضعیت پرداخت
+  updatePayment: async (id: string, status: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.patch(
+      `/enrollments/${id}/payment`,
+      { status },
+      token,
+    );
+    return response;
+  },
+
+  // لغو ثبت‌نام
+  cancel: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.delete(`/enrollments/${id}`, token);
+    return response;
   },
 };

@@ -1,5 +1,5 @@
 import { type ReactNode, type ButtonHTMLAttributes } from "react";
-import { LiquidGlassCard } from "./LiquidGlassCard";
+// import { LiquidGlassCard } from "./LiquidGlassCard";
 import { cn } from "../../lib/utils";
 
 interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -64,62 +64,63 @@ export function GlassButton({
     : "";
 
   return (
-    <LiquidGlassCard
-      // draggable={false}
-      blurIntensity="lg"
-      borderRadius="16px"
-      glowIntensity="sm"
+    // <LiquidGlassCard
+    //   // draggable={false}
+    //   blurIntensity="lg"
+    //   borderRadius="16px"
+    //   glowIntensity="sm"
+    //   className={cn(
+    //     "overflow-hidden group cursor-pointer transition-all duration-300",
+    //     !isDisabled && "hover:scale-105",
+    //     fullWidth && "w-full",
+    //     className,
+    //   )}
+    // >
+    <button
+      onClick={!isDisabled ? onClick : undefined}
+      disabled={isDisabled}
       className={cn(
-        "overflow-hidden group cursor-pointer transition-all duration-300",
-        !isDisabled && "hover:scale-105",
+        "font-bold flex items-center gap-2 justify-center backdrop-blur-sm",
+        "transition-all duration-300",
+        "rounded-xl",
+        sizeClasses[size],
+        variantClasses[variant],
         fullWidth && "w-full",
+        disabledClasses,
         className,
       )}
+      {...props}
     >
-      <button
-        onClick={!isDisabled ? onClick : undefined}
-        disabled={isDisabled}
-        className={cn(
-          "font-bold flex items-center gap-2 justify-center backdrop-blur-sm",
-          "transition-all duration-300",
-          sizeClasses[size],
-          variantClasses[variant],
-          fullWidth && "w-full",
-          disabledClasses,
-          className,
-        )}
-        {...props}
-      >
-        {loading ? (
-          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        ) : (
-          <>
-            {icon && iconPosition === "left" && (
-              <span
-                className={cn(
-                  "group-hover:rotate-12 transition-transform",
-                  iconClassName,
-                )}
-              >
-                {icon}
-              </span>
-            )}
+      {loading ? (
+        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      ) : (
+        <>
+          {icon && iconPosition === "left" && (
+            <span
+              className={cn(
+                "group-hover:rotate-12 transition-transform",
+                iconClassName,
+              )}
+            >
+              {icon}
+            </span>
+          )}
 
-            {children}
+          {children}
 
-            {icon && iconPosition === "right" && (
-              <span
-                className={cn(
-                  "group-hover:rotate-12 transition-transform",
-                  iconClassName,
-                )}
-              >
-                {icon}
-              </span>
-            )}
-          </>
-        )}
-      </button>
-    </LiquidGlassCard>
+          {icon && iconPosition === "right" && (
+            <span
+              className={cn(
+                "group-hover:rotate-12 transition-transform",
+                iconClassName,
+              )}
+            >
+              {icon}
+            </span>
+          )}
+        </>
+      )}
+    </button>
+    // </LiquidGlassCard>
   );
 }

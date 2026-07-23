@@ -1,27 +1,53 @@
+// src/lib/api/users.ts
 import { apiClient } from "./client";
 
 export const usersAPI = {
-  // دریافت همه کاربران (ادمین)
-  getAll: (
-    params?: { page?: number; limit?: number; search?: string },
-    token?: string,
-  ) => {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) => {
+    const token = localStorage.getItem("token") || "";
     const query = new URLSearchParams(params as any).toString();
-    return apiClient.get(`/users${query ? "?" + query : ""}`, token);
+    const response = await apiClient.get(
+      `/users${query ? "?" + query : ""}`,
+      token,
+    );
+    return response;
   },
 
-  // دریافت کاربر با شماره تلفن
-  getByPhone: (phone: string, token: string) => {
-    return apiClient.get(`/users/${phone}`, token);
+  getById: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.get(`/users/${id}`, token);
+    return response;
   },
 
-  // بروزرسانی کاربر
-  update: (id: string, data: any, token: string) => {
-    return apiClient.put(`/users/${id}`, data, token);
+  create: async (data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.post("/users", data, token);
+    return response;
   },
 
-  // حذف کاربر
-  delete: (id: string, token: string) => {
-    return apiClient.delete(`/users/${id}`, token);
+  update: async (id: string, data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.put(`/users/${id}`, data, token);
+    return response;
+  },
+
+  // 🔥 تغییر نقش کاربر
+  updateRole: async (id: string, role: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.patch(
+      `/users/${id}/role`,
+      { role },
+      token,
+    );
+    return response;
+  },
+
+  delete: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.delete(`/users/${id}`, token);
+    return response;
   },
 };
