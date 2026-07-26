@@ -23,7 +23,6 @@ export default function Partners() {
         setLoading(true);
         setError(null);
 
-        // ✅ اصلاح: حذف /api اضافی
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/partners?isActive=true`,
           {
@@ -145,26 +144,24 @@ export default function Partners() {
                   blurIntensity="lg"
                   glowIntensity="sm"
                   borderRadius="9999px"
-                  className="w-16 h-16 md:w-28 md:h-28 lg:w-32 lg:h-32 flex flex-col items-center justify-center group hover:scale-105 transition-all duration-300"
+                  className="w-14 h-14 md:w-20 md:h-20 lg:w-24 lg:h-24 flex flex-col items-center justify-center group hover:scale-105 transition-all duration-300"
                   hoverScale={1.05}
                 >
                   {partner.logo ? (
                     <img
                       src={partner.logo}
                       alt={partner.name}
-                      className="w-8 h-8 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                      className="w-7 h-7 md:w-10 md:h-10 lg:w-12 lg:h-12 object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
                   ) : (
-                    <Building2 className="w-5 h-5 md:w-10 md:h-10 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                    <Building2 className="w-5 h-5 md:w-7 md:h-7 text-gray-500 group-hover:text-blue-400 transition-colors" />
                   )}
                 </LiquidGlassCard>
-                <div className="text-gray-400 text-[8px] md:text-xs group-hover:text-blue-400 transition mt-1 text-center">
-                  {partner.name.length > 12
-                    ? partner.name.slice(0, 10) + "..."
-                    : partner.name}
+                <div className="text-gray-400 text-[8px] md:text-xs group-hover:text-blue-400 transition mt-1 text-center max-w-[60px] md:max-w-[80px] lg:max-w-[96px] truncate">
+                  {partner.name}
                 </div>
               </a>
             ))}

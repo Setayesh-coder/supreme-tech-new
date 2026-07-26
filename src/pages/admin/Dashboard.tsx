@@ -10,6 +10,7 @@ import {
   TrendingUp,
   ArrowUp,
 } from "lucide-react";
+import { DashboardSkeleton } from "../../components/skeletons/DashboardSkeleton";
 
 interface Stats {
   totalPosts: number;
@@ -23,6 +24,11 @@ export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem("token") || "";
+
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = user?.role === "ADMIN" || user?.type === "admin";
+  // const isEmployee = user?.type === "employee" || user?.role === "EMPLOYEE";
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -75,7 +81,9 @@ export default function Dashboard() {
       change: "+27%",
     },
   ];
-
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
   if (loading) {
     return (
       <AdminLayout>
@@ -90,7 +98,9 @@ export default function Dashboard() {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-white">📊 داشبورد</h1>
+          <h1 className="text-3xl font-bold text-white">
+            {isAdmin ? "📊 داشبورد ادمین" : "📊 داشبورد کارمند"}
+          </h1>
           <p className="text-white/60 mt-1">خلاصه آماری سیستم</p>
         </div>
 

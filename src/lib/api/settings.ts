@@ -1,11 +1,39 @@
 // src/lib/api/settings.ts
 import { apiClient } from "./client";
 
+// 🔥 مقادیر پیش‌فرض
+const defaultSettings = {
+  siteName: "Supreme Tech",
+  siteDescription: "پیشرو در توسعه AI Agent های هوشمند",
+  contactEmail: "info@supremetech.ir",
+  contactPhone: "09121234567",
+  contactAddress: "تهران، بزرگراه اشرفی اصفهانی، مجتمع نیایش",
+  contactMapLink: "https://maps.app.goo.gl/3JnB1ePWY57CiHkf6",
+  workingHours: "شنبه تا چهارشنبه ۹ الی ۱۸",
+  socialLinks: {
+    instagram: "",
+    twitter: "",
+    linkedin: "",
+    telegram: "",
+  },
+  seo: {
+    title: "",
+    description: "",
+    keywords: "",
+  },
+  maintenance: false,
+};
+
 export const settingsAPI = {
   getAll: async () => {
-    const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get("/settings", token);
-    return response;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await apiClient.get("/settings", token);
+      return response;
+    } catch (error) {
+      console.warn("⚠️ خطا در دریافت تنظیمات، استفاده از مقادیر پیش‌فرض");
+      return defaultSettings;
+    }
   },
 
   update: async (data: any) => {

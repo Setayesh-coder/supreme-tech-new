@@ -78,12 +78,12 @@ const services = [
   },
 ];
 
-const scrollToContact = () => {
-  const contactSection = document.getElementById("contact");
-  if (contactSection) {
-    contactSection.scrollIntoView({ behavior: "smooth" });
-  }
-};
+// const scrollToContact = () => {
+//   const contactSection = document.getElementById("contact");
+//   if (contactSection) {
+//     contactSection.scrollIntoView({ behavior: "smooth" });
+//   }
+// };
 
 export default function Services() {
   return (
@@ -152,7 +152,7 @@ export default function Services() {
           ))}
         </div>
 
-        {/* Custom Solution Banner */}
+        {/* Custom Solution Banner
         <div className="mt-12">
           <LiquidGlassCard
             // draggable={false}
@@ -186,7 +186,7 @@ export default function Services() {
               </button>
             </LiquidGlassCard>
           </LiquidGlassCard>
-        </div>
+        </div> */}
       </div>
     </section>
   );

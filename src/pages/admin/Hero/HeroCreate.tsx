@@ -6,7 +6,7 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { heroAPI } from "../../../lib/api/hero";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, X, Loader2, Image } from "lucide-react";
+import { ArrowLeft, Save, X, Loader2, Image, HelpCircle } from "lucide-react";
 
 export default function HeroCreate() {
   const navigate = useNavigate();
@@ -22,6 +22,7 @@ export default function HeroCreate() {
     color: "#3b82f6",
     order: 0,
     isActive: true,
+    heroTagline: "", // 🔥 اضافه شد
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -113,14 +114,15 @@ export default function HeroCreate() {
           >
             <ArrowLeft size={24} className="text-white" />
           </button>
-          <h1 className="text-2xl font-bold text-white">
-            ➕ ایجاد اسلاید جدید
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Image className="w-6 h-6 text-blue-400" />
+            ایجاد اسلاید جدید
           </h1>
         </div>
 
         <LiquidGlassCard
           className="p-6 md:p-8"
-          borderRadius="16px"
+          borderRadius="20px"
           blurIntensity="lg"
           glowIntensity="md"
         >
@@ -190,6 +192,7 @@ export default function HeroCreate() {
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
+                placeholder="عنوان اسلاید را وارد کنید"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
@@ -205,8 +208,27 @@ export default function HeroCreate() {
                 name="subtitle"
                 value={formData.subtitle}
                 onChange={handleChange}
+                placeholder="زیرعنوان (اختیاری)"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
               />
+            </div>
+
+            {/* 🔥 heroTagline - اضافه شد */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                تگ بالای اسلاید (Hero Tagline)
+              </label>
+              <input
+                type="text"
+                name="heroTagline"
+                value={formData.heroTagline}
+                onChange={handleChange}
+                placeholder="مثال: مرکز توسعه فناوری‌های برتر تهران"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                این متن در بالای اسلاید نمایش داده می‌شود
+              </p>
             </div>
 
             {/* توضیحات */}
@@ -219,6 +241,7 @@ export default function HeroCreate() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
+                placeholder="توضیحات کامل اسلاید را وارد کنید..."
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
               />
             </div>
@@ -234,8 +257,8 @@ export default function HeroCreate() {
                   name="buttonText"
                   value={formData.buttonText}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="مثلاً: شروع کنید"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
               <div>
@@ -247,8 +270,8 @@ export default function HeroCreate() {
                   name="buttonLink"
                   value={formData.buttonLink}
                   onChange={handleChange}
+                  placeholder="/services یا https://..."
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="/services"
                 />
               </div>
             </div>
@@ -257,7 +280,7 @@ export default function HeroCreate() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  رنگ پس‌زمینه
+                  رنگ گرادیانت
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -273,12 +296,16 @@ export default function HeroCreate() {
                     value={formData.color}
                     onChange={handleChange}
                     className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                    placeholder="#3b82f6"
                   />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  کد رنگ برای گرادیانت متن در اسلاید
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  ترتیب
+                  ترتیب نمایش
                 </label>
                 <input
                   type="number"
@@ -288,6 +315,9 @@ export default function HeroCreate() {
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   min="0"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  عدد کوچکتر = نمایش زودتر
+                </p>
               </div>
             </div>
 
@@ -301,8 +331,12 @@ export default function HeroCreate() {
                   onChange={handleChange}
                   className="w-4 h-4 accent-blue-500"
                 />
-                فعال
+                <span>فعال</span>
+                <HelpCircle className="w-3.5 h-3.5 text-gray-500" />
               </label>
+              <span className="text-xs text-gray-500">
+                اسلایدهای غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
+              </span>
             </div>
 
             {/* دکمه‌ها */}

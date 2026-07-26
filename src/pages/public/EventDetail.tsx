@@ -5,6 +5,8 @@ import { eventsAPI } from "../../lib/api/events";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
+// import LikeButton from "../../components/ui/LikeButton";
+import ShareButton from "../../components/ui/ShareButton";
 import {
   Calendar,
   MapPin,
@@ -12,13 +14,13 @@ import {
   Clock,
   Ticket,
   ChevronLeft,
-  Share2,
-  Heart,
   ImageOff,
   Flame,
   ShoppingCart,
   CheckCircle,
 } from "lucide-react";
+import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
+import CountdownTimer from "../../components/ui/CountdownTimer";
 
 interface Event {
   id: string;
@@ -176,8 +178,9 @@ export default function EventDetail() {
     });
   };
 
-  // src/pages/public/EventDetail.tsx
-  // در handleRegister، اصلاح کنید:
+  if (loading) {
+    return <EventDetailSkeleton />;
+  }
 
   const handleRegister = async () => {
     if (!event) return;
@@ -197,7 +200,6 @@ export default function EventDetail() {
     setRegistering(true);
 
     try {
-      // 🔥 اصلاح: create فقط یک آرگومان می‌گیرد (object)
       const result = await enrollmentsAPI.create({
         eventId: event.id,
         name: user?.name || "",
@@ -208,8 +210,6 @@ export default function EventDetail() {
       console.log("📥 نتیجه ثبت‌نام:", result);
 
       if (result && result.success && result.data) {
-        // const enrollment = result.data;
-
         if (event.price === 0) {
           setEnrolled((prev) => prev + 1);
           setIsUserEnrolled(true);
@@ -265,6 +265,7 @@ export default function EventDetail() {
   const isFull = totalEnrolled >= event.capacity && event.capacity > 0;
   const daysLeft = getDaysLeft(event.date);
   const isPast = new Date(event.date) < new Date();
+  const eventDate = new Date(event.date);
 
   return (
     <section className="py-12 px-4 md:px-6 relative overflow-hidden min-h-screen">
@@ -376,8 +377,27 @@ export default function EventDetail() {
             </LiquidGlassCard>
           </div>
 
-          {/* 🔥 کارت ثبت‌نام با پشتیبانی از پرداخت */}
-          <div className="lg:sticky lg:top-6">
+          {/* 🔥 کارت ثبت‌نام با تایمر شمارش معکوس */}
+          <div className="lg:sticky lg:top-6 space-y-4">
+            {/* 🔥 تایمر شمارش معکوس - فقط اگر رویداد آینده باشد */}
+            {!isPast && eventDate > new Date() && (
+              <LiquidGlassCard
+                className="p-6"
+                borderRadius="24px"
+                blurIntensity="lg"
+                glowIntensity="md"
+                shadowIntensity="lg"
+              >
+                <div className="text-center mb-4">
+                  <CountdownTimer targetDate={eventDate} />
+                  <p className="text-sm text-gray-400 mt-2">
+                    زمان باقی‌مانده تا شروع رویداد
+                  </p>
+                </div>
+              </LiquidGlassCard>
+            )}
+
+            {/* کارت ثبت‌نام */}
             <LiquidGlassCard
               className="p-6"
               borderRadius="24px"
@@ -393,25 +413,13 @@ export default function EventDetail() {
                     `${event.price.toLocaleString()} تومان`
                   )}
                 </span>
+                {/* 🔥 اشتراک‌گذاری */}
                 <div className="flex items-center gap-2">
-                  <button
-                    aria-label="اشتراک‌گذاری"
-                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors group"
-                  >
-                    <Share2
-                      size={18}
-                      className="text-gray-400 group-hover:text-white transition-colors"
-                    />
-                  </button>
-                  <button
-                    aria-label="علاقه‌مندی"
-                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors group"
-                  >
-                    <Heart
-                      size={18}
-                      className="text-gray-400 group-hover:text-red-400 transition-colors"
-                    />
-                  </button>
+                  <ShareButton
+                    title={event.title}
+                    excerpt={event.description}
+                    url={window.location.href}
+                  />
                 </div>
               </div>
 
@@ -448,7 +456,7 @@ export default function EventDetail() {
                 </div>
               )}
 
-              {/* 🔥 دکمه ثبت‌نام با توجه به نوع رویداد */}
+              {/* 🔥 دکمه ثبت‌نام */}
               <GlassButton
                 variant={isUserEnrolled ? "white" : "primary"}
                 size="lg"

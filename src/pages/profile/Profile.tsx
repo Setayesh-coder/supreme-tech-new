@@ -1,31 +1,33 @@
 // src/pages/profile/Profile.tsx
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
+import { ticketsAPI } from "../../lib/api/tickets";
+import { messagesAPI } from "../../lib/api/messages";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import {
-  User,
-  Phone,
-  Mail,
-  Edit2,
-  LogOut,
-  Save,
-  X,
-  Calendar,
-  BookOpen,
-  Clock,
+  ProfileHeader,
+  ProfileStats,
+  ProfileTabs,
+  ProfileInfo,
+  EnrollmentsTab,
+  CartTab,
+  TicketsTab,
+  PaymentModal,
+} from "../../components/profile";
+import {
+  Loader2,
   CheckCircle,
-  XCircle,
   AlertCircle,
-  CreditCard,
-  Wallet,
-  Video,
-  ExternalLink,
+  XCircle,
+  Clock,
+  MessageSquare,
+  Mail,
 } from "lucide-react";
 
+// ============== Interfaces ==============
 interface UserProfile {
   id: string;
   name: string;
@@ -45,6 +47,7 @@ interface Enrollment {
     date: string;
     image?: string;
     price: number;
+    duration?: string;
     meetingLink?: string;
   };
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "WAITING" | "ATTENDED";
@@ -53,11 +56,142 @@ interface Enrollment {
   meetingLink?: string;
 }
 
+interface Ticket {
+  id: string;
+  title: string;
+  description: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  createdAt: string;
+  updatedAt: string;
+  category: string;
+}
+
+interface MessageReply {
+  id: string;
+  messageId: string;
+  message: {
+    subject: string;
+    message: string;
+    createdAt: string;
+  };
+  reply: string;
+  sentAt: string;
+}
+
+// ============================================================
+// 🔥 کامپوننت پاسخ‌های پیام‌ها
+// ============================================================
+function RepliesTab({
+  replies,
+  loading,
+  formatDate,
+}: {
+  replies: MessageReply[];
+  loading: boolean;
+  formatDate: (date: string) => string;
+}) {
+  if (loading) {
+    return (
+      <LiquidGlassCard
+        className="p-8 text-center"
+        borderRadius="20px"
+        blurIntensity="lg"
+        glowIntensity="md"
+      >
+        <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto" />
+        <p className="text-gray-400 mt-4">دریافت پاسخ‌ها...</p>
+      </LiquidGlassCard>
+    );
+  }
+
+  if (replies.length === 0) {
+    return (
+      <LiquidGlassCard
+        className="p-8 text-center"
+        borderRadius="20px"
+        blurIntensity="lg"
+        glowIntensity="md"
+      >
+        <Mail className="w-16 h-16 mx-auto mb-4 text-white/20" />
+        <p className="text-gray-400">هنوز پاسخی دریافت نکرده‌اید</p>
+        <p className="text-gray-500 text-sm mt-1">
+          پاسخ به پیام‌های شما در این بخش نمایش داده می‌شود
+        </p>
+      </LiquidGlassCard>
+    );
+  }
+
+  return (
+    <LiquidGlassCard
+      className="p-6"
+      borderRadius="20px"
+      blurIntensity="lg"
+      glowIntensity="md"
+    >
+      <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
+        <MessageSquare className="w-5 h-5 text-blue-400" />
+        پاسخ‌های تیم
+        <span className="text-sm text-gray-400 font-normal mr-2">
+          ({replies.length})
+        </span>
+      </h2>
+
+      <div className="space-y-4">
+        {replies.map((reply) => (
+          <LiquidGlassCard
+            key={reply.id}
+            className="p-4 hover:bg-white/5 transition-all duration-300"
+            borderRadius="14px"
+            blurIntensity="sm"
+            glowIntensity="sm"
+          >
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <h3 className="text-white font-bold">
+                  {reply.message.subject}
+                </h3>
+                <span className="text-xs text-gray-500">
+                  {formatDate(reply.sentAt)}
+                </span>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-3">
+                <p className="text-gray-400 text-sm">
+                  <span className="text-gray-500">پیام شما:</span>
+                  <br />
+                  {reply.message.message}
+                </p>
+              </div>
+
+              <div className="bg-blue-500/10 rounded-xl p-3 border-r-2 border-blue-400">
+                <p className="text-white text-sm">
+                  <span className="text-blue-400">پاسخ تیم:</span>
+                  <br />
+                  {reply.reply}
+                </p>
+              </div>
+            </div>
+          </LiquidGlassCard>
+        ))}
+      </div>
+    </LiquidGlassCard>
+  );
+}
+
+// ============== Main Component ==============
 export default function Profile() {
   const navigate = useNavigate();
+
+  // ============== States ==============
   const [user, setUser] = useState<UserProfile | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [cart, setCart] = useState<Enrollment[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [replies, setReplies] = useState<MessageReply[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [repliesLoading, setRepliesLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -70,7 +204,53 @@ export default function Profile() {
   const [selectedEnrollment, setSelectedEnrollment] =
     useState<Enrollment | null>(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "enrollments" | "cart" | "tickets" | "replies"
+  >("enrollments");
+  const [processing, setProcessing] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // ============== 🔥 توابع قبل از useEffect ==============
+  const fetchTickets = async () => {
+    setTicketsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("⚠️ توکن وجود ندارد");
+        setTickets([]);
+        return;
+      }
+
+      const data = await ticketsAPI.getMyTickets();
+      setTickets(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      console.error("❌ خطا در دریافت تیکت‌ها:", err);
+      if (err.status === 403 || err.status === 404) {
+        console.warn("⚠️ دسترسی به تیکت‌ها مجاز نیست، آرایه خالی برگردانده شد");
+        setTickets([]);
+      } else {
+        setError("خطا در دریافت تیکت‌ها");
+      }
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  // 🔥 دریافت پاسخ‌های پیام‌ها
+  const fetchReplies = async () => {
+    if (!user?.id) return;
+    setRepliesLoading(true);
+    try {
+      const data = await messagesAPI.getUserReplies(user.id);
+      setReplies(data || []);
+    } catch (err) {
+      console.error("❌ خطا در دریافت پاسخ‌ها:", err);
+    } finally {
+      setRepliesLoading(false);
+    }
+  };
+
+  // ============== useEffect ==============
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -87,6 +267,13 @@ export default function Profile() {
 
         const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
         setEnrollments(enrollmentsData);
+
+        const pending = enrollmentsData.filter(
+          (e: any) => e.paymentStatus === "PENDING",
+        );
+        setCart(pending);
+
+        await fetchTickets();
       } catch (err) {
         console.error("❌ خطا:", err);
         localStorage.removeItem("token");
@@ -99,6 +286,14 @@ export default function Profile() {
     fetchProfile();
   }, [navigate]);
 
+  // ============== Fetch Replies after user is set ==============
+  useEffect(() => {
+    if (user?.id) {
+      fetchReplies();
+    }
+  }, [user?.id]);
+
+  // ============== 🔥 Profile Functions ==============
   const handleEdit = () => {
     setEditing(true);
     setError("");
@@ -139,12 +334,15 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
-    authAPI.logout();
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+    if (confirm("آیا از خروج از حساب کاربری مطمئن هستید؟")) {
+      authAPI.logout();
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    }
   };
 
+  // ============== Payment Functions ==============
   const handlePayment = async (enrollmentId: string) => {
     setShowPayment(true);
     setSelectedEnrollment(
@@ -160,16 +358,16 @@ export default function Profile() {
     setSuccess("");
 
     try {
-      // پرداخت واقعی با API
       const result = await enrollmentsAPI.processPayment(selectedEnrollment.id);
 
       if (result.success) {
         setSuccess("✅ پرداخت با موفقیت انجام شد!");
-        // به‌روزرسانی لیست
         const updated = await enrollmentsAPI.getMyEnrollments();
         setEnrollments(updated);
+        setCart(updated.filter((e: any) => e.paymentStatus === "PENDING"));
         setShowPayment(false);
         setSelectedEnrollment(null);
+        setTimeout(() => setSuccess(""), 2000);
       } else {
         setError(result.error || "خطا در پرداخت");
       }
@@ -180,6 +378,118 @@ export default function Profile() {
     }
   };
 
+  // ============== Cart Functions ==============
+  const handleCartPayment = async (enrollmentId: string) => {
+    setProcessingId(enrollmentId);
+    setProcessing(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const result = await enrollmentsAPI.processPayment(enrollmentId);
+      if (result.success) {
+        setSuccess("✅ پرداخت با موفقیت انجام شد!");
+        const updated = await enrollmentsAPI.getMyEnrollments();
+        setEnrollments(updated);
+        setCart(updated.filter((e: any) => e.paymentStatus === "PENDING"));
+        setTimeout(() => setSuccess(""), 2000);
+      } else {
+        setError(result.error || "خطا در پرداخت");
+      }
+    } catch (err) {
+      setError("خطا در پردازش پرداخت");
+    } finally {
+      setProcessing(false);
+      setProcessingId(null);
+    }
+  };
+
+  const handleRemoveFromCart = async (enrollmentId: string) => {
+    if (!confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
+
+    try {
+      setCart(cart.filter((item) => item.id !== enrollmentId));
+      setSuccess("✅ آیتم از سبد خرید حذف شد");
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (err) {
+      setError("خطا در حذف آیتم");
+    }
+  };
+
+  const handlePayAll = async () => {
+    if (cart.length === 0) return;
+
+    const totalPrice = cart.reduce((sum, item) => sum + item.event.price, 0);
+    if (
+      !confirm(
+        `آیا از پرداخت مبلغ ${totalPrice.toLocaleString()} تومان برای ${cart.length} دوره مطمئن هستید؟`,
+      )
+    ) {
+      return;
+    }
+
+    setProcessing(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      for (const item of cart) {
+        const result = await enrollmentsAPI.processPayment(item.id);
+        if (!result.success) {
+          setError(`خطا در پرداخت دوره "${item.event.title}"`);
+          setProcessing(false);
+          return;
+        }
+      }
+
+      setSuccess(`✅ پرداخت ${cart.length} دوره با موفقیت انجام شد!`);
+      const updated = await enrollmentsAPI.getMyEnrollments();
+      setEnrollments(updated);
+      setCart(updated.filter((e: any) => e.paymentStatus === "PENDING"));
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (err) {
+      setError("خطا در پردازش پرداخت‌ها");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // ============== Ticket Functions ==============
+  const handleCreateTicket = () => {
+    navigate("/tickets/create");
+  };
+
+  const handleViewTicket = (id: string) => {
+    navigate(`/tickets/${id}`);
+  };
+
+  const handleDeleteTicket = async (id: string) => {
+    try {
+      await ticketsAPI.delete(id);
+      setTickets(tickets.filter((t) => t.id !== id));
+      setSuccess("✅ تیکت با موفقیت حذف شد");
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (err) {
+      setError("خطا در حذف تیکت");
+    }
+  };
+
+  // 🔥 تابع ارسال پیام در تیکت
+  const handleSendTicketMessage = async (ticketId: string, message: string) => {
+    try {
+      await ticketsAPI.addMessage(ticketId, {
+        content: message,
+        senderType: "USER",
+      });
+      // به‌روزرسانی تیکت‌ها
+      await fetchTickets();
+    } catch (err) {
+      console.error("❌ خطا در ارسال پیام:", err);
+      throw err;
+    }
+  };
+
+  // ============== Helper Functions ==============
   const getStatusLabel = (status: string) => {
     const labels: Record<
       string,
@@ -212,7 +522,11 @@ export default function Profile() {
       },
     };
     return (
-      labels[status] || { label: status, icon: null, color: "text-gray-400" }
+      labels[status] || {
+        label: status,
+        icon: <AlertCircle size={14} />,
+        color: "text-gray-400",
+      }
     );
   };
 
@@ -243,412 +557,164 @@ export default function Profile() {
     return `${price.toLocaleString()} تومان`;
   };
 
+  // ============== Loading & Error States ==============
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900">
-        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
+          <p className="text-blue-400/60 text-sm animate-pulse">بارگذاری...</p>
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900">
-        <LiquidGlassCard className="p-8 text-center" borderRadius="32px">
-          <p className="text-white">کاربری یافت نشد</p>
-          <GlassButton className="mt-4" onClick={() => navigate("/login")}>
-            بازگشت به ورود
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <LiquidGlassCard
+          className="p-8 text-center max-w-sm"
+          borderRadius="24px"
+        >
+          <div className="text-6xl mb-4">👤</div>
+          <h3 className="text-xl font-bold text-white mb-2">کاربری یافت نشد</h3>
+          <p className="text-gray-400 mb-6">لطفاً دوباره وارد شوید</p>
+          <GlassButton variant="primary" onClick={() => navigate("/login")}>
+            ورود به حساب
           </GlassButton>
         </LiquidGlassCard>
       </div>
     );
   }
 
+  // ============== Stats ==============
+  const stats = {
+    totalEnrollments: enrollments.length,
+    confirmedEnrollments: enrollments.filter((e) => e.status === "CONFIRMED")
+      .length,
+    pendingEnrollments: enrollments.filter((e) => e.status === "PENDING")
+      .length,
+    attendedEnrollments: enrollments.filter((e) => e.status === "ATTENDED")
+      .length,
+    cartCount: cart.length,
+    ticketCount: tickets.length,
+    repliesCount: replies.length,
+  };
+
+  // ============== Render ==============
   return (
-    <section className="min-h-screen py-20 px-4 bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-8 px-4 md:py-12">
+      <div className="max-w-6xl mx-auto">
+        <ProfileHeader
+          user={user}
+          cartCount={stats.cartCount}
+          onLogout={handleLogout}
+          onCartClick={() => setActiveTab("cart")}
+        />
 
-      <div className="max-w-4xl mx-auto relative z-10">
-        {/* پروفایل */}
-        <LiquidGlassCard
-          className="p-8"
-          borderRadius="32px"
-          blurIntensity="lg"
-          glowIntensity="md"
-          shadowIntensity="lg"
-        >
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-3xl font-bold text-white">
-                {user.name.charAt(0)}
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">{user.name}</h1>
-                <p className="text-white/60 text-sm flex items-center gap-1">
-                  <Calendar size={14} />
-                  عضو از {new Date(user.createdAt).toLocaleDateString("fa-IR")}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors text-red-400"
-            >
-              <LogOut size={24} />
-            </button>
+        <ProfileStats
+          stats={stats}
+          onStatClick={(tab) => setActiveTab(tab as any)}
+        />
+
+        <ProfileTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          cartCount={stats.cartCount}
+          ticketCount={stats.ticketCount}
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <ProfileInfo
+              user={user}
+              formData={formData}
+              editing={editing}
+              saving={saving}
+              error={error}
+              success={success}
+              onEdit={handleEdit}
+              onCancel={handleCancel}
+              onSave={handleSave}
+              onChange={handleChange}
+              onLogout={handleLogout}
+            />
           </div>
 
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-center">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 text-center">
-              ✅ {success}
-            </div>
-          )}
+          <div className="lg:col-span-2">
+            {activeTab === "enrollments" && (
+              <EnrollmentsTab
+                enrollments={enrollments}
+                navigate={navigate}
+                formatDate={formatDate}
+                formatPrice={formatPrice}
+                getStatusLabel={getStatusLabel}
+                getPaymentStatusLabel={getPaymentStatusLabel}
+                handlePayment={handlePayment}
+              />
+            )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">
-                نام کامل
-              </label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  className={`w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border rounded-xl text-white placeholder:text-white/40 focus:outline-none transition-all duration-200 ${
-                    editing
-                      ? "border-blue-500/50 focus:ring-2 focus:ring-blue-500/50"
-                      : "border-white/10 cursor-not-allowed opacity-70"
-                  }`}
-                />
-              </div>
-            </div>
+            {activeTab === "cart" && (
+              <CartTab
+                cart={cart}
+                processing={processing}
+                processingId={processingId}
+                totalCartPrice={cart.reduce(
+                  (sum, item) => sum + item.event.price,
+                  0,
+                )}
+                isCartFree={
+                  cart.reduce((sum, item) => sum + item.event.price, 0) === 0 &&
+                  cart.length > 0
+                }
+                handleCartPayment={handleCartPayment}
+                handleRemoveFromCart={handleRemoveFromCart}
+                handlePayAll={handlePayAll}
+                formatPrice={formatPrice}
+                navigate={navigate}
+              />
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">
-                شماره تلفن
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  className={`w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border rounded-xl text-white placeholder:text-white/40 focus:outline-none transition-all duration-200 ${
-                    editing
-                      ? "border-blue-500/50 focus:ring-2 focus:ring-blue-500/50"
-                      : "border-white/10 cursor-not-allowed opacity-70"
-                  }`}
-                />
-              </div>
-            </div>
+            {activeTab === "tickets" && (
+              <TicketsTab
+                tickets={tickets}
+                loading={ticketsLoading}
+                navigate={navigate}
+                onCreateTicket={handleCreateTicket}
+                onViewTicket={handleViewTicket}
+                onDeleteTicket={handleDeleteTicket}
+                onSendMessage={handleSendTicketMessage} // 🔥 اضافه شد
+              />
+            )}
 
-            {user.email && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-white/60 mb-1">
-                  ایمیل
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    disabled={!editing}
-                    className={`w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border rounded-xl text-white placeholder:text-white/40 focus:outline-none transition-all duration-200 ${
-                      editing
-                        ? "border-blue-500/50 focus:ring-2 focus:ring-blue-500/50"
-                        : "border-white/10 cursor-not-allowed opacity-70"
-                    }`}
-                  />
-                </div>
-              </div>
+            {/* 🔥 تب پاسخ‌ها */}
+            {activeTab === "replies" && (
+              <RepliesTab
+                replies={replies}
+                loading={repliesLoading}
+                formatDate={formatDate}
+              />
             )}
           </div>
-
-          <div className="flex gap-3 mt-4">
-            {editing ? (
-              <>
-                <GlassButton
-                  variant="primary"
-                  size="md"
-                  loading={saving}
-                  icon={<Save size={18} />}
-                  iconPosition="left"
-                  onClick={handleSave}
-                >
-                  ذخیره
-                </GlassButton>
-                <GlassButton
-                  variant="white"
-                  size="md"
-                  icon={<X size={18} />}
-                  iconPosition="left"
-                  onClick={handleCancel}
-                >
-                  انصراف
-                </GlassButton>
-              </>
-            ) : (
-              <GlassButton
-                variant="primary"
-                size="md"
-                icon={<Edit2 size={18} />}
-                iconPosition="left"
-                onClick={handleEdit}
-              >
-                ویرایش پروفایل
-              </GlassButton>
-            )}
-          </div>
-        </LiquidGlassCard>
-
-        {/* دوره‌های ثبت‌نام شده */}
-        <div className="mt-8">
-          <LiquidGlassCard
-            className="p-8"
-            borderRadius="32px"
-            blurIntensity="lg"
-            glowIntensity="md"
-            shadowIntensity="lg"
-          >
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-              <BookOpen size={22} className="text-blue-400" />
-              دوره‌های من
-            </h2>
-
-            {enrollments.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید</p>
-                <GlassButton
-                  variant="primary"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => navigate("/events")}
-                >
-                  مشاهده رویدادها
-                </GlassButton>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {enrollments.map((enrollment) => {
-                  const status = getStatusLabel(enrollment.status);
-                  const paymentStatus = getPaymentStatusLabel(
-                    enrollment.paymentStatus,
-                  );
-                  const isPaid = enrollment.paymentStatus === "PAID";
-                  const isConfirmed = enrollment.status === "CONFIRMED";
-                  const isEventStarted =
-                    new Date(enrollment.event.date) <= new Date();
-
-                  return (
-                    <LiquidGlassCard
-                      key={enrollment.id}
-                      className="p-4"
-                      borderRadius="16px"
-                      blurIntensity="sm"
-                      glowIntensity="sm"
-                    >
-                      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                        {enrollment.event.image ? (
-                          <img
-                            src={enrollment.event.image}
-                            alt={enrollment.event.title}
-                            className="w-full md:w-32 h-24 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-full md:w-32 h-24 bg-white/5 rounded-lg flex items-center justify-center">
-                            <BookOpen className="w-8 h-8 text-white/20" />
-                          </div>
-                        )}
-
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-white">
-                            {enrollment.event.title}
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-400">
-                            <span className="flex items-center gap-1">
-                              <Calendar size={14} />
-                              {formatDate(enrollment.event.date)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Wallet size={14} />
-                              {formatPrice(enrollment.event.price)}
-                            </span>
-                            <span
-                              className={`flex items-center gap-1 ${status.color}`}
-                            >
-                              {status.icon}
-                              {status.label}
-                            </span>
-                            <span
-                              className={`flex items-center gap-1 ${paymentStatus.color}`}
-                            >
-                              {paymentStatus.label}
-                            </span>
-                          </div>
-
-                          {/* 🔥 لینک جلسه */}
-                          {isConfirmed && isPaid && (
-                            <div className="mt-2">
-                              {isEventStarted ? (
-                                <a
-                                  href={
-                                    enrollment.meetingLink ||
-                                    enrollment.event.meetingLink ||
-                                    "#"
-                                  }
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl transition text-sm"
-                                >
-                                  <Video size={16} />
-                                  ورود به جلسه
-                                  <ExternalLink size={14} />
-                                </a>
-                              ) : (
-                                <span className="text-yellow-400 text-sm flex items-center gap-1">
-                                  <Clock size={14} />
-                                  لینک از{" "}
-                                  {new Date(
-                                    enrollment.event.date,
-                                  ).toLocaleDateString("fa-IR")}{" "}
-                                  فعال میشود
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {enrollment.status === "PENDING" &&
-                            enrollment.paymentStatus !== "PAID" && (
-                              <GlassButton
-                                variant="primary"
-                                size="sm"
-                                icon={<CreditCard size={16} />}
-                                iconPosition="left"
-                                onClick={() => handlePayment(enrollment.id)}
-                              >
-                                پرداخت
-                              </GlassButton>
-                            )}
-                          {enrollment.status === "CONFIRMED" && (
-                            <span className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-xl text-sm font-medium">
-                              تایید شده
-                            </span>
-                          )}
-                          <GlassButton
-                            variant="white"
-                            size="sm"
-                            onClick={() =>
-                              navigate(`/events/${enrollment.event.slug}`)
-                            }
-                          >
-                            مشاهده
-                          </GlassButton>
-                        </div>
-                      </div>
-                    </LiquidGlassCard>
-                  );
-                })}
-              </div>
-            )}
-          </LiquidGlassCard>
         </div>
       </div>
 
-      {/* مودال پرداخت */}
       {showPayment && selectedEnrollment && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <LiquidGlassCard
-              className="p-8"
-              borderRadius="32px"
-              blurIntensity="lg"
-              glowIntensity="md"
-            >
-              <h2 className="text-2xl font-bold text-white mb-4 text-center">
-                💳 پرداخت
-              </h2>
-              <p className="text-gray-400 text-center mb-6">
-                آیا از پرداخت مبلغ{" "}
-                <span className="text-white font-bold">
-                  {formatPrice(selectedEnrollment.event.price)}
-                </span>{" "}
-                برای دوره "{selectedEnrollment.event.title}" مطمئن هستید؟
-              </p>
-
-              <div className="space-y-4">
-                <div className="bg-white/5 p-4 rounded-xl">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">دوره</span>
-                    <span className="text-white">
-                      {selectedEnrollment.event.title}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-2">
-                    <span className="text-gray-400">مبلغ</span>
-                    <span className="text-white font-bold">
-                      {formatPrice(selectedEnrollment.event.price)}
-                    </span>
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-center">
-                    {error}
-                  </div>
-                )}
-                {success && (
-                  <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl text-center">
-                    ✅ {success}
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <GlassButton
-                    variant="white"
-                    size="md"
-                    className="flex-1"
-                    onClick={() => {
-                      setShowPayment(false);
-                      setSelectedEnrollment(null);
-                      setError("");
-                      setSuccess("");
-                    }}
-                  >
-                    انصراف
-                  </GlassButton>
-                  <GlassButton
-                    variant="primary"
-                    size="md"
-                    className="flex-1"
-                    loading={saving}
-                    onClick={processPayment}
-                  >
-                    پرداخت
-                  </GlassButton>
-                </div>
-              </div>
-            </LiquidGlassCard>
-          </div>
-        </div>
+        <PaymentModal
+          selectedEnrollment={selectedEnrollment}
+          saving={saving}
+          error={error}
+          success={success}
+          formatPrice={formatPrice}
+          onClose={() => {
+            setShowPayment(false);
+            setSelectedEnrollment(null);
+            setError("");
+            setSuccess("");
+          }}
+          onConfirm={processPayment}
+        />
       )}
-    </section>
+    </div>
   );
 }

@@ -1,17 +1,19 @@
 // src/pages/admin/Login.tsx
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI } from "../../lib/api/auth";
-import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard"; // ← توجه به نام فایل
+import { adminAPI } from "../../lib/api/admin";
+import { employeesAPI } from "../../lib/api/employees"; // 🔥 یا employees
+import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
-import { ArrowRight, Lock, Phone } from "lucide-react";
+import { User, Lock, Shield, Briefcase } from "lucide-react";
 
 export default function AdminLogin() {
+  const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [loginType, setLoginType] = useState<"admin" | "employee">("admin");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,119 +21,141 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      const result = await authAPI.loginAdmin({ phone, password });
+      let response;
 
-      if (result.token) {
-        authAPI.saveToken(result.token);
-        localStorage.setItem(
-          "admin",
-          JSON.stringify({
-            id: result.admin.id,
-            name: result.admin.name,
-            phone: result.admin.phone,
-            role: result.admin.role || "ADMIN",
-          }),
-        );
+      if (loginType === "admin") {
+        response = await adminAPI.login(phone, password);
+      } else {
+        response = await employeesAPI.login(phone, password);
+      }
+
+      if (response.success) {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+
+        if (loginType === "admin") {
+          localStorage.setItem("admin", JSON.stringify(response.user));
+        } else {
+          localStorage.setItem("employee", JSON.stringify(response.user));
+        }
+
         navigate("/admin/dashboard");
       } else {
-        setError(result.error || "خطا در ورود");
+        setError(response.error || "خطا در ورود");
       }
-    } catch (err) {
-      setError("خطا در ارتباط با سرور");
+    } catch (err: any) {
+      setError(err.message || "خطا در ورود");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-3xl" />
-      </div>
-
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-4">
       <LiquidGlassCard
-        // draggable={false}
-        className="w-full max-w-md p-8"
-        borderRadius="32px"
-        blurIntensity="sm"
-        glowIntensity="md"
-        shadowIntensity="lg"
+        className="p-8 max-w-md w-full"
+        borderRadius="24px"
+        blurIntensity="xl"
+        glowIntensity="lg"
       >
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🚀</div>
-          <h1 className="text-3xl font-bold text-white">پنل مدیریت</h1>
-          <p className="text-white/60 mt-2">سامانه هوشمند Supreme Tech</p>
+          <div className="text-4xl mb-2">
+            {loginType === "admin" ? "🚀" : "👤"}
+          </div>
+          <h1 className="text-2xl font-bold text-white">
+            {loginType === "admin" ? "ورود به پنل ادمین" : "ورود کارمندان"}
+          </h1>
+          <p className="text-gray-400 text-sm">
+            شماره تماس و رمز عبور خود را وارد کنید
+          </p>
+        </div>
+
+        <div className="flex gap-2 mb-6 bg-white/5 rounded-xl p-1">
+          <button
+            type="button"
+            onClick={() => setLoginType("admin")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+              loginType === "admin"
+                ? "bg-blue-500/30 text-blue-400 border border-blue-400/30"
+                : "text-white/60 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Shield size={16} />
+            ادمین
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoginType("employee")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+              loginType === "employee"
+                ? "bg-green-500/30 text-green-400 border border-green-400/30"
+                : "text-white/60 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Briefcase size={16} />
+            کارمند
+          </button>
         </div>
 
         {error && (
-          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-center">
+          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-sm text-center">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-white/80">
-              شماره تلفن
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">
+              شماره تماس
             </label>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 pointer-events-none" />
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
-                placeholder="09121234567"
+                placeholder="مثلاً 09123456789"
+                className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                 required
-                autoFocus
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-white/80">
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">
               رمز عبور
             </label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 pointer-events-none" />
+              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 placeholder="••••••••"
+                className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
             </div>
           </div>
 
-          <div className="pt-2">
-            <GlassButton
-              type="submit"
-              fullWidth
-              variant="primary"
-              size="lg"
-              loading={loading}
-              icon={!loading ? <ArrowRight className="w-5 h-5" /> : undefined}
-              iconPosition="left"
-              className="!rounded-xl"
-              disabled={loading}
-            >
-              {loading ? "در حال ورود..." : "ورود به پنل"}
-            </GlassButton>
-          </div>
+          <GlassButton
+            type="submit"
+            variant={loginType === "admin" ? "primary" : "success"}
+            size="lg"
+            fullWidth
+            loading={loading}
+            disabled={loading}
+          >
+            {loading ? "در حال ورود..." : "ورود"}
+          </GlassButton>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center text-sm text-gray-500">
           <button
-            type="button"
-            onClick={() => navigate("/admin/forgot-password")}
-            className="text-white/50 hover:text-white/80 text-sm transition-colors duration-200"
+            onClick={() => navigate("/login")}
+            className="text-blue-400 hover:text-blue-300 transition-colors"
           >
-            رمز عبور خود را فراموش کرده‌اید؟
+            ورود به پنل کاربری
           </button>
         </div>
       </LiquidGlassCard>

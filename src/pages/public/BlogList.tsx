@@ -13,6 +13,8 @@ import {
   ImageOff,
   Loader2,
 } from "lucide-react";
+import { BlogListSkeleton } from "../../components/skeletons/BlogListSkeleton";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 interface BlogPost {
   id: string;
@@ -106,7 +108,9 @@ export default function BlogList() {
       !activeTag || post.tags.some((tag) => tag.name === activeTag);
     return matchesSearch && matchesTag;
   });
-
+  if (loading) {
+    return <BlogListSkeleton />;
+  }
   if (error) {
     return (
       <div className="flex justify-center items-center h-64 px-4">
@@ -126,31 +130,13 @@ export default function BlogList() {
     <section className="py-12 px-4 md:px-6">
       <div className="container mx-auto">
         {/* Header */}
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-4">
-            <LiquidGlassCard
-              blurIntensity="md"
-              borderRadius="100px"
-              glowIntensity="sm"
-              className="inline-flex px-4 py-2"
-            >
-              <span className="text-sm font-medium text-gray-300">
-                📝 وبلاگ Supreme Tech
-              </span>
-            </LiquidGlassCard>
-          </div>
-
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              آخرین مطالب
-            </span>
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            جدیدترین مقالات و مطالب آموزشی در حوزه هوش مصنوعی، طراحی وب و توسعه
-            نرم‌افزار
-          </p>
-        </div>
-
+        <SectionHeader
+          badge="وبلاگ Supreme Tech"
+          badgeIcon={<Calendar className="w-4 h-4 text-blue-400" />}
+          title="آخرین مطالب"
+          subtitle="جدیدترین مقالات و مطالب آموزشی"
+          description="در حوزه هوش مصنوعی، طراحی وب و توسعه نرم‌افزار"
+        />
         {/* جستجو و فیلتر تگ */}
         <div className="flex flex-col md:flex-row items-center gap-4 mb-10">
           <div className="relative w-full md:w-80">

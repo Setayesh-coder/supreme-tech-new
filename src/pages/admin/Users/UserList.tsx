@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Briefcase,
 } from "lucide-react";
+import { AdminListSkeleton } from "../../../components/skeletons/AdminListSkeleton";
 
 interface User {
   id: string;
@@ -160,7 +161,9 @@ export default function UserList() {
     setNewRole(user.role);
     setShowRoleModal(true);
   };
-
+  if (loading) {
+    return <AdminListSkeleton />;
+  }
   if (loading) {
     return (
       <AdminLayout>

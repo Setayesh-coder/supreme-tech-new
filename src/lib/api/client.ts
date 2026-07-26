@@ -4,16 +4,21 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 // ========== تابع کمکی برای مدیریت پاسخ ==========
 const handleResponse = async (response: Response) => {
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = { error: "پاسخ نامعتبر از سرور" };
+  }
 
   if (!response.ok) {
     const error = new Error(data.error || data.message || "خطا در درخواست");
-    (error as any).status = response.status;
+    (error as any).status = response.status; // 🔥 اضافه کردن status به خطا
     (error as any).data = data;
     throw error;
   }
 
-  if (data.data) {
+  if (data && data.data !== undefined) {
     return data.data;
   }
 

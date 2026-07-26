@@ -1,5 +1,4 @@
-// src/pages/admin/Messages/
-
+// src/pages/admin/Messages/MessageList.tsx
 import { useState, useEffect } from "react";
 import { AdminLayout } from "../AdminLayout";
 import { LiquidGlassCard } from "../../ui/LiquidGlassCard";
@@ -28,6 +27,7 @@ interface Message {
   isRead: boolean;
   isReplied: boolean;
   createdAt: string;
+  userId?: string;
 }
 
 export default function MessageList() {
@@ -36,6 +36,9 @@ export default function MessageList() {
   const [error, setError] = useState("");
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
     fetchMessages();
@@ -101,6 +104,51 @@ export default function MessageList() {
     setShowDetail(true);
     if (!message.isRead) {
       handleMarkAsRead(message.id);
+    }
+  };
+
+  // 🔥 تابع پاسخ با ایمیل (باز کردن mailto)
+  const handleReplyByEmail = (message: Message) => {
+    const email = message.email || "info@supremetech.ir";
+    const subject = `پاسخ به: ${message.subject}`;
+    const body = `سلام ${message.name}\n\nبا تشکر از پیام شما.\n\nمتن پیام شما:\n"${message.message}"\n\n---\n\nپاسخ:\n`;
+
+    window.open(
+      `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+      "_blank",
+    );
+  };
+
+  // 🔥 تابع ارسال پاسخ (از طریق مودال)
+  const handleSendReply = async () => {
+    if (!selectedMessage || !replyText.trim()) return;
+
+    setSendingReply(true);
+    try {
+      // ارسال پاسخ به API
+      await messagesAPI.sendReply(selectedMessage.id, {
+        reply: replyText,
+        to: selectedMessage.email || selectedMessage.phone,
+      });
+
+      // علامت پاسخ داده شده
+      await handleMarkAsReplied(selectedMessage.id);
+
+      // آپدیت UI
+      setMessages(
+        messages.map((m) =>
+          m.id === selectedMessage.id ? { ...m, isReplied: true } : m,
+        ),
+      );
+      setSelectedMessage({ ...selectedMessage, isReplied: true });
+      setReplyText("");
+      setShowReplyModal(false);
+      alert("✅ پاسخ با موفقیت ارسال شد!");
+    } catch (error) {
+      console.error("❌ خطا:", error);
+      alert("خطا در ارسال پاسخ");
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -270,7 +318,7 @@ export default function MessageList() {
                   )}
                 </div>
 
-                {/* دکمه‌ها */}
+                {/* 🔥 دکمه‌ها */}
                 <div className="flex flex-wrap gap-2">
                   {!selectedMessage.isRead && (
                     <GlassButton
@@ -283,17 +331,41 @@ export default function MessageList() {
                       خوانده شد
                     </GlassButton>
                   )}
+
+                  {/* 🔥 دکمه پاسخ با ایمیل (mailto) */}
+                  <GlassButton
+                    variant="secondary"
+                    size="sm"
+                    icon={<Reply size={16} />}
+                    iconPosition="left"
+                    onClick={() => handleReplyByEmail(selectedMessage)}
+                  >
+                    پاسخ با ایمیل
+                  </GlassButton>
+
+                  {/* 🔥 دکمه باز کردن مودال پاسخ */}
+                  <GlassButton
+                    variant="success"
+                    size="sm"
+                    icon={<Reply size={16} />}
+                    iconPosition="left"
+                    onClick={() => setShowReplyModal(true)}
+                  >
+                    ارسال پاسخ
+                  </GlassButton>
+
                   {!selectedMessage.isReplied && (
                     <GlassButton
-                      variant="secondary"
+                      variant="white"
                       size="sm"
-                      icon={<Reply size={16} />}
+                      icon={<Check size={16} />}
                       iconPosition="left"
                       onClick={() => handleMarkAsReplied(selectedMessage.id)}
                     >
                       پاسخ داده شد
                     </GlassButton>
                   )}
+
                   <GlassButton
                     variant="danger"
                     size="sm"
@@ -321,6 +393,66 @@ export default function MessageList() {
           </div>
         </div>
       </div>
+
+      {/* 🔥 مودال پاسخ */}
+      {showReplyModal && selectedMessage && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-lg w-full">
+            <LiquidGlassCard
+              className="p-6"
+              borderRadius="20px"
+              blurIntensity="xl"
+              glowIntensity="lg"
+            >
+              <h2 className="text-xl font-bold text-white mb-4 text-center">
+                ✉️ ارسال پاسخ
+              </h2>
+              <p className="text-gray-400 text-sm text-center mb-4">
+                پاسخ خود را برای "{selectedMessage.name}" ارسال کنید
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-1">
+                    متن پاسخ
+                  </label>
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows={5}
+                    placeholder="متن پاسخ خود را وارد کنید..."
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <GlassButton
+                    variant="white"
+                    size="md"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowReplyModal(false);
+                      setReplyText("");
+                    }}
+                  >
+                    انصراف
+                  </GlassButton>
+                  <GlassButton
+                    variant="primary"
+                    size="md"
+                    className="flex-1"
+                    loading={sendingReply}
+                    onClick={handleSendReply}
+                    disabled={!replyText.trim()}
+                  >
+                    ارسال پاسخ
+                  </GlassButton>
+                </div>
+              </div>
+            </LiquidGlassCard>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

@@ -89,7 +89,7 @@ export default function About() {
         <div className="text-center mb-8">
           <div className="flex justify-center">
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="100px"
               glowIntensity="sm"
@@ -126,7 +126,7 @@ export default function About() {
         {/* Mission Statement - کارت شیشه‌ای بزرگ */}
         <div className="mb-16 max-w-4xl mx-auto">
           <LiquidGlassCard
-            draggable={false}
+            // draggable={false}
             blurIntensity="lg"
             borderRadius="32px"
             glowIntensity="md"
@@ -181,7 +181,7 @@ export default function About() {
           {values.map((value, index) => (
             <LiquidGlassCard
               key={index}
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="24px"
               glowIntensity="sm"
@@ -215,7 +215,7 @@ export default function About() {
           {services.map((service, index) => (
             <LiquidGlassCard
               key={index}
-              draggable={false}
+              // draggable={false}
               blurIntensity="md"
               borderRadius="24px"
               glowIntensity="sm"
@@ -240,7 +240,7 @@ export default function About() {
         <div className="text-center">
           <a href="/contact" className="inline-block">
             <LiquidGlassCard
-              draggable={false}
+              // draggable={false}
               blurIntensity="lg"
               borderRadius="100px"
               glowIntensity="md"

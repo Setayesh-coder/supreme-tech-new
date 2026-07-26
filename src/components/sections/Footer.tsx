@@ -1,7 +1,51 @@
 import { Link } from "react-router-dom";
-import { Brain, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { settingsAPI } from "../../lib/api/settings";
+
+interface Settings {
+  siteName: string;
+  siteDescription: string;
+  contactEmail: string;
+  contactPhone: string;
+  contactAddress: string;
+  workingHours: string;
+  socialLinks: {
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+    telegram?: string;
+  };
+}
 
 export default function Footer() {
+  const [settings, setSettings] = useState<Settings>({
+    siteName: "Supreme Tech",
+    siteDescription: "پیشرو در توسعه AI Agent های هوشمند",
+    contactEmail: "info@supremetech.ir",
+    contactPhone: "09121234567",
+    contactAddress: "تهران، بزرگراه اشرفی اصفهانی، مجتمع نیایش",
+    workingHours: "شنبه تا چهارشنبه ۹ الی ۱۸",
+    socialLinks: {},
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await settingsAPI.getAll();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error("خطا در دریافت تنظیمات:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -19,17 +63,14 @@ export default function Footer() {
           {/* Brand Section - ستون 1 */}
           <div className="text-center">
             <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 justify-center">
-              {/* <div className="w-7 h-7 md:w-10 md:h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg md:rounded-xl flex items-center justify-center shrink-0"> */}
-              {/* <Brain className="w-3.5 h-3.5 md:w-6 md:h-6 text-white" /> */}
               <img
                 src="assets/favicon-96x96.png"
                 alt="supreme tech"
-                className="w-12 h-12 text-blue-400"
+                className="w-12 h-12"
               />
-              {/* </div> */}
               <div>
                 <h3 className="text-sm md:text-xl font-bold bg-gradient-to-l from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  Supreme Tech
+                  {loading ? "..." : settings?.siteName || "Supreme Tech"}
                 </h3>
                 <p className="text-[8px] md:text-xs text-gray-500">
                   AI Agent Solutions
@@ -37,7 +78,10 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-[9px] md:text-sm text-gray-500 leading-relaxed hidden md:block">
-              پیشرو در توسعه AI Agent های هوشمند
+              {loading
+                ? "..."
+                : settings?.siteDescription ||
+                  "پیشرو در توسعه AI Agent های هوشمند"}
             </p>
           </div>
 
@@ -108,28 +152,39 @@ export default function Footer() {
               <div
                 className="flex items-center gap-1.5 md:gap-2 group cursor-pointer justify-center"
                 onClick={() =>
-                  copyToClipboard("supremetech.ir@gmail.com", "ایمیل")
+                  copyToClipboard(
+                    settings?.contactEmail || "info@supremetech.ir",
+                    "ایمیل",
+                  )
                 }
               >
                 <Mail className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-400 group-hover:scale-110 transition shrink-0" />
                 <span className="text-[8px] md:text-sm text-gray-500 group-hover:text-cyan-400 break-all">
-                  ایمیل
+                  {loading
+                    ? "..."
+                    : settings?.contactEmail || "info@supremetech.ir"}
                 </span>
               </div>
               <div
                 className="flex items-center gap-1.5 md:gap-2 group cursor-pointer justify-center"
-                onClick={() => copyToClipboard("09199017041", "شماره تلفن")}
+                onClick={() =>
+                  copyToClipboard(
+                    settings?.contactPhone || "09121234567",
+                    "شماره تلفن",
+                  )
+                }
               >
                 <Phone className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-400 group-hover:scale-110 transition shrink-0" />
                 <span className="text-[8px] md:text-sm text-gray-500 group-hover:text-cyan-400">
-                  تلفن
+                  {loading ? "..." : settings?.contactPhone || "09121234567"}
                 </span>
               </div>
               <div
                 className="flex items-center gap-1.5 md:gap-2 group cursor-pointer justify-center"
                 onClick={() =>
                   window.open(
-                    "https://maps.google.com/?cid=590621477498261219",
+                    "https://maps.google.com/?q=" +
+                      encodeURIComponent(settings?.contactAddress || "تهران"),
                     "_blank",
                   )
                 }
@@ -143,9 +198,11 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* متن برند در موبایل - فقط در موبایل نمایش داده بشه */}
+        {/* متن برند در موبایل */}
         <p className="text-[9px] text-gray-500 leading-relaxed text-center mt-2 md:hidden">
-          پیشرو در توسعه AI Agent های هوشمند
+          {loading
+            ? "..."
+            : settings?.siteDescription || "پیشرو در توسعه AI Agent های هوشمند"}
         </p>
 
         {/* Bottom Section */}

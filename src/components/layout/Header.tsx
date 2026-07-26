@@ -1,11 +1,20 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, User, X } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-// import { favicon } from "assets/favicon-96x96.png";
+import { settingsAPI } from "../../lib/api/settings";
+
+interface Settings {
+  siteName: string;
+  siteDescription?: string;
+}
 
 export default function Header() {
   const [, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>({
+    siteName: "Supreme Tech",
+  });
+  const [loading, setLoading] = useState(true);
 
   const navItems = [
     { name: "خانه", href: "/" },
@@ -18,6 +27,20 @@ export default function Header() {
   ];
 
   useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await settingsAPI.getAll();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error("خطا در دریافت تنظیمات:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
@@ -29,7 +52,6 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4">
       <div className="max-w-7xl mx-auto">
         <LiquidGlassCard
-          // draggable={false}
           blurIntensity="lg"
           borderRadius="100px"
           glowIntensity="sm"
@@ -40,11 +62,11 @@ export default function Header() {
             <a href="/" className="flex items-center gap-2">
               <img
                 src="assets/favicon-96x96.png"
-                alt="supreme tech"
-                className="w-8 h-8 text-blue-400"
+                alt="لوگو Supreme Tech"
+                className="w-8 h-8"
               />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                Supreme Tech
+                {loading ? "..." : settings?.siteName || "Supreme Tech"}
               </span>
             </a>
 
@@ -61,10 +83,9 @@ export default function Header() {
               ))}
             </nav>
 
-            {/* Desktop Button - شیشه‌ای */}
+            {/* Desktop Button */}
             <div className="hidden md:block">
               <LiquidGlassCard
-                // draggable={false}
                 blurIntensity="lg"
                 borderRadius="16px"
                 glowIntensity="sm"
@@ -76,7 +97,7 @@ export default function Header() {
                     bg-gradient-to-r from-blue-500/80 to-blue-600/80 
                     backdrop-blur-sm border border-blue-400/30 text-sm"
                   >
-                    ورود
+                    <User className="w-5 h-5" />
                   </button>
                 </a>
               </LiquidGlassCard>
@@ -101,7 +122,6 @@ export default function Header() {
       {isMobileMenuOpen && (
         <div className="md:hidden mt-4">
           <LiquidGlassCard
-            // draggable={false}
             blurIntensity="lg"
             borderRadius="24px"
             className="p-4"
@@ -118,9 +138,7 @@ export default function Header() {
                 </a>
               ))}
 
-              {/* Mobile Button - شیشه‌ای */}
               <LiquidGlassCard
-                // draggable={false}
                 blurIntensity="lg"
                 borderRadius="16px"
                 glowIntensity="sm"

@@ -66,6 +66,13 @@ export default function EventCreate() {
     }
   };
 
+  // 🔥 تابع ایمن برای تبدیل به عدد
+  const safeNumber = (value: any): number => {
+    if (value === null || value === undefined || value === "") return 0;
+    const num = Number(value);
+    return isNaN(num) ? 0 : Math.max(0, num);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -77,14 +84,18 @@ export default function EventCreate() {
         imageUrl = await uploadImage(image);
       }
 
+      // 🔥 تبدیل ایمن به عدد
+      const capacity = safeNumber(formData.capacity);
+      const price = safeNumber(formData.price);
+
       const eventData = {
         title: formData.title,
         description: formData.description,
         content: formData.content || "",
         date: new Date(formData.date).toISOString(),
         duration: formData.duration,
-        capacity: Number(formData.capacity),
-        price: Number(formData.price),
+        capacity: capacity,
+        price: price, // ✅ حتماً 0 یا بیشتر
         location: formData.location,
         type: formData.type,
         featured: formData.featured,
@@ -218,7 +229,7 @@ export default function EventCreate() {
               />
             </div>
 
-            {/* 🔥 تاریخ با PersianDatePicker */}
+            {/* تاریخ با PersianDatePicker */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تاریخ رویداد
@@ -278,6 +289,7 @@ export default function EventCreate() {
                   name="capacity"
                   value={formData.capacity}
                   onChange={handleChange}
+                  min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />
@@ -291,6 +303,8 @@ export default function EventCreate() {
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
+                  min="0"
+                  step="1000"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />

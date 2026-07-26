@@ -9,14 +9,14 @@ export const enrollmentsAPI = {
     return response;
   },
 
-  // ثبت‌نام در رویداد
+  // ایجاد ثبت‌نام جدید
   create: async (data: any) => {
     const token = localStorage.getItem("token") || "";
     const response = await apiClient.post("/enrollments", data, token);
     return response;
   },
 
-  // 🔥 پرداخت
+  // پردازش پرداخت
   processPayment: async (enrollmentId: string) => {
     const token = localStorage.getItem("token") || "";
     const response = await apiClient.post(
@@ -27,7 +27,7 @@ export const enrollmentsAPI = {
     return response;
   },
 
-  // 🔥 دریافت لینک جلسه
+  // دریافت لینک جلسه
   getMeetingLink: async (enrollmentId: string) => {
     const token = localStorage.getItem("token") || "";
     const response = await apiClient.get(
@@ -37,7 +37,21 @@ export const enrollmentsAPI = {
     return response;
   },
 
-  // به‌روزرسانی وضعیت
+  // 🔥 دریافت ثبت‌نام‌های یک رویداد (برای ادمین و کارمند)
+  getEventEnrollments: async (
+    eventId: string,
+    params?: { status?: string; search?: string },
+  ) => {
+    const token = localStorage.getItem("token") || "";
+    const query = new URLSearchParams();
+    if (params?.status) query.append("status", params.status);
+    if (params?.search) query.append("search", params.search);
+    const url = `/enrollments/event/${eventId}${query.toString() ? `?${query.toString()}` : ""}`;
+    const response = await apiClient.get(url, token);
+    return response;
+  },
+
+  // 🔥 به‌روزرسانی وضعیت ثبت‌نام
   updateStatus: async (id: string, status: string) => {
     const token = localStorage.getItem("token") || "";
     const response = await apiClient.patch(
@@ -48,12 +62,23 @@ export const enrollmentsAPI = {
     return response;
   },
 
+  // 🔥 ارسال لینک جلسه
+  sendMeetingLink: async (id: string, meetingLink: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await apiClient.post(
+      `/enrollments/${id}/meeting-link`,
+      { meetingLink },
+      token,
+    );
+    return response;
+  },
+
   // به‌روزرسانی وضعیت پرداخت
-  updatePayment: async (id: string, status: string) => {
+  updatePayment: async (id: string, paymentStatus: string) => {
     const token = localStorage.getItem("token") || "";
     const response = await apiClient.patch(
       `/enrollments/${id}/payment`,
-      { status },
+      { paymentStatus },
       token,
     );
     return response;

@@ -14,6 +14,7 @@ import {
   Check,
   X,
   ImageOff,
+  Users,
 } from "lucide-react";
 
 interface Event {
@@ -29,12 +30,12 @@ interface Event {
   type: string;
   featured: boolean;
   isActive: boolean;
+  employeeId?: string;
   _count?: {
     enrollments: number;
   };
 }
 
-// 🔥 آدرس پایه برای عکس‌ها
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
 
 export default function EventList() {
@@ -43,22 +44,36 @@ export default function EventList() {
   const [error, setError] = useState("");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
+  // 🔥 تشخیص نوع کاربر
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = user?.role === "ADMIN" || user?.type === "admin";
+  const isEmployee = user?.type === "employee" || user?.role === "EMPLOYEE";
+
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const data = await eventsAPI.getAll({
-          limit: 50,
-        });
-        setEvents(data.events || []);
-      } catch (err) {
-        setError("خطا در دریافت رویدادها");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchEvents();
   }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const data = await eventsAPI.getAll({
+        limit: 50,
+      });
+      let eventsData = data.events || [];
+
+      // 🔥 اگر کارمند هست، فقط رویدادهای خودش رو ببینه
+      if (isEmployee && user?.id) {
+        eventsData = eventsData.filter((e: Event) => e.employeeId === user.id);
+      }
+
+      setEvents(eventsData);
+    } catch (err) {
+      setError("خطا در دریافت رویدادها");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -79,14 +94,12 @@ export default function EventList() {
     }
   };
 
-  // 🔥 تابع ساخت آدرس کامل عکس
   const getImageUrl = (imagePath?: string) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
     return `${BASE_URL}${imagePath}`;
   };
 
-  // 🔥 تابع مدیریت خطای عکس
   const handleImageError = (eventId: string) => {
     setImageErrors((prev) => ({ ...prev, [eventId]: true }));
   };
@@ -104,23 +117,30 @@ export default function EventList() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">
-              📅 مدیریت رویدادها
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-blue-400" />
+              {isEmployee ? "رویدادهای من" : "مدیریت رویدادها"}
             </h1>
-            <p className="text-white/60 text-sm">لیست تمام رویدادها</p>
+            <p className="text-white/60 text-sm">
+              {isEmployee
+                ? `${events.length} رویداد assigned به شما`
+                : `لیست تمام رویدادها (${events.length})`}
+            </p>
           </div>
-          <Link to="/admin/events/create">
-            <GlassButton
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-4 h-4" />}
-              iconPosition="left"
-            >
-              رویداد جدید
-            </GlassButton>
-          </Link>
+          {isAdmin && (
+            <Link to="/admin/events/create">
+              <GlassButton
+                variant="primary"
+                size="md"
+                icon={<Plus className="w-4 h-4" />}
+                iconPosition="left"
+              >
+                رویداد جدید
+              </GlassButton>
+            </Link>
+          )}
         </div>
 
         {error && (
@@ -137,13 +157,12 @@ export default function EventList() {
             return (
               <LiquidGlassCard
                 key={event.id}
-                className="p-4"
+                className="p-4 hover:bg-white/5 transition-all duration-300"
                 borderRadius="16px"
                 blurIntensity="sm"
                 glowIntensity="sm"
               >
                 <div className="flex flex-col md:flex-row gap-4">
-                  {/* 🔥 تصویر با مدیریت خطا */}
                   {event.image && imageUrl && !hasError ? (
                     <img
                       src={imageUrl}
@@ -164,7 +183,7 @@ export default function EventList() {
                         <h3 className="text-lg font-bold text-white">
                           {event.title}
                         </h3>
-                        <p className="text-gray-400 text-sm line-clamp-2">
+                        <p className="text-white/60 text-sm line-clamp-2">
                           {event.description}
                         </p>
                       </div>
@@ -194,7 +213,7 @@ export default function EventList() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-400">
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-white/60">
                       <span className="flex items-center gap-1">
                         <Calendar size={14} />
                         {formatDate(event.date)}
@@ -205,7 +224,8 @@ export default function EventList() {
                         </span>
                       )}
                       <span className="flex items-center gap-1">
-                        👥 {event._count?.enrollments || 0} / {event.capacity}
+                        <Users size={14} />
+                        {event._count?.enrollments || 0} / {event.capacity}
                       </span>
                       <span className="flex items-center gap-1">
                         💰{" "}
@@ -215,17 +235,35 @@ export default function EventList() {
                   </div>
 
                   <div className="flex md:flex-col gap-2">
-                    <Link to={`/admin/events/edit/${event.id}`}>
-                      <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
-                        <Edit size={18} />
-                      </button>
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(event.id)}
-                      className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {isAdmin ? (
+                      <>
+                        <Link to={`/admin/events/edit/${event.id}`}>
+                          <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
+                            <Edit size={18} />
+                          </button>
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(event.id)}
+                          className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <Link to={`/admin/events/enrollments/${event.id}`}>
+                        <button className="p-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors">
+                          <Users size={18} />
+                          <span className="text-xs mr-1">ثبت‌نام‌ها</span>
+                        </button>
+                      </Link>
+                    )}
+                    {isEmployee && (
+                      <Link to={`/admin/events/enrollments/${event.id}`}>
+                        <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
+                          <Users size={18} />
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </LiquidGlassCard>
@@ -234,9 +272,25 @@ export default function EventList() {
         </div>
 
         {events.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-2xl mb-2">📭</p>
-            <p>هیچ رویدادی ایجاد نشده است</p>
+          <div className="text-center py-12 text-white/40">
+            <Calendar className="w-16 h-16 mx-auto mb-4 text-white/20" />
+            <p className="text-lg">
+              {isEmployee
+                ? "هیچ رویدادی به شما اختصاص داده نشده است"
+                : "هیچ رویدادی ایجاد نشده است"}
+            </p>
+            <p className="text-sm text-white/30">
+              {isEmployee
+                ? "با ادمین تماس بگیرید تا رویدادی به شما اختصاص دهد"
+                : "برای شروع، اولین رویداد را ایجاد کنید"}
+            </p>
+            {isAdmin && (
+              <Link to="/admin/events/create">
+                <GlassButton variant="primary" size="sm" className="mt-4">
+                  ایجاد رویداد جدید
+                </GlassButton>
+              </Link>
+            )}
           </div>
         )}
       </div>

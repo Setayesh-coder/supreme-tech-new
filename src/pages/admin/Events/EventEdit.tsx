@@ -42,7 +42,6 @@ export default function EventEdit() {
         const response = await eventsAPI.getById(id);
         console.log("📥 داده دریافت شد:", response);
 
-        // 🔥 اگر داده داخل data.data بود
         const data = response.data || response;
 
         setFormData({
@@ -52,7 +51,7 @@ export default function EventEdit() {
           date: data.date ? new Date(data.date).toISOString().slice(0, 16) : "",
           duration: data.duration || "",
           capacity: data.capacity?.toString() || "",
-          price: data.price?.toString() || "",
+          price: data.price?.toString() || "0", // ✅ اگر null/undefined بود "0"
           location: data.location || "",
           type: data.type || "WORKSHOP",
           featured: data.featured || false,
@@ -125,6 +124,13 @@ export default function EventEdit() {
     }
   };
 
+  // 🔥 تابع ایمن برای تبدیل به عدد
+  const safeNumber = (value: any): number => {
+    if (value === null || value === undefined || value === "") return 0;
+    const num = Number(value);
+    return isNaN(num) ? 0 : Math.max(0, num);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -137,12 +143,15 @@ export default function EventEdit() {
         imageUrl = await uploadImage(image);
       }
 
-      // 🔥 اطمینان از اینکه تاریخ وجود داره
       if (!formData.date) {
         setError("لطفاً تاریخ رویداد را انتخاب کنید");
         setSubmitting(false);
         return;
       }
+
+      // 🔥 تبدیل ایمن به عدد
+      const capacity = safeNumber(formData.capacity);
+      const price = safeNumber(formData.price);
 
       const eventData = {
         title: formData.title,
@@ -150,8 +159,8 @@ export default function EventEdit() {
         content: formData.content || "",
         date: new Date(formData.date).toISOString(),
         duration: formData.duration,
-        capacity: Number(formData.capacity),
-        price: Number(formData.price),
+        capacity: capacity,
+        price: price, // ✅ حتماً 0 یا بیشتر
         location: formData.location,
         type: formData.type,
         featured: formData.featured,
@@ -164,7 +173,6 @@ export default function EventEdit() {
       await eventsAPI.update(id!, eventData);
       setSuccess("رویداد با موفقیت ویرایش شد!");
 
-      // بعد از ۲ ثانیه به لیست برگرد
       setTimeout(() => {
         navigate("/admin/events");
       }, 1500);
@@ -344,6 +352,7 @@ export default function EventEdit() {
                   name="capacity"
                   value={formData.capacity}
                   onChange={handleChange}
+                  min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />
@@ -357,6 +366,8 @@ export default function EventEdit() {
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
+                  min="0"
+                  step="1000"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />

@@ -15,6 +15,8 @@ import {
   ImageOff,
   Flame,
 } from "lucide-react";
+import { EventsSkeleton } from "../../components/skeletons/EventSkeletons";
+import SectionHeader from "../../components/ui/SectionHeader";
 
 interface Event {
   id: string;
@@ -67,38 +69,16 @@ const getEventTypeColor = (type: string) => {
   return colors[type] || "from-gray-500 to-gray-600";
 };
 
-// 🔥 چند روز تا برگزاری رویداد مانده — برای نمایش نشان شمارش‌معکوس
 const getDaysLeft = (dateString: string) => {
   const diffMs = new Date(dateString).getTime() - Date.now();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
 
-// 🔥 رنگ نوار ظرفیت بر اساس درصد پر شدن (اطلاعات واقعی، نه صرفاً تزیین)
 const getCapacityColor = (ratio: number) => {
   if (ratio >= 0.9) return "bg-red-400";
   if (ratio >= 0.6) return "bg-amber-400";
   return "bg-emerald-400";
 };
-
-function EventCardSkeleton() {
-  return (
-    <LiquidGlassCard
-      className="overflow-hidden h-full"
-      borderRadius="16px"
-      blurIntensity="sm"
-      glowIntensity="sm"
-    >
-      <div className="h-48 bg-white/5 animate-pulse" />
-      <div className="p-6 space-y-3">
-        <div className="h-3 w-1/2 bg-white/10 rounded animate-pulse" />
-        <div className="h-5 w-3/4 bg-white/10 rounded animate-pulse" />
-        <div className="h-3 w-full bg-white/10 rounded animate-pulse" />
-        <div className="h-3 w-2/3 bg-white/10 rounded animate-pulse" />
-        <div className="h-9 w-full bg-white/10 rounded-full animate-pulse mt-4" />
-      </div>
-    </LiquidGlassCard>
-  );
-}
 
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -143,6 +123,7 @@ export default function Events() {
     setImageErrors((prev) => ({ ...prev, [eventId]: true }));
   };
 
+  // ✅ مدیریت خطا
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
@@ -167,6 +148,11 @@ export default function Events() {
     );
   }
 
+  if (loading) {
+    return <EventsSkeleton />;
+  }
+
+  // ✅ نمایش اصلی
   return (
     <section className="py-12 px-4 md:px-6 relative overflow-hidden min-h-screen">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/10 to-transparent" />
@@ -174,30 +160,13 @@ export default function Events() {
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
       <div className="container mx-auto relative z-10">
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <LiquidGlassCard
-              blurIntensity="md"
-              borderRadius="100px"
-              glowIntensity="sm"
-              className="inline-flex px-4 py-2"
-            >
-              <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-400" />
-                رویدادهای Supreme Tech
-              </span>
-            </LiquidGlassCard>
-          </div>
-
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              📅 رویدادها
-            </span>
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            در رویدادهای ما شرکت کنید و مهارت‌های خود را ارتقا دهید
-          </p>
-        </div>
+        <SectionHeader
+          badge="رویدادهای Supreme Tech"
+          badgeIcon={<Calendar className="w-4 h-4 text-blue-400" />}
+          title=" رویدادها"
+          subtitle="در رویدادهای ما شرکت کنید و مهارت‌های خود را ارتقا دهید"
+          description="از کارگاه‌ها و وبینارهای تخصصی تا کنفرانس‌های بزرگ"
+        />
 
         <div className="flex flex-wrap justify-center gap-3 mb-10">
           <button
@@ -233,13 +202,7 @@ export default function Events() {
           </button>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <EventCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : filteredEvents.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div className="flex justify-center items-center py-20">
             <LiquidGlassCard
               className="p-12 text-center max-w-md"
@@ -308,7 +271,6 @@ export default function Events() {
                         </div>
                       )}
 
-                      {/* 🔥 نشان شمارش‌معکوس — فقط وقتی معنادار است نمایش داده می‌شود */}
                       {daysLeft >= 0 && daysLeft <= 14 && (
                         <div className="absolute bottom-3 right-3">
                           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/50 text-orange-300 backdrop-blur-sm flex items-center gap-1 border border-orange-400/30">
@@ -356,7 +318,6 @@ export default function Events() {
                       </span>
                     )}
 
-                    {/* 🔥 نوار ظرفیت — رنگ بر اساس میزان پر شدن تغییر می‌کند */}
                     <div className="space-y-1.5 pt-1">
                       <div className="flex items-center justify-between text-xs text-gray-400">
                         <span className="flex items-center gap-1">

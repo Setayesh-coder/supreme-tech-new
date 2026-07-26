@@ -26,6 +26,7 @@ import {
   // Linkedin,
   Send,
 } from "lucide-react";
+import { BlogPostSkeleton } from "../../components/skeletons/BlogPostSkeleton";
 
 interface BlogPost {
   id: string;
@@ -65,27 +66,9 @@ function getNodeText(node: unknown): string {
   return "";
 }
 
-function BlogPostSkeleton() {
-  return (
-    <section className="py-12 px-4 md:px-6 min-h-screen">
-      <div className="container mx-auto max-w-6xl">
-        <div className="h-8 w-40 bg-white/5 rounded-full animate-pulse mb-6" />
-        <div className="h-72 md:h-96 bg-white/5 rounded-3xl animate-pulse mb-6" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="h-10 w-3/4 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-full bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-5/6 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-2/3 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-full bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-4/5 bg-white/5 rounded animate-pulse" />
-          </div>
-          <div className="h-48 bg-white/5 rounded-3xl animate-pulse" />
-        </div>
-      </div>
-    </section>
-  );
-}
+// if (loading) {
+//   return <BlogPostSkeleton />;
+// }
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
