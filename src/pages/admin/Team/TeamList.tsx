@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { teamAPI } from "../../../lib/api/team";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
+import { CircleOptimizedImage } from "../../../components/ui/OptimizedImage";
 import { Plus, Edit, Trash2, Mail, Star } from "lucide-react";
 
 interface TeamMember {
@@ -92,17 +93,14 @@ export default function TeamList() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-                      {member.avatar ? (
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        member.name.charAt(0)
-                      )}
-                    </div>
+                    {/* 🔥 استفاده از CircleOptimizedImage به جای img */}
+                    <CircleOptimizedImage
+                      src={member.avatar || ''}
+                      alt={member.name}
+                      className="w-14 h-14"
+                      quality={80}
+                      fallback="/default-avatar.png"
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-white font-medium">

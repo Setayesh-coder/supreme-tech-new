@@ -29,7 +29,7 @@ interface EnrollmentsTabProps {
   formatPrice: (price: number) => string;
   getStatusLabel: (status: string) => {
     label: string;
-    icon: JSX.Element;
+    icon: React.ReactElement;
     color: string;
   };
   getPaymentStatusLabel: (status?: string) => { label: string; color: string };

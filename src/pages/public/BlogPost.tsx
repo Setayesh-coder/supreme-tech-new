@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { blogAPI } from "../../lib/api/blog";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
+import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -65,10 +66,6 @@ function getNodeText(node: unknown): string {
   }
   return "";
 }
-
-// if (loading) {
-//   return <BlogPostSkeleton />;
-// }
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
@@ -422,13 +419,18 @@ export default function BlogPost() {
         </a>
       );
     },
+    // 🔥 استفاده از OptimizedImage در محتوای Markdown
     img({ src, alt }) {
       return (
         <figure className="my-6">
-          <img
-            src={src}
+          <OptimizedImage
+            src={src || ""}
             alt={alt || "تصویر"}
             className="rounded-lg w-full shadow-lg"
+            objectFit="cover"
+            quality={85}
+            loading="lazy"
+            fallback="/placeholder-image.jpg"
           />
           {alt && (
             <figcaption className="text-center text-sm text-gray-400 mt-3">
@@ -513,10 +515,15 @@ export default function BlogPost() {
         >
           {post.coverImage && (
             <div className="relative overflow-hidden h-64 md:h-96">
-              <img
+              <OptimizedImage
                 src={post.coverImage}
                 alt={post.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full"
+                objectFit="cover"
+                quality={90}
+                priority={true}
+                loading="eager"
+                fallback="/placeholder-image.jpg"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             </div>

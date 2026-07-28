@@ -1,6 +1,6 @@
 // src/components/ui/SectionHeader.tsx
 import { LiquidGlassCard } from "./LiquidGlassCard";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface SectionHeaderProps {
   badge?: string;

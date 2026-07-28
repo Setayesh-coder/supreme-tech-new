@@ -20,11 +20,13 @@ export default function BlogList() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const token = localStorage.getItem("token") || "";
+  // ❌ خط token رو حذف کنید چون interceptor خودش مدیریت میکنه
+  // const token = localStorage.getItem("token") || "";
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
+        // ✅ بدون ارسال توکن - interceptor خودش اضافه میکنه
         const data = await blogAPI.getAll({ limit: 100 });
         setPosts(data.posts || []);
       } catch (err) {
@@ -40,7 +42,8 @@ export default function BlogList() {
     if (!confirm("آیا از حذف این پست مطمئن هستید؟")) return;
 
     try {
-      await blogAPI.delete(id, token);
+      // ✅ بدون ارسال توکن - interceptor خودش اضافه میکنه
+      await blogAPI.delete(id);
       setPosts(posts.filter((p) => p.id !== id));
     } catch (err) {
       alert("خطا در حذف پست");

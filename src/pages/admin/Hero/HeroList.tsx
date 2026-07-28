@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
+import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { heroAPI } from "../../../lib/api/hero";
-// import { uploadAPI } from "../../../lib/api/upload";
 import {
   Plus,
   Edit,
@@ -36,6 +36,7 @@ export default function HeroList() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchSlides();
@@ -106,6 +107,10 @@ export default function HeroList() {
     }
   };
 
+  const handleImageError = (slideId: string) => {
+    setImageErrors((prev) => ({ ...prev, [slideId]: true }));
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -145,125 +150,137 @@ export default function HeroList() {
         )}
 
         <div className="grid grid-cols-1 gap-4">
-          {slides.map((slide, index) => (
-            <LiquidGlassCard
-              key={slide.id}
-              className="p-4"
-              borderRadius="16px"
-              blurIntensity="sm"
-              glowIntensity="sm"
-            >
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                {/* تصویر */}
-                <div className="w-32 h-20 bg-white/5 rounded-lg overflow-hidden shrink-0">
-                  <img
-                    src={slide.image}
-                    alt={slide.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://via.placeholder.com/128x80?text=No+Image";
-                    }}
-                  />
-                </div>
-
-                {/* اطلاعات */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">
-                        {slide.title}
-                      </h3>
-                      {slide.subtitle && (
-                        <p className="text-sm text-gray-400">
-                          {slide.subtitle}
-                        </p>
-                      )}
-                      {slide.description && (
-                        <p className="text-sm text-gray-500 line-clamp-1">
-                          {slide.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          slide.isActive
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-red-500/20 text-red-400"
-                        }`}
-                      >
-                        {slide.isActive ? (
-                          <span className="flex items-center gap-1">
-                            <Check className="w-3 h-3" /> فعال
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <X className="w-3 h-3" /> غیرفعال
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ترتیب: {slide.order + 1}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
-                    {slide.buttonText && <span>🔗 {slide.buttonText}</span>}
-                    {slide.color && (
-                      <span className="flex items-center gap-1">
-                        🎨
-                        <span
-                          className="w-4 h-4 rounded-full border border-white/10"
-                          style={{ backgroundColor: slide.color }}
-                        />
-                      </span>
+          {slides.map((slide, index) => {
+            const hasError = imageErrors[slide.id];
+            
+            return (
+              <LiquidGlassCard
+                key={slide.id}
+                className="p-4"
+                borderRadius="16px"
+                blurIntensity="sm"
+                glowIntensity="sm"
+              >
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                  {/* 🔥 تصویر با OptimizedImage */}
+                  <div className="w-32 h-20 bg-white/5 rounded-lg overflow-hidden shrink-0">
+                    {slide.image && !hasError ? (
+                      <OptimizedImage
+                        src={slide.image}
+                        alt={slide.title}
+                        className="w-full h-full"
+                        objectFit="cover"
+                        quality={80}
+                        loading="lazy"
+                        fallback="https://via.placeholder.com/128x80?text=No+Image"
+                        placeholder={false}
+                        onError={() => handleImageError(slide.id)}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                        <Image className="w-8 h-8 text-white/20" />
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {/* عملیات */}
-                <div className="flex flex-wrap items-center gap-1">
-                  <button
-                    onClick={() => handleMove(slide.id, "up")}
-                    disabled={index === 0}
-                    className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ArrowUp size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleMove(slide.id, "down")}
-                    disabled={index === slides.length - 1}
-                    className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ArrowDown size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleToggleStatus(slide.id, slide.isActive)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      slide.isActive
-                        ? "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400"
-                        : "bg-green-500/20 hover:bg-green-500/30 text-green-400"
-                    }`}
-                  >
-                    {slide.isActive ? <X size={18} /> : <Check size={18} />}
-                  </button>
-                  <Link to={`/admin/hero/edit/${slide.id}`}>
-                    <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
-                      <Edit size={18} />
+                  {/* اطلاعات */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">
+                          {slide.title}
+                        </h3>
+                        {slide.subtitle && (
+                          <p className="text-sm text-gray-400">
+                            {slide.subtitle}
+                          </p>
+                        )}
+                        {slide.description && (
+                          <p className="text-sm text-gray-500 line-clamp-1">
+                            {slide.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            slide.isActive
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {slide.isActive ? (
+                            <span className="flex items-center gap-1">
+                              <Check className="w-3 h-3" /> فعال
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <X className="w-3 h-3" /> غیرفعال
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ترتیب: {slide.order + 1}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+                      {slide.buttonText && <span>🔗 {slide.buttonText}</span>}
+                      {slide.color && (
+                        <span className="flex items-center gap-1">
+                          🎨
+                          <span
+                            className="w-4 h-4 rounded-full border border-white/10"
+                            style={{ backgroundColor: slide.color }}
+                          />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* عملیات */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      onClick={() => handleMove(slide.id, "up")}
+                      disabled={index === 0}
+                      className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ArrowUp size={18} />
                     </button>
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(slide.id)}
-                    className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                    <button
+                      onClick={() => handleMove(slide.id, "down")}
+                      disabled={index === slides.length - 1}
+                      className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ArrowDown size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleToggleStatus(slide.id, slide.isActive)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        slide.isActive
+                          ? "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400"
+                          : "bg-green-500/20 hover:bg-green-500/30 text-green-400"
+                      }`}
+                    >
+                      {slide.isActive ? <X size={18} /> : <Check size={18} />}
+                    </button>
+                    <Link to={`/admin/hero/edit/${slide.id}`}>
+                      <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
+                        <Edit size={18} />
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(slide.id)}
+                      className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </LiquidGlassCard>
-          ))}
+              </LiquidGlassCard>
+            );
+          })}
         </div>
 
         {slides.length === 0 && (

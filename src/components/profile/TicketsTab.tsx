@@ -59,7 +59,7 @@ export function TicketsTab({
   const getStatusLabel = (status: string) => {
     const labels: Record<
       string,
-      { label: string; icon: JSX.Element; color: string }
+      { label: string; icon: React.ReactElement; color: string }
     > = {
       OPEN: {
         label: "باز",

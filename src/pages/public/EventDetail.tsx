@@ -5,6 +5,7 @@ import { eventsAPI } from "../../lib/api/events";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
+import { OptimizedImage } from "../../components/ui/OptimizedImage";
 // import LikeButton from "../../components/ui/LikeButton";
 import ShareButton from "../../components/ui/ShareButton";
 import {
@@ -302,10 +303,14 @@ export default function EventDetail() {
         >
           <div className="relative h-64 md:h-[420px]">
             {event.image && imageUrl && !imageError ? (
-              <img
+              <OptimizedImage
                 src={imageUrl}
                 alt={event.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full"
+                objectFit="cover"
+                quality={90}
+                priority={true}
+                loading="eager"
                 onError={() => setImageError(true)}
               />
             ) : (

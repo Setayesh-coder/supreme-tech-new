@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
+import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { partnersAPI } from "../../../lib/api/partners";
 import { Plus, Edit, Trash2, Loader2, Building2, Check, X } from "lucide-react";
 
@@ -23,6 +24,7 @@ export default function PartnerList() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchPartners();
@@ -64,6 +66,10 @@ export default function PartnerList() {
     }
   };
 
+  const handleImageError = (partnerId: string) => {
+    setImageErrors((prev) => ({ ...prev, [partnerId]: true }));
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -101,105 +107,112 @@ export default function PartnerList() {
         )}
 
         <div className="grid grid-cols-1 gap-4">
-          {partners.map((partner) => (
-            <LiquidGlassCard
-              key={partner.id}
-              className="p-4"
-              borderRadius="16px"
-              blurIntensity="sm"
-              glowIntensity="sm"
-            >
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                {/* لوگو */}
-                <div className="w-16 h-16 bg-white/5 rounded-xl flex items-center justify-center shrink-0">
-                  {partner.logo ? (
-                    <img
-                      src={partner.logo}
-                      alt={partner.name}
-                      className="w-12 h-12 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <Building2 className="w-8 h-8 text-white/20" />
-                  )}
-                </div>
+          {partners.map((partner) => {
+            const hasError = imageErrors[partner.id];
+            
+            return (
+              <LiquidGlassCard
+                key={partner.id}
+                className="p-4"
+                borderRadius="16px"
+                blurIntensity="sm"
+                glowIntensity="sm"
+              >
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                  {/* 🔥 لوگو با OptimizedImage */}
+                  <div className="w-16 h-16 bg-white/5 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                    {partner.logo && !hasError ? (
+                      <OptimizedImage
+                        src={partner.logo}
+                        alt={partner.name}
+                        className="w-12 h-12 object-contain"
+                        objectFit="contain"
+                        quality={80}
+                        loading="lazy"
+                        fallback=""
+                        placeholder={false}
+                        onError={() => handleImageError(partner.id)}
+                      />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-white/20" />
+                    )}
+                  </div>
 
-                {/* اطلاعات */}
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">
-                        {partner.name}
-                      </h3>
-                      {partner.website && (
-                        <a
-                          href={partner.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-400 hover:text-blue-300 transition"
-                        >
-                          {partner.website}
-                        </a>
-                      )}
-                      {partner.description && (
-                        <p className="text-gray-400 text-sm line-clamp-1">
-                          {partner.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          partner.isActive
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-red-500/20 text-red-400"
-                        }`}
-                      >
-                        {partner.isActive ? (
-                          <span className="flex items-center gap-1">
-                            <Check className="w-3 h-3" /> فعال
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <X className="w-3 h-3" /> غیرفعال
-                          </span>
+                  {/* اطلاعات */}
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">
+                          {partner.name}
+                        </h3>
+                        {partner.website && (
+                          <a
+                            href={partner.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-400 hover:text-blue-300 transition"
+                          >
+                            {partner.website}
+                          </a>
                         )}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ترتیب: {partner.order}
-                      </span>
+                        {partner.description && (
+                          <p className="text-gray-400 text-sm line-clamp-1">
+                            {partner.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            partner.isActive
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {partner.isActive ? (
+                            <span className="flex items-center gap-1">
+                              <Check className="w-3 h-3" /> فعال
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <X className="w-3 h-3" /> غیرفعال
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ترتیب: {partner.order}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* عملیات */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() =>
-                      handleToggleStatus(partner.id, partner.isActive)
-                    }
-                    className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
-                    title={partner.isActive ? "غیرفعال کردن" : "فعال کردن"}
-                  >
-                    {partner.isActive ? <X size={18} /> : <Check size={18} />}
-                  </button>
-                  <Link to={`/admin/partners/edit/${partner.id}`}>
-                    <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
-                      <Edit size={18} />
+                  {/* عملیات */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() =>
+                        handleToggleStatus(partner.id, partner.isActive)
+                      }
+                      className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
+                      title={partner.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                    >
+                      {partner.isActive ? <X size={18} /> : <Check size={18} />}
                     </button>
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(partner.id)}
-                    className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                    <Link to={`/admin/partners/edit/${partner.id}`}>
+                      <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
+                        <Edit size={18} />
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(partner.id)}
+                      className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </LiquidGlassCard>
-          ))}
+              </LiquidGlassCard>
+            );
+          })}
         </div>
 
         {partners.length === 0 && (

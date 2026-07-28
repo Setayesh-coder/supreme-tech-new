@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
+import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, X,  Loader2, Building2 } from "lucide-react";
+import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
 
 export default function PartnerCreate() {
   const navigate = useNavigate();
@@ -126,17 +127,23 @@ export default function PartnerCreate() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* لوگو */}
+            {/* 🔥 لوگو با OptimizedImage */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 لوگو
               </label>
               {logoPreview ? (
                 <div className="relative w-32 h-32">
-                  <img
+                  <OptimizedImage
                     src={logoPreview}
                     alt="پیش‌نمایش لوگو"
                     className="w-32 h-32 object-contain rounded-xl border border-white/20"
+                    objectFit="contain"
+                    quality={85}
+                    priority={true}
+                    loading="eager"
+                    placeholder={false}
+                    fallback=""
                   />
                   <button
                     type="button"

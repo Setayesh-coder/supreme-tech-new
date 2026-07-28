@@ -493,7 +493,7 @@ export default function Profile() {
   const getStatusLabel = (status: string) => {
     const labels: Record<
       string,
-      { label: string; icon: JSX.Element; color: string }
+      { label: string; icon: React.ReactElement; color: string }
     > = {
       PENDING: {
         label: "در انتظار تایید",

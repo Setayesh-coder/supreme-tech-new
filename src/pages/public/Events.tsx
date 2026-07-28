@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { eventsAPI } from "../../lib/api/events";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
+import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import {
   Calendar,
   MapPin,
@@ -242,12 +243,16 @@ export default function Events() {
                   glowIntensity="sm"
                   hoverScale={1.03}
                 >
+                  {/* ✅ استفاده از OptimizedImage به جای img */}
                   {event.image && imageUrl && !hasError ? (
                     <div className="relative overflow-hidden h-48">
-                      <img
+                      <OptimizedImage
                         src={imageUrl}
                         alt={event.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full transition-transform duration-500 group-hover:scale-110"
+                        objectFit="cover"
+                        quality={80}
+                        loading="lazy"
                         onError={() => handleImageError(event.id)}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />

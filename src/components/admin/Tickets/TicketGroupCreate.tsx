@@ -13,7 +13,7 @@ export default function TicketGroupCreate() {
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [fetchingUsers, setFetchingUsers] = useState(true);
+  const [, setFetchingUsers] = useState(true);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     title: "",

@@ -1,5 +1,5 @@
 // src/pages/admin/Users/UserList.tsx
-import React from "react";
+
 import { useState, useEffect } from "react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
@@ -40,7 +40,7 @@ interface User {
 
 const roleLabels: Record<
   string,
-  { label: string; icon: JSX.Element; color: string }
+  { label: string; icon: React.ReactElement; color: string }
 > = {
   USER: {
     label: "کاربر عادی",

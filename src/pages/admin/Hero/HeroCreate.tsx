@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
+import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { heroAPI } from "../../../lib/api/hero";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Image, HelpCircle } from "lucide-react";
@@ -22,7 +23,7 @@ export default function HeroCreate() {
     color: "#3b82f6",
     order: 0,
     isActive: true,
-    heroTagline: "", // 🔥 اضافه شد
+    heroTagline: "",
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -133,17 +134,23 @@ export default function HeroCreate() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* تصویر */}
+            {/* 🔥 تصویر با OptimizedImage */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر اسلاید
               </label>
               {imagePreview ? (
                 <div className="relative">
-                  <img
+                  <OptimizedImage
                     src={imagePreview}
                     alt="پیش‌نمایش"
-                    className="w-full h-48 object-cover rounded-xl"
+                    className="w-full h-48 rounded-xl"
+                    objectFit="cover"
+                    quality={90}
+                    priority={true}
+                    loading="eager"
+                    placeholder={false}
+                    fallback=""
                   />
                   <button
                     type="button"
@@ -213,7 +220,7 @@ export default function HeroCreate() {
               />
             </div>
 
-            {/* 🔥 heroTagline - اضافه شد */}
+            {/* heroTagline */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تگ بالای اسلاید (Hero Tagline)

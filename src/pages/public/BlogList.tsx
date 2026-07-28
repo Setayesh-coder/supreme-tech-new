@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { blogAPI } from "../../lib/api/blog";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
+import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import {
   Calendar,
   Eye,
@@ -108,9 +109,11 @@ export default function BlogList() {
       !activeTag || post.tags.some((tag) => tag.name === activeTag);
     return matchesSearch && matchesTag;
   });
+
   if (loading) {
     return <BlogListSkeleton />;
   }
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-64 px-4">
@@ -137,6 +140,7 @@ export default function BlogList() {
           subtitle="جدیدترین مقالات و مطالب آموزشی"
           description="در حوزه هوش مصنوعی، طراحی وب و توسعه نرم‌افزار"
         />
+
         {/* جستجو و فیلتر تگ */}
         <div className="flex flex-col md:flex-row items-center gap-4 mb-10">
           <div className="relative w-full md:w-80">
@@ -221,13 +225,17 @@ export default function BlogList() {
                   glowIntensity="sm"
                   hoverScale={1.03}
                 >
-                  {/* Cover Image — با پوشش ثابت برای همه کارت‌ها */}
+                  {/* 🔥 استفاده از OptimizedImage به جای img */}
                   <div className="overflow-hidden h-48 relative">
                     {post.coverImage ? (
-                      <img
+                      <OptimizedImage
                         src={post.coverImage}
                         alt={post.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full transition-transform duration-500 group-hover:scale-110"
+                        objectFit="cover"
+                        quality={80}
+                        loading="lazy"
+                        fallback="/placeholder-image.jpg"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-2">
@@ -304,7 +312,7 @@ export default function BlogList() {
           </div>
         )}
 
-        {/* Load More — حالا واقعاً صفحه بعد را می‌گیرد، فقط لاگ نمی‌کند */}
+        {/* Load More */}
         {!loading && hasMore && !search && !activeTag && posts.length > 0 && (
           <div className="text-center mt-12">
             <GlassButton
