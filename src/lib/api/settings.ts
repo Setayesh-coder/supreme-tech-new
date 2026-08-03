@@ -2,7 +2,7 @@
 import { apiClient } from "./client";
 
 // 🔥 مقادیر پیش‌فرض
-const defaultSettings = {
+export const defaultSettings = {
   siteName: "Supreme Tech",
   siteDescription: "پیشرو در توسعه AI Agent های هوشمند",
   contactEmail: "info@supremetech.ir",
@@ -24,21 +24,27 @@ const defaultSettings = {
   maintenance: false,
 };
 
+// src/lib/api/settings.ts
 export const settingsAPI = {
   getAll: async () => {
     try {
-      const token = localStorage.getItem("token") || "";
-      const response = await apiClient.get("/settings", token);
+      // 🔥 ابتدا از مسیر عمومی دریافت کن
+      const response = await apiClient.get("/settings/public");
       return response;
-    } catch (error) {
-      console.warn("⚠️ خطا در دریافت تنظیمات، استفاده از مقادیر پیش‌فرض");
-      return defaultSettings;
+    } catch (error: any) {
+      // اگر مسیر public نبود، از مسیر اصلی استفاده کن
+      try {
+        const response = await apiClient.get("/settings");
+        return response;
+      } catch (error) {
+        console.warn("⚠️ خطا در دریافت تنظیمات، استفاده از مقادیر پیش‌فرض");
+        return defaultSettings;
+      }
     }
   },
 
   update: async (data: any) => {
-    const token = localStorage.getItem("token") || "";
-    const response = await apiClient.put("/settings", data, token);
+    const response = await apiClient.put("/settings", data);
     return response;
   },
 };
