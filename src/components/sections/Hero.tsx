@@ -159,23 +159,32 @@ export default function Hero() {
     "🚀 مرکز توسعه فناوری‌های برتر تهران";
 
   // 🔥 رنگ اسلاید - اگر color وجود نداشت از پیش‌فرض استفاده کن
-  const slideColor = currentSlide.color || "from-blue-400 to-cyan-400";
+//  const slideColor = currentSlide.color || "from-blue-400 to-cyan-400";
 
   return (
     <section className="relative h-screen w-full overflow-hidden">
       {/* تصویر زمینه */}
-      <div className="absolute inset-0">
-        <img
-          src={currentSlide.image}
-          alt={currentSlide.title}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "/assets/ai-hero-new.webp";
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-      </div>
-
+  <div className="absolute inset-0">
+ <img
+  src={currentSlide.image}
+  alt={currentSlide.title}
+  className="w-full h-full object-cover"
+  onError={(e) => {
+    console.error('❌ خطا:', currentSlide.image);
+    // از /slides/ استفاده کن (همون فولدر پروژه)
+    const fallbackImages = [
+      '/slides/ai-hero-new.webp',
+      '/slides/ai-hero.webp',
+      '/slides/ai-face-hero.webp'
+    ];
+    const currentSrc = (e.target as HTMLImageElement).src;
+    const index = fallbackImages.indexOf(currentSrc);
+    const nextIndex = (index + 1) % fallbackImages.length;
+    (e.target as HTMLImageElement).src = fallbackImages[nextIndex];
+  }}
+/>
+  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+</div>
       {/* محتوای اسلاید */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
         {/* تگ بالایی */}
@@ -194,20 +203,7 @@ export default function Hero() {
 
         {/* عنوان اصلی - با رنگ از اسلاید */}
         <div className="mb-6">
-          <LiquidGlassCard
-            blurIntensity="sm"
-            borderRadius="100px"
-            glowIntensity="sm"
-            className="inline-flex px-4 py-2 mb-4 bg-white/5 backdrop-blur-sm border border-white/5"
-          >
-            <span
-              className={`text-sm font-bold bg-gradient-to-r ${slideColor} bg-clip-text text-transparent`}
-            >
-              {currentSlide.title}
-            </span>
-          </LiquidGlassCard>
-
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
+                 <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
             {currentSlide.title}
           </h1>
 
@@ -230,8 +226,8 @@ export default function Hero() {
             size="md"
             onClick={scrollToContact}
           >
-            {currentSlide.buttonText || "شروع کنید"}
-          </GlassButton>
+{currentSlide.buttonLink ? "بیشتر بدانید" : "درخواست مشاوره"}
+            </GlassButton>
 
           <LiquidGlassCard
             blurIntensity="lg"
@@ -247,7 +243,7 @@ export default function Hero() {
              bg-gradient-to-r from-blue-500/80 to-blue-600/80 
              backdrop-blur-sm border border-blue-400/30"
             >
-              {currentSlide.buttonLink ? "بیشتر بدانید" : "درخواست مشاوره"}
+  {currentSlide.buttonText || "شروع کنید"}
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
           </LiquidGlassCard>

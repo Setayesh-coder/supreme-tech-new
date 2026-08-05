@@ -1,5 +1,4 @@
 // src/pages/public/BlogPost.tsx
-// @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { blogAPI } from "../../lib/api/blog";
@@ -10,7 +9,9 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
+// @ts-ignore - react-syntax-highlighter types issue
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+// @ts-ignore - react-syntax-highlighter styles types issue
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   Calendar,
@@ -23,11 +24,23 @@ import {
   Copy,
   Check,
   List as ListIcon,
-  // Twitter,
-  // Linkedin,
   Send,
 } from "lucide-react";
 import { BlogPostSkeleton } from "../../components/skeletons/BlogPostSkeleton";
+import { getImageUrl } from "../../lib/constants";
+
+// آیکون‌های ساده برای شبکه‌های اجتماعی
+const TwitterIcon = () => (
+  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+const LinkedinIcon = () => (
+  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+  </svg>
+);
 
 interface BlogPost {
   id: string;
@@ -48,7 +61,6 @@ interface Heading {
   id: string;
 }
 
-// 🔥 تبدیل متن به شناسه مناسب برای لنگر
 const slugify = (text: string) =>
   text
     .toString()
@@ -57,7 +69,6 @@ const slugify = (text: string) =>
     .replace(/\s+/g, "-")
     .replace(/[^\u0600-\u06FFa-z0-9-]/g, "");
 
-// 🔥 استخراج متن ساده از فرزندان JSX
 function getNodeText(node: unknown): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(getNodeText).join("");
@@ -112,7 +123,6 @@ export default function BlogPost() {
     }
   };
 
-  // 🔥 نوار پیشرفت مطالعه
   useEffect(() => {
     const handleScroll = () => {
       const el = contentRef.current;
@@ -143,7 +153,6 @@ export default function BlogPost() {
     ? Math.max(1, Math.ceil(post.content.split(" ").length / 200))
     : 0;
 
-  // 🔥 لایک کردن
   const handleLike = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -167,7 +176,6 @@ export default function BlogPost() {
     }
   };
 
-  // 🔥 اشتراک‌گذاری
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -194,7 +202,6 @@ export default function BlogPost() {
   const handleShare = (platform: string) => {
     const url = encodeURIComponent(window.location.href);
     const title = encodeURIComponent(post?.title || "");
-    const text = encodeURIComponent(post?.excerpt || "");
 
     const shareUrls: Record<string, string> = {
       twitter: `https://twitter.com/intent/tweet?text=${title}&url=${url}`,
@@ -419,12 +426,11 @@ export default function BlogPost() {
         </a>
       );
     },
-    // 🔥 استفاده از OptimizedImage در محتوای Markdown
     img({ src, alt }) {
       return (
         <figure className="my-6">
           <OptimizedImage
-            src={src || ""}
+            src={getImageUrl(src) || src || ""}
             alt={alt || "تصویر"}
             className="rounded-lg w-full shadow-lg"
             objectFit="cover"
@@ -475,7 +481,6 @@ export default function BlogPost() {
 
   return (
     <section className="py-12 px-4 md:px-6 relative overflow-hidden min-h-screen">
-      {/* 🔥 نوار پیشرفت مطالعه */}
       <div className="fixed top-0 right-0 left-0 h-1 bg-white/5 z-50">
         <div
           className="h-full bg-gradient-to-l from-blue-400 to-cyan-400 transition-[width] duration-150"
@@ -516,7 +521,7 @@ export default function BlogPost() {
           {post.coverImage && (
             <div className="relative overflow-hidden h-64 md:h-96">
               <OptimizedImage
-                src={post.coverImage}
+                src={getImageUrl(post.coverImage) || post.coverImage}
                 alt={post.title}
                 className="w-full h-full"
                 objectFit="cover"
@@ -595,7 +600,6 @@ export default function BlogPost() {
           </div>
 
           <div className="lg:sticky lg:top-6 space-y-6">
-            {/* 🔥 فهرست مطالب */}
             {headings.length > 0 && (
               <LiquidGlassCard
                 className="p-5"
@@ -623,7 +627,6 @@ export default function BlogPost() {
               </LiquidGlassCard>
             )}
 
-            {/* 🔥 اشتراک‌گذاری و لایک */}
             <LiquidGlassCard
               className="p-5"
               borderRadius="20px"
@@ -634,9 +637,7 @@ export default function BlogPost() {
                 اشتراک‌گذاری این مطلب
               </span>
 
-              {/* دکمه‌های اصلی */}
               <div className="flex flex-wrap items-center gap-3">
-                {/* لایک */}
                 <button
                   onClick={handleLike}
                   disabled={likeLoading}
@@ -683,21 +684,20 @@ export default function BlogPost() {
                 </button>
               </div>
 
-              {/* منوی شبکه‌های اجتماعی */}
               {showShareMenu && (
                 <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2">
                   <button
                     onClick={() => handleShare("twitter")}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1DA1F2]/20 hover:bg-[#1DA1F2]/30 text-[#1DA1F2] rounded-lg transition-colors text-xs"
                   >
-                    <Twitter size={14} />
+                    <TwitterIcon />
                     توییتر
                   </button>
                   <button
                     onClick={() => handleShare("linkedin")}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A66C2]/20 hover:bg-[#0A66C2]/30 text-[#0A66C2] rounded-lg transition-colors text-xs"
                   >
-                    <Linkedin size={14} />
+                    <LinkedinIcon />
                     لینکدین
                   </button>
                   <button

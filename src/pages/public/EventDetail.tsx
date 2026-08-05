@@ -6,6 +6,7 @@ import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
+import CourseList from "../../components/sections/CourseList";
 // import LikeButton from "../../components/ui/LikeButton";
 import ShareButton from "../../components/ui/ShareButton";
 import {
@@ -44,7 +45,7 @@ interface Event {
   };
 }
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
+const BASE_URL = import.meta.env.VITE_BASE_URL || "https://supremetech.ir";
 
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
@@ -500,6 +501,8 @@ export default function EventDetail() {
             </LiquidGlassCard>
           </div>
         </div>
+{/* دوره‌های آموزشی */}
+<CourseList eventId={event.id} eventTitle={event.title} />
       </div>
     </section>
   );

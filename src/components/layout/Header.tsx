@@ -1,20 +1,13 @@
 import { useState, useEffect } from "react";
 import { Menu, User, X } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import { settingsAPI } from "../../lib/api/settings";
-
-interface Settings {
-  siteName: string;
-  siteDescription?: string;
-}
+import { useSettings } from "../../contexts/SettingsContext";
+import { Link } from "react-router-dom";
 
 export default function Header() {
   const [, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [settings, setSettings] = useState<Settings>({
-    siteName: "Supreme Tech",
-  });
-  const [loading, setLoading] = useState(true);
+  const { settings, loading } = useSettings();
 
   const navItems = [
     { name: "خانه", href: "/" },
@@ -27,20 +20,6 @@ export default function Header() {
   ];
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const data = await settingsAPI.getAll();
-        if (data) {
-          setSettings(data);
-        }
-      } catch (error) {
-        console.error("خطا در دریافت تنظیمات:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
@@ -58,28 +37,31 @@ export default function Header() {
           className="px-4 py-2"
         >
           <div className="flex items-center justify-between">
-            {/* Logo */}
-            <a href="/" className="flex items-center gap-2">
+            {/* Logo - 🔥 مسیر مطلق */}
+            <Link to="/" className="flex items-center gap-2">
               <img
-                src="assets/favicon-96x96.png"
+                src="/favicon/favicon-96x96.png"
                 alt="لوگو Supreme Tech"
                 className="w-8 h-8"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/favicon.ico';
+                }}
               />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 {loading ? "..." : settings?.siteName || "Supreme Tech"}
               </span>
-            </a>
+            </Link>
 
             {/* Desktop Menu */}
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
-                  href={item.href}
+                  to={item.href}
                   className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
                 >
                   {item.name}
-                </a>
+                </Link>
               ))}
             </nav>
 
@@ -91,7 +73,7 @@ export default function Header() {
                 glowIntensity="sm"
                 className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300"
               >
-                <a href="/profile">
+                <Link to="/profile">
                   <button
                     className="px-6 py-2 text-white font-bold flex items-center gap-2 justify-center 
                     bg-gradient-to-r from-blue-500/80 to-blue-600/80 
@@ -99,7 +81,7 @@ export default function Header() {
                   >
                     <User className="w-5 h-5" />
                   </button>
-                </a>
+                </Link>
               </LiquidGlassCard>
             </div>
 
@@ -128,14 +110,14 @@ export default function Header() {
           >
             <nav className="flex flex-col gap-2">
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
-                  href={item.href}
+                  to={item.href}
                   className="px-4 py-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.name}
-                </a>
+                </Link>
               ))}
 
               <LiquidGlassCard
@@ -144,15 +126,16 @@ export default function Header() {
                 glowIntensity="sm"
                 className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300 mt-2"
               >
-                <a href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)}>
                   <button
                     className="w-full py-3 text-white font-bold flex items-center gap-2 justify-center 
                     bg-gradient-to-r from-blue-500/80 to-blue-600/80 
                     backdrop-blur-sm border border-blue-400/30 text-sm"
                   >
-                    ورود
+                    <User className="w-5 h-5" />
+                    پروفایل
                   </button>
-                </a>
+                </Link>
               </LiquidGlassCard>
             </nav>
           </LiquidGlassCard>

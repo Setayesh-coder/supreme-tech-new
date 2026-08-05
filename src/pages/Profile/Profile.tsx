@@ -1,4 +1,4 @@
-// src/pages/profile/Profile.tsx
+// src/pages/Profile/Profile.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
@@ -481,7 +481,6 @@ export default function Profile() {
         content: message,
         senderType: "USER",
       });
-      // به‌روزرسانی تیکت‌ها
       await fetchTickets();
     } catch (err) {
       console.error("❌ خطا در ارسال پیام:", err);
@@ -560,7 +559,7 @@ export default function Profile() {
   // ============== Loading & Error States ==============
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 pt-20">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
           <p className="text-blue-400/60 text-sm animate-pulse">بارگذاری...</p>
@@ -571,7 +570,7 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 pt-20">
         <LiquidGlassCard
           className="p-8 text-center max-w-sm"
           borderRadius="24px"
@@ -603,7 +602,8 @@ export default function Profile() {
 
   // ============== Render ==============
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-8 px-4 md:py-12">
+    // 🔥 اضافه کردن pt-20 برای فاصله از هدر
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-8 px-4 md:py-12 pt-24 md:pt-28">
       <div className="max-w-6xl mx-auto">
         <ProfileHeader
           user={user}
@@ -683,7 +683,7 @@ export default function Profile() {
                 onCreateTicket={handleCreateTicket}
                 onViewTicket={handleViewTicket}
                 onDeleteTicket={handleDeleteTicket}
-                onSendMessage={handleSendTicketMessage} // 🔥 اضافه شد
+                onSendMessage={handleSendTicketMessage}
               />
             )}
 

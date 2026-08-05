@@ -241,7 +241,6 @@ export default function BlogList() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    {/* برچسب پیش‌نویس - فقط اگر پست منتشر نشده باشد */}
                     {!post.published && (
                       <span className="absolute top-3 right-3 px-3 py-1 bg-yellow-500/80 text-white text-xs rounded-full backdrop-blur-sm">
                         پیش‌نویس

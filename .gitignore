@@ -1,33 +1,60 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Coverage
+coverage/
+*.lcov
 
-node_modules/
-dist/
-.env
-.env.*
-!.env.example
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 .DS_Store
 
-/src/generated/prisma
+# Temp
+tmp/
+temp/
+*.tmp
+
+# PM2
+.pm2/
+
+# Uploads (داده‌های آپلود شده)
+uploads/
+
+# Prisma (فقط برای بک‌اند)
+prisma/*.db
+prisma/*.sqlite
+*.db
+
+# Backup files
+*.sql
+*.dump
+backup_*.sql

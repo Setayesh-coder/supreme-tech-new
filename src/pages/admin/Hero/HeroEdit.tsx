@@ -4,10 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { heroAPI } from "../../../lib/api/hero";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, X, Loader2, Image, HelpCircle } from "lucide-react";
+import { ArrowLeft, Save, X, Loader2, Image } from "lucide-react";
 
 export default function HeroEdit() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +15,7 @@ export default function HeroEdit() {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     subtitle: "",
@@ -27,7 +27,7 @@ export default function HeroEdit() {
     isActive: true,
     heroTagline: "",
   });
-  const [image, setImage] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [currentImage, setCurrentImage] = useState<string>("");
 
@@ -35,7 +35,10 @@ export default function HeroEdit() {
     const fetchSlide = async () => {
       if (!id) return;
       try {
+        setLoading(true);
         const data = await heroAPI.getById(id);
+        console.log("📥 داده اسلاید:", data);
+        
         setFormData({
           title: data.title || "",
           subtitle: data.subtitle || "",
@@ -47,12 +50,14 @@ export default function HeroEdit() {
           isActive: data.isActive !== undefined ? data.isActive : true,
           heroTagline: data.heroTagline || "",
         });
+        
         if (data.image) {
           setCurrentImage(data.image);
           setImagePreview(data.image);
         }
-      } catch (err) {
-        setError("خطا در دریافت اطلاعات اسلاید");
+      } catch (err: any) {
+        console.error("❌ خطا:", err);
+        setError(err.response?.data?.error || "خطا در دریافت اطلاعات اسلاید");
       } finally {
         setLoading(false);
       }
@@ -61,15 +66,12 @@ export default function HeroEdit() {
   }, [id]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -84,14 +86,14 @@ export default function HeroEdit() {
         setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
         return;
       }
-      setImage(file);
+      setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setError("");
     }
   };
 
   const handleRemoveImage = () => {
-    setImage(null);
+    setImageFile(null);
     setImagePreview(currentImage || "");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
@@ -103,8 +105,10 @@ export default function HeroEdit() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(formData);
+      console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error) {
+      console.error("❌ خطا در آپلود:", error);
       throw new Error("خطا در آپلود تصویر");
     } finally {
       setUploading(false);
@@ -115,22 +119,39 @@ export default function HeroEdit() {
     e.preventDefault();
     setSubmitting(true);
     setError("");
+    setSuccess("");
 
     try {
       let imageUrl = currentImage;
-      if (image) {
-        imageUrl = await uploadImage(image);
+      
+      // اگر تصویر جدید آپلود شده
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
       }
 
       const slideData = {
-        ...formData,
-        order: Number(formData.order),
+        title: formData.title,
+        subtitle: formData.subtitle || "",
+        heroTagline: formData.heroTagline || "",
+        description: formData.description || "",
         image: imageUrl,
+        buttonText: formData.buttonText || "",
+        buttonLink: formData.buttonLink || "",
+        color: formData.color || "#3b82f6",
+        order: Number(formData.order) || 0,
+        isActive: formData.isActive,
       };
 
+      console.log("📤 ارسال داده برای ویرایش:", slideData);
+
       await heroAPI.update(id!, slideData);
-      navigate("/admin/hero");
+      setSuccess("✅ اسلاید با موفقیت ویرایش شد!");
+
+      setTimeout(() => {
+        navigate("/admin/hero");
+      }, 1500);
     } catch (err: any) {
+      console.error("❌ خطا:", err);
       setError(err.response?.data?.error || "خطا در ویرایش اسلاید");
     } finally {
       setSubmitting(false);
@@ -171,28 +192,31 @@ export default function HeroEdit() {
         >
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
+              ❌ {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
+              ✅ {success}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 🔥 تصویر با OptimizedImage */}
+            {/* 🔥 تصویر - استفاده از img معمولی به جای OptimizedImage */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر اسلاید
               </label>
               {imagePreview ? (
                 <div className="relative">
-                  <OptimizedImage
+                  <img
                     src={imagePreview}
                     alt="پیش‌نمایش"
-                    className="w-full h-48 rounded-xl"
-                    objectFit="cover"
-                    quality={90}
-                    priority={true}
-                    loading="eager"
-                    placeholder={false}
-                    fallback=""
+                    className="w-full h-48 object-cover rounded-xl"
+                    onError={(e) => {
+                      console.error("❌ خطا در لود تصویر:", imagePreview);
+                      (e.target as HTMLImageElement).src = "/placeholder-image.jpg";
+                    }}
                   />
                   <button
                     type="button"
@@ -201,12 +225,18 @@ export default function HeroEdit() {
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {imageFile ? "تصویر جدید" : "تصویر فعلی"}
+                  </p>
                 </div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
                   <div className="flex flex-col items-center justify-center py-4">
                     {uploading ? (
-                      <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                      <>
+                        <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                        <p className="text-sm text-blue-400">در حال آپلود...</p>
+                      </>
                     ) : (
                       <>
                         <Image className="w-10 h-10 text-gray-400 mb-2" />
@@ -234,7 +264,7 @@ export default function HeroEdit() {
             {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان
+                عنوان *
               </label>
               <input
                 type="text"
@@ -255,7 +285,7 @@ export default function HeroEdit() {
               <input
                 type="text"
                 name="subtitle"
-                value={formData.subtitle}
+                value={formData.subtitle || ""}
                 onChange={handleChange}
                 placeholder="زیرعنوان (اختیاری)"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -270,7 +300,7 @@ export default function HeroEdit() {
               <input
                 type="text"
                 name="heroTagline"
-                value={formData.heroTagline}
+                value={formData.heroTagline || ""}
                 onChange={handleChange}
                 placeholder="مثال: مرکز توسعه فناوری‌های برتر تهران"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -287,7 +317,7 @@ export default function HeroEdit() {
               </label>
               <textarea
                 name="description"
-                value={formData.description}
+                value={formData.description || ""}
                 onChange={handleChange}
                 rows={3}
                 placeholder="توضیحات کامل اسلاید را وارد کنید..."
@@ -304,7 +334,7 @@ export default function HeroEdit() {
                 <input
                   type="text"
                   name="buttonText"
-                  value={formData.buttonText}
+                  value={formData.buttonText || ""}
                   onChange={handleChange}
                   placeholder="مثلاً: شروع کنید"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -317,7 +347,7 @@ export default function HeroEdit() {
                 <input
                   type="text"
                   name="buttonLink"
-                  value={formData.buttonLink}
+                  value={formData.buttonLink || ""}
                   onChange={handleChange}
                   placeholder="/services یا https://..."
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -335,14 +365,14 @@ export default function HeroEdit() {
                   <input
                     type="color"
                     name="color"
-                    value={formData.color}
+                    value={formData.color || "#3b82f6"}
                     onChange={handleChange}
                     className="w-12 h-12 rounded-xl border border-white/20 cursor-pointer bg-transparent"
                   />
                   <input
                     type="text"
                     name="color"
-                    value={formData.color}
+                    value={formData.color || "#3b82f6"}
                     onChange={handleChange}
                     className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
                     placeholder="#3b82f6"
@@ -381,7 +411,6 @@ export default function HeroEdit() {
                   className="w-4 h-4 accent-blue-500"
                 />
                 <span>فعال</span>
-                <HelpCircle className="w-3.5 h-3.5 text-gray-500" />
               </label>
               <span className="text-xs text-gray-500">
                 اسلایدهای غیرفعال در صفحه اصلی نمایش داده نمی‌شوند

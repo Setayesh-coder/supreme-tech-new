@@ -1,4 +1,4 @@
-import { LiquidGlassCard } from "./../components/ui/LiquidGlassCard";
+import { LiquidGlassCard } from "../components/ui/LiquidGlassCard";
 import {
   Brain,
   Lightbulb,
@@ -10,6 +10,7 @@ import {
   Bot,
   ArrowLeft,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 // تغییر در values برای پوشش هر دو حوزه
 const values = [
@@ -47,7 +48,7 @@ const values = [
   },
 ];
 
-// سرویس‌های جدید - می‌توانید این کارت‌ها را زیر بخش values اضافه کنید
+// سرویس‌های جدید
 const services = [
   {
     icon: Code,
@@ -89,7 +90,6 @@ export default function About() {
         <div className="text-center mb-8">
           <div className="flex justify-center">
             <LiquidGlassCard
-              // draggable={false}
               blurIntensity="md"
               borderRadius="100px"
               glowIntensity="sm"
@@ -99,10 +99,14 @@ export default function About() {
                 <span className="text-sm font-medium text-gray-300">
                   درباره SupremeTech
                 </span>
+                {/* 🔥 مسیر مطلق برای لوگو */}
                 <img
-                  src="assets/favicon-96x96.png" // ✅ مسیر اصلاح شد
+                  src="/favicon/favicon-96x96.png"
                   alt="supreme tech"
                   className="w-8 h-8"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/favicon.ico';
+                  }}
                 />
               </div>
             </LiquidGlassCard>
@@ -126,7 +130,6 @@ export default function About() {
         {/* Mission Statement - کارت شیشه‌ای بزرگ */}
         <div className="mb-16 max-w-4xl mx-auto">
           <LiquidGlassCard
-            // draggable={false}
             blurIntensity="lg"
             borderRadius="32px"
             glowIntensity="md"
@@ -181,7 +184,6 @@ export default function About() {
           {values.map((value, index) => (
             <LiquidGlassCard
               key={index}
-              // draggable={false}
               blurIntensity="md"
               borderRadius="24px"
               glowIntensity="sm"
@@ -215,7 +217,6 @@ export default function About() {
           {services.map((service, index) => (
             <LiquidGlassCard
               key={index}
-              // draggable={false}
               blurIntensity="md"
               borderRadius="24px"
               glowIntensity="sm"
@@ -238,9 +239,8 @@ export default function About() {
 
         {/* Call to Action */}
         <div className="text-center">
-          <a href="/contact" className="inline-block">
+          <Link to="/contact" className="inline-block">
             <LiquidGlassCard
-              // draggable={false}
               blurIntensity="lg"
               borderRadius="100px"
               glowIntensity="md"
@@ -251,7 +251,7 @@ export default function About() {
                 <ArrowLeft />
               </p>
             </LiquidGlassCard>
-          </a>
+          </Link>
         </div>
       </div>
     </section>

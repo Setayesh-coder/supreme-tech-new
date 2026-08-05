@@ -1,44 +1,47 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { partnersAPI } from "../../../lib/api/partners";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  ExternalLink,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { coursesAPI } from "../../../lib/api/courses";
+import { Plus, Edit, Trash2, Eye, EyeOff, GraduationCap } from "lucide-react";
 
-interface Partner {
+interface Course {
   id: string;
-  name: string;
-  logo?: string;
-  website?: string;
+  title: string;
+  slug: string;
   description?: string;
-  order: number;
+  image?: string;
+  price: number;
+  duration?: string;
+  level?: string;
+  capacity: number;
+  enrolledCount: number;
+  eventId?: string;
+  event?: {
+    title: string;
+  };
   isActive: boolean;
+  isFeatured: boolean;
+  status: string;
 }
 
-export default function PartnersList() {
-  const [partners, setPartners] = useState<Partner[]>([]);
+export default function CourseList() {
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchPartners();
+    fetchCourses();
   }, []);
 
-  const fetchPartners = async () => {
+  const fetchCourses = async () => {
     try {
       setLoading(true);
-      const data = await partnersAPI.getAll();
-      setPartners(data || []);
+      const data = await coursesAPI.getAll();
+      setCourses(data.data || data || []);
     } catch (err) {
-      setError("خطا در دریافت همکاران");
+      setError("خطا در دریافت دوره‌ها");
       console.error(err);
     } finally {
       setLoading(false);
@@ -46,23 +49,23 @@ export default function PartnersList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این همکار مطمئن هستید؟")) return;
+    if (!confirm("آیا از حذف این دوره مطمئن هستید؟")) return;
 
     try {
-      await partnersAPI.delete(id);
-      setPartners(partners.filter((p) => p.id !== id));
+      await coursesAPI.delete(id);
+      setCourses(courses.filter((c) => c.id !== id));
     } catch (err) {
-      alert("خطا در حذف همکار");
+      alert("خطا در حذف دوره");
       console.error(err);
     }
   };
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      await partnersAPI.update(id, { isActive: !currentStatus });
-      setPartners(
-        partners.map((p) =>
-          p.id === id ? { ...p, isActive: !currentStatus } : p,
+      await coursesAPI.update(id, { isActive: !currentStatus });
+      setCourses(
+        courses.map((c) =>
+          c.id === id ? { ...c, isActive: !currentStatus } : c,
         ),
       );
     } catch (err) {
@@ -86,12 +89,15 @@ export default function PartnersList() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">🤝 همکاران</h1>
-            <p className="text-white/60 text-sm">مدیریت همکاران و شرکا</p>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <GraduationCap className="w-6 h-6 text-blue-400" />
+              دوره‌های آموزشی
+            </h1>
+            <p className="text-white/60 text-sm">مدیریت دوره‌های آموزشی</p>
           </div>
-          <Link to="/admin/partners/create">
+          <Link to="/admin/courses/create">
             <GlassButton variant="primary" size="md" icon={<Plus size={18} />}>
-              همکار جدید
+              دوره جدید
             </GlassButton>
           </Link>
         </div>
@@ -102,20 +108,21 @@ export default function PartnersList() {
           </div>
         )}
 
-        {partners.length === 0 ? (
+        {courses.length === 0 ? (
           <LiquidGlassCard className="p-12 text-center" borderRadius="16px">
-            <p className="text-gray-400">هیچ همکاری ثبت نشده است</p>
-            <Link to="/admin/partners/create">
+            <GraduationCap className="w-16 h-16 mx-auto text-gray-500 mb-4" />
+            <p className="text-gray-400">هیچ دوره‌ای ثبت نشده است</p>
+            <Link to="/admin/courses/create">
               <GlassButton variant="primary" size="sm" className="mt-4">
-                افزودن اولین همکار
+                افزودن اولین دوره
               </GlassButton>
             </Link>
           </LiquidGlassCard>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {partners.map((partner) => (
+            {courses.map((course) => (
               <LiquidGlassCard
-                key={partner.id}
+                key={course.id}
                 className="p-4"
                 borderRadius="16px"
                 blurIntensity="sm"
@@ -123,45 +130,47 @@ export default function PartnersList() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-white font-semibold">{partner.name}</h3>
-                    {partner.website && (
-                      <a
-                        href={partner.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 mt-1 break-all"
-                      >
-                        {partner.website}
-                        <ExternalLink size={12} />
-                      </a>
-                    )}
-                    {partner.description && (
-                      <p className="text-xs text-gray-400 mt-2 line-clamp-2">
-                        {partner.description}
+                    <h3 className="text-white font-semibold">{course.title}</h3>
+                    {course.event && (
+                      <p className="text-xs text-blue-400 mt-1">
+                        📅 {course.event.title}
                       </p>
                     )}
-                    <div className="flex items-center gap-3 mt-3">
+                    {course.duration && (
+                      <p className="text-xs text-gray-400">⏱ {course.duration}</p>
+                    )}
+                    {course.level && (
+                      <p className="text-xs text-gray-400">📚 سطح: {course.level}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2">
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
-                          partner.isActive
+                          course.isActive
                             ? "bg-green-500/20 text-green-400"
                             : "bg-red-500/20 text-red-400"
                         }`}
                       >
-                        {partner.isActive ? "فعال" : "غیرفعال"}
+                        {course.isActive ? "فعال" : "غیرفعال"}
                       </span>
+                      {course.isFeatured && (
+                        <span className="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">
+                          ⭐ ویژه
+                        </span>
+                      )}
                       <span className="text-xs text-gray-500">
-                        ترتیب: {partner.order}
+                        👥 {course.enrolledCount}/{course.capacity || "∞"}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm font-bold text-blue-400">
+                        {course.price === 0 ? "رایگان" : `${course.price.toLocaleString()} تومان`}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/10">
-                  <Link
-                    to={`/admin/partners/edit/${partner.id}`}
-                    className="flex-1"
-                  >
+                  <Link to={`/admin/courses/edit/${course.id}`} className="flex-1">
                     <GlassButton
                       variant="white"
                       size="sm"
@@ -173,18 +182,18 @@ export default function PartnersList() {
                     </GlassButton>
                   </Link>
                   <button
-                    onClick={() => handleToggleActive(partner.id, partner.isActive)}
+                    onClick={() => handleToggleActive(course.id, course.isActive)}
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                    title={partner.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                    title={course.isActive ? "غیرفعال کردن" : "فعال کردن"}
                   >
-                    {partner.isActive ? (
+                    {course.isActive ? (
                       <EyeOff size={16} className="text-gray-400" />
                     ) : (
                       <Eye size={16} className="text-gray-400" />
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(partner.id)}
+                    onClick={() => handleDelete(course.id)}
                     className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors"
                     title="حذف"
                   >

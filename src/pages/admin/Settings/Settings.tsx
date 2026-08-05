@@ -1,9 +1,8 @@
-// src/pages/admin/Settings/Settings.tsx
 import { useState, useEffect } from "react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { settingsAPI } from "../../../lib/api/settings";
+import { useSettings } from "../../../contexts/SettingsContext";
 import {
   Save,
   Globe,
@@ -16,95 +15,73 @@ import {
   Database,
   RefreshCw,
   Loader2,
+  Send,
+  MessageCircle,
 } from "lucide-react";
 
-interface SettingsData {
-  siteName: string;
-  siteDescription: string;
-  siteLogo?: string;
-  contactEmail: string;
-  contactPhone: string;
-  contactAddress: string;
-  workingHours: string;
-  socialLinks: {
-    instagram?: string;
-    twitter?: string;
-    linkedin?: string;
-    telegram?: string;
-  };
-  seo: {
-    title?: string;
-    description?: string;
-    keywords?: string;
-  };
-  maintenance: boolean;
-}
+// آیکون اینستاگرام با SVG
+const InstagramIcon = () => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="18" 
+    height="18" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className="text-pink-400"
+  >
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+  </svg>
+);
 
 export default function Settings() {
-  //   const admin = JSON.parse(localStorage.getItem("admin") || "{}");
-  const [loading, setLoading] = useState(true);
+  const { settings, loading, updateSettings, refreshSettings } = useSettings();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [settings, setSettings] = useState<SettingsData>({
-    siteName: "Supreme Tech",
-    siteDescription: "پیشرو در توسعه AI Agent های هوشمند",
-    contactEmail: "info@supremetech.ir",
-    contactPhone: "09121234567",
-    contactAddress: "تهران، بزرگراه اشرفی اصفهانی، مجتمع نیایش",
-    workingHours: "شنبه تا چهارشنبه ۹ الی ۱۸",
-    socialLinks: {
-      instagram: "",
-      twitter: "",
-      linkedin: "",
-      telegram: "",
-    },
-    seo: {
-      title: "",
-      description: "",
-      keywords: "",
-    },
-    maintenance: false,
-  });
+  const [localSettings, setLocalSettings] = useState(settings);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
-    try {
-      setLoading(true);
-      const data = await settingsAPI.getAll();
-      if (data) {
-        setSettings(data);
-      }
-    } catch (err) {
-      console.error("خطا در دریافت تنظیمات:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLocalSettings(settings);
+  }, [settings]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = e.target;
+    
     if (type === "checkbox") {
-      setSettings({
-        ...settings,
-        [name]: (e.target as HTMLInputElement).checked,
+      const checked = (e.target as HTMLInputElement).checked;
+      setLocalSettings({
+        ...localSettings,
+        [name]: checked,
       });
     } else if (name.includes(".")) {
       const [parent, child] = name.split(".");
-      setSettings({
-        ...settings,
-        [parent]: {
-          ...(settings[parent as keyof SettingsData] as any),
-          [child]: value,
-        },
-      });
+      if (parent === 'socialLinks') {
+        setLocalSettings({
+          ...localSettings,
+          socialLinks: {
+            ...localSettings.socialLinks,
+            [child]: value,
+          }
+        });
+      } else if (parent === 'seo') {
+        setLocalSettings({
+          ...localSettings,
+          seo: {
+            ...localSettings.seo,
+            [child]: value,
+          }
+        });
+      }
     } else {
-      setSettings({ ...settings, [name]: value });
+      setLocalSettings({ ...localSettings, [name]: value });
     }
   };
 
@@ -114,13 +91,28 @@ export default function Settings() {
     setSuccess("");
 
     try {
-      await settingsAPI.update(settings);
-      setSuccess("تنظیمات با موفقیت ذخیره شد");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("برای ذخیره تنظیمات باید وارد شوید");
+      }
+      
+      await updateSettings(localSettings);
+      
+      setSuccess("✅ تنظیمات با موفقیت ذخیره شد");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در ذخیره تنظیمات");
+      console.error("❌ خطا:", err);
+      setError(err.message || "خطا در ذخیره تنظیمات");
+      setTimeout(() => setError(""), 3000);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    await refreshSettings();
+    setSuccess("✅ تنظیمات بازنشانی شد");
+    setTimeout(() => setSuccess(""), 2000);
   };
 
   if (loading) {
@@ -155,12 +147,12 @@ export default function Settings() {
 
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-            {error}
+            ❌ {error}
           </div>
         )}
         {success && (
           <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
-            ✅ {success}
+            {success}
           </div>
         )}
 
@@ -184,7 +176,7 @@ export default function Settings() {
                 <input
                   type="text"
                   name="siteName"
-                  value={settings.siteName}
+                  value={localSettings?.siteName || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
@@ -195,7 +187,7 @@ export default function Settings() {
                 </label>
                 <textarea
                   name="siteDescription"
-                  value={settings.siteDescription}
+                  value={localSettings?.siteDescription || ""}
                   onChange={handleChange}
                   rows={3}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -225,7 +217,7 @@ export default function Settings() {
                   <input
                     type="email"
                     name="contactEmail"
-                    value={settings.contactEmail}
+                    value={localSettings?.contactEmail || ""}
                     onChange={handleChange}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -240,7 +232,7 @@ export default function Settings() {
                   <input
                     type="text"
                     name="contactPhone"
-                    value={settings.contactPhone}
+                    value={localSettings?.contactPhone || ""}
                     onChange={handleChange}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -254,7 +246,7 @@ export default function Settings() {
                   <MapPin className="absolute left-4 top-4 w-5 h-5 text-white/40" />
                   <textarea
                     name="contactAddress"
-                    value={settings.contactAddress}
+                    value={localSettings?.contactAddress || ""}
                     onChange={handleChange}
                     rows={2}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -270,7 +262,7 @@ export default function Settings() {
                   <input
                     type="text"
                     name="workingHours"
-                    value={settings.workingHours}
+                    value={localSettings?.workingHours || ""}
                     onChange={handleChange}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -279,7 +271,7 @@ export default function Settings() {
             </div>
           </LiquidGlassCard>
 
-          {/* شبکه‌های اجتماعی */}
+          {/* شبکه‌های اجتماعی - فقط اینستاگرام، کانال تلگرام، پشتیبانی تلگرام */}
           <LiquidGlassCard
             className="p-6"
             borderRadius="16px"
@@ -290,58 +282,56 @@ export default function Settings() {
               <Palette size={20} className="text-purple-400" />
               شبکه‌های اجتماعی
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {/* اینستاگرام */}
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">
+                <label className="block text-sm font-medium text-white/60 mb-1 flex items-center gap-2">
+                  <InstagramIcon />
                   اینستاگرام
                 </label>
                 <input
                   type="text"
                   name="socialLinks.instagram"
-                  value={settings.socialLinks.instagram || ""}
+                  value={localSettings?.socialLinks?.instagram || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="https://instagram.com/..."
+                  placeholder="https://instagram.com/yourpage"
                 />
+                <p className="text-xs text-gray-500 mt-1">لینک صفحه اینستاگرام</p>
               </div>
+
+              {/* تلگرام کانال */}
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">
-                  توییتر
-                </label>
-                <input
-                  type="text"
-                  name="socialLinks.twitter"
-                  value={settings.socialLinks.twitter || ""}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="https://twitter.com/..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">
-                  لینکدین
-                </label>
-                <input
-                  type="text"
-                  name="socialLinks.linkedin"
-                  value={settings.socialLinks.linkedin || ""}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="https://linkedin.com/..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">
-                  تلگرام
+                <label className="block text-sm font-medium text-white/60 mb-1 flex items-center gap-2">
+                  <Send size={18} className="text-blue-400" />
+                  کانال تلگرام
                 </label>
                 <input
                   type="text"
                   name="socialLinks.telegram"
-                  value={settings.socialLinks.telegram || ""}
+                  value={localSettings?.socialLinks?.telegram || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="https://t.me/..."
+                  placeholder="https://t.me/yourchannel"
                 />
+                <p className="text-xs text-gray-500 mt-1">لینک کانال تلگرام</p>
+              </div>
+
+              {/* تلگرام پشتیبانی */}
+              <div>
+                <label className="block text-sm font-medium text-white/60 mb-1 flex items-center gap-2">
+                  <MessageCircle size={18} className="text-cyan-400" />
+                  تلگرام پشتیبانی
+                </label>
+                <input
+                  type="text"
+                  name="socialLinks.support"
+                  value={localSettings?.socialLinks?.support || ""}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="https://t.me/supportbot"
+                />
+                <p className="text-xs text-gray-500 mt-1">لینک ربات یا اکانت پشتیبانی تلگرام</p>
               </div>
             </div>
           </LiquidGlassCard>
@@ -365,7 +355,7 @@ export default function Settings() {
                 <input
                   type="text"
                   name="seo.title"
-                  value={settings.seo.title || ""}
+                  value={localSettings?.seo?.title || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="عنوان صفحه اصلی"
@@ -377,7 +367,7 @@ export default function Settings() {
                 </label>
                 <textarea
                   name="seo.description"
-                  value={settings.seo.description || ""}
+                  value={localSettings?.seo?.description || ""}
                   onChange={handleChange}
                   rows={2}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -391,7 +381,7 @@ export default function Settings() {
                 <input
                   type="text"
                   name="seo.keywords"
-                  value={settings.seo.keywords || ""}
+                  value={localSettings?.seo?.keywords || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="واژه‌های کلیدی، جدا شده با کاما"
@@ -417,7 +407,7 @@ export default function Settings() {
                   <input
                     type="checkbox"
                     name="maintenance"
-                    checked={settings.maintenance}
+                    checked={localSettings?.maintenance || false}
                     onChange={handleChange}
                     className="w-4 h-4 accent-blue-500"
                   />
@@ -430,7 +420,7 @@ export default function Settings() {
                   size="sm"
                   icon={<RefreshCw size={16} />}
                   iconPosition="left"
-                  onClick={fetchSettings}
+                  onClick={handleRefresh}
                 >
                   بازنشانی
                 </GlassButton>
