@@ -1,10 +1,11 @@
 // src/pages/Profile/Profile.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { ticketsAPI } from "../../lib/api/tickets";
 import { messagesAPI } from "../../lib/api/messages";
+import { uploadAPI } from "../../lib/api/upload";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import {
@@ -25,6 +26,8 @@ import {
   Clock,
   MessageSquare,
   Mail,
+  Camera,
+  X,
 } from "lucide-react";
 
 // ============== Interfaces ==============
@@ -33,6 +36,10 @@ interface UserProfile {
   name: string;
   email?: string;
   phone: string;
+  province?: string;
+  birthDate?: string;
+  gender?: string;
+  avatar?: string;
   createdAt: string;
   isActive: boolean;
 }
@@ -194,13 +201,20 @@ export default function Profile() {
   const [repliesLoading, setRepliesLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
+    province: "",
+    birthDate: "",
+    gender: "",
+    avatar: "",
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [selectedEnrollment, setSelectedEnrollment] =
     useState<Enrollment | null>(null);
   const [showPayment, setShowPayment] = useState(false);
@@ -210,7 +224,7 @@ export default function Profile() {
   const [processing, setProcessing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // ============== 🔥 توابع قبل از useEffect ==============
+  // ============== توابع ==============
   const fetchTickets = async () => {
     setTicketsLoading(true);
     try {
@@ -225,18 +239,12 @@ export default function Profile() {
       setTickets(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error("❌ خطا در دریافت تیکت‌ها:", err);
-      if (err.status === 403 || err.status === 404) {
-        console.warn("⚠️ دسترسی به تیکت‌ها مجاز نیست، آرایه خالی برگردانده شد");
-        setTickets([]);
-      } else {
-        setError("خطا در دریافت تیکت‌ها");
-      }
+      setError("خطا در دریافت تیکت‌ها");
     } finally {
       setTicketsLoading(false);
     }
   };
 
-  // 🔥 دریافت پاسخ‌های پیام‌ها
   const fetchReplies = async () => {
     if (!user?.id) return;
     setRepliesLoading(true);
@@ -254,7 +262,17 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        const token = localStorage.getItem("token");
         const storedUser = localStorage.getItem("user");
+        
+        console.log("🔍 بررسی localStorage:", { token: !!token, user: !!storedUser });
+
+        if (!token) {
+          console.warn("⚠️ توکن وجود ندارد، هدایت به لاگین");
+          navigate("/login");
+          return;
+        }
+
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
@@ -262,23 +280,58 @@ export default function Profile() {
             name: parsedUser.name || "",
             email: parsedUser.email || "",
             phone: parsedUser.phone || "",
+            province: parsedUser.province || "",
+            birthDate: parsedUser.birthDate || "",
+            gender: parsedUser.gender || "",
+            avatar: parsedUser.avatar || "",
           });
+          if (parsedUser.avatar) {
+            setAvatarPreview(parsedUser.avatar);
+          }
+        } else {
+          try {
+            const profileData = await authAPI.getProfile();
+            if (profileData) {
+              setUser(profileData);
+              localStorage.setItem("user", JSON.stringify(profileData));
+              setFormData({
+                name: profileData.name || "",
+                email: profileData.email || "",
+                phone: profileData.phone || "",
+                province: profileData.province || "",
+                birthDate: profileData.birthDate || "",
+                gender: profileData.gender || "",
+                avatar: profileData.avatar || "",
+              });
+              if (profileData.avatar) {
+                setAvatarPreview(profileData.avatar);
+              }
+            }
+          } catch (err: any) {
+            console.error("❌ خطا در دریافت پروفایل:", err);
+            if (err?.status === 401) {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              navigate("/login");
+              return;
+            }
+          }
         }
 
-        const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
-        setEnrollments(enrollmentsData);
-
-        const pending = enrollmentsData.filter(
-          (e: any) => e.paymentStatus === "PENDING",
-        );
-        setCart(pending);
+        try {
+          const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
+          setEnrollments(enrollmentsData || []);
+          const pending = (enrollmentsData || []).filter(
+            (e: any) => e.paymentStatus === "PENDING",
+          );
+          setCart(pending);
+        } catch (err) {
+          console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
+        }
 
         await fetchTickets();
-      } catch (err) {
-        console.error("❌ خطا:", err);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        navigate("/login");
+      } catch (err: any) {
+        console.error("❌ خطا در fetchProfile:", err);
       } finally {
         setLoading(false);
       }
@@ -286,14 +339,13 @@ export default function Profile() {
     fetchProfile();
   }, [navigate]);
 
-  // ============== Fetch Replies after user is set ==============
   useEffect(() => {
     if (user?.id) {
       fetchReplies();
     }
   }, [user?.id]);
 
-  // ============== 🔥 Profile Functions ==============
+  // ============== Profile Functions ==============
   const handleEdit = () => {
     setEditing(true);
     setError("");
@@ -302,17 +354,62 @@ export default function Profile() {
 
   const handleCancel = () => {
     setEditing(false);
+    setAvatarFile(null);
     if (user) {
       setFormData({
         name: user.name || "",
         email: user.email || "",
         phone: user.phone || "",
+        province: user.province || "",
+        birthDate: user.birthDate || "",
+        gender: user.gender || "",
+        avatar: user.avatar || "",
       });
+      setAvatarPreview(user.avatar || "");
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("لطفاً یک فایل تصویری انتخاب کنید");
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setError("حجم تصویر نباید بیشتر از ۲ مگابایت باشد");
+        return;
+      }
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+      setError("");
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(user?.avatar || "");
+  };
+
+  const uploadAvatar = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+      setUploading(true);
+      const response = await uploadAPI.uploadImage(formData);
+      return response.url;
+    } catch (error) {
+      throw new Error("خطا در آپلود تصویر");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -321,11 +418,27 @@ export default function Profile() {
     setSuccess("");
 
     try {
-      const updatedUser = await authAPI.updateProfile(formData);
+      let avatarUrl = formData.avatar;
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar(avatarFile);
+      }
+
+      const updatedUser = await authAPI.updateProfile({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        province: formData.province || undefined,
+        birthDate: formData.birthDate || undefined,
+        gender: formData.gender || undefined,
+        avatar: avatarUrl,
+      });
+
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setSuccess("اطلاعات با موفقیت بروزرسانی شد");
       setEditing(false);
+      setAvatarFile(null);
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || "خطا در بروزرسانی");
     } finally {
@@ -474,7 +587,6 @@ export default function Profile() {
     }
   };
 
-  // 🔥 تابع ارسال پیام در تیکت
   const handleSendTicketMessage = async (ticketId: string, message: string) => {
     try {
       await ticketsAPI.addMessage(ticketId, {
@@ -602,9 +714,57 @@ export default function Profile() {
 
   // ============== Render ==============
   return (
-    // 🔥 اضافه کردن pt-20 برای فاصله از هدر
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-8 px-4 md:py-12 pt-24 md:pt-28">
       <div className="max-w-6xl mx-auto">
+        {/* عکس پروفایل */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/placeholder-avatar.jpg";
+                  }}
+                />
+              ) : (
+                <span className="text-4xl text-white font-bold">
+                  {user.name?.charAt(0) || "U"}
+                </span>
+              )}
+            </div>
+            {editing && (
+              <>
+                <label className="absolute bottom-0 right-0 p-2 bg-blue-500 rounded-full cursor-pointer hover:bg-blue-600 transition-colors">
+                  <Camera className="w-4 h-4 text-white" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+                {avatarFile && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    className="absolute bottom-0 left-0 p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                )}
+              </>
+            )}
+            {uploading && (
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+
         <ProfileHeader
           user={user}
           cartCount={stats.cartCount}
@@ -625,6 +785,7 @@ export default function Profile() {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 🔥 ProfileInfo - الان در بالاترین سطح و بدون تداخل */}
           <div className="lg:col-span-1">
             <ProfileInfo
               user={user}
@@ -687,7 +848,6 @@ export default function Profile() {
               />
             )}
 
-            {/* 🔥 تب پاسخ‌ها */}
             {activeTab === "replies" && (
               <RepliesTab
                 replies={replies}

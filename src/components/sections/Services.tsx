@@ -78,115 +78,64 @@ const services = [
   },
 ];
 
-// const scrollToContact = () => {
-//   const contactSection = document.getElementById("contact");
-//   if (contactSection) {
-//     contactSection.scrollIntoView({ behavior: "smooth" });
-//   }
-// };
-
 export default function Services() {
   return (
-    <section id="services" className="py-20 px-4 relative">
+    <section id="services" className="py-12 md:py-20 px-4 relative">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4">
             <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               خدمات ما
             </span>
           </h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-gray-400 max-w-2xl mx-auto px-4">
             راهکارهای تخصصی برای رشد و پیشرفت کسب‌وکار شما در عصر هوش مصنوعی
           </p>
         </div>
 
-        {/* Services Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {services.map((service) => (
             <LiquidGlassCard
               key={service.id}
-              // draggable={false}
               blurIntensity="lg"
               borderRadius="24px"
               glowIntensity="sm"
-              className="group cursor-pointer hover:scale-105 transition-all duration-300 p-6"
+              className="group cursor-pointer hover:scale-105 transition-all duration-300 p-4 md:p-6"
             >
-              {/* آیکون - مشکل حل شد */}
               <div
-                className={`${service.bgColor} w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                className={`${service.bgColor} w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform`}
               >
-                <service.icon className={`w-7 h-7 ${service.iconColor}`} />
+                <service.icon className={`w-6 h-6 sm:w-7 sm:h-7 ${service.iconColor}`} />
               </div>
 
-              {/* عنوان */}
-              <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
                 {service.title}
               </h3>
 
-              {/* توضیحات */}
-              <p className="text-gray-400 text-sm leading-relaxed mb-4">
+              <p className="text-sm text-gray-400 leading-relaxed mb-3 sm:mb-4">
                 {service.description}
               </p>
 
-              {/* ویژگی‌ها */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                 {service.features.map((feature, idx) => (
                   <span
                     key={idx}
-                    className="text-xs px-2 py-1 rounded-full bg-white/10 text-gray-300"
+                    className="text-[10px] sm:text-xs px-2 py-1 rounded-full bg-white/10 text-gray-300 whitespace-nowrap"
                   >
                     {feature}
                   </span>
                 ))}
               </div>
 
-              {/* دکمه */}
-              <a href={service.link}>
-                <button className="text-blue-400 text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+              <a href={service.link} className="inline-block">
+                <button className="text-blue-400 text-xs sm:text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
                   بیشتر بدانید
-                  <ArrowLeft className="w-4 h-4" />
+                  <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </a>
             </LiquidGlassCard>
           ))}
         </div>
-
-        {/* Custom Solution Banner
-        <div className="mt-12">
-          <LiquidGlassCard
-            // draggable={false}
-            blurIntensity="lg"
-            borderRadius="32px"
-            glowIntensity="md"
-            className="p-8 text-center"
-          >
-            <h3 className="text-2xl font-bold text-white mb-3">
-              نیاز به راه‌حل سفارشی دارید؟
-            </h3>
-            <p className="text-gray-400 max-w-2xl mx-auto mb-6">
-              تیم Supreme Tech آماده است تا AI Agent های منحصر به فردی مطابق با
-              نیازهای خاص کسب‌وکار شما طراحی و توسعه دهد
-            </p>
-            <LiquidGlassCard
-              // draggable={false}
-              blurIntensity="lg"
-              borderRadius="16px"
-              glowIntensity="sm"
-              className="overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300 inline-block"
-            >
-              <button
-                onClick={scrollToContact}
-                className="px-8 py-3 text-white font-bold flex items-center gap-2 justify-center 
-                bg-gradient-to-r from-blue-500/80 to-blue-600/80 
-                backdrop-blur-sm border border-blue-400/30"
-              >
-                مشاوره رایگان
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              </button>
-            </LiquidGlassCard>
-          </LiquidGlassCard>
-        </div> */}
       </div>
     </section>
   );

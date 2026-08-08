@@ -105,7 +105,8 @@ export default function EventEdit() {
 
   const handleRemoveImage = () => {
     setImage(null);
-    setImagePreview(currentImage || "");
+    setImagePreview("");
+    setCurrentImage("");     
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -142,6 +143,9 @@ export default function EventEdit() {
       if (image) {
         imageUrl = await uploadImage(image);
       }
+    if (!image && !currentImage) {
+      imageUrl = "";
+    }
 
       if (!formData.date) {
         setError("لطفاً تاریخ رویداد را انتخاب کنید");

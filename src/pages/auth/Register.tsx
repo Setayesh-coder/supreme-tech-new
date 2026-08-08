@@ -1,27 +1,25 @@
-// src/pages/auth/Register.tsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
-import { User, Phone, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { User, Phone, Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 
 export default function Register() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    email: "",
     password: "",
     confirmPassword: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error) setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,72 +45,73 @@ export default function Register() {
       return;
     }
 
-    if (formData.password && formData.password.length < 6) {
+    if (formData.password.length < 6) {
       setError("رمز عبور باید حداقل ۶ کاراکتر باشد");
       setLoading(false);
       return;
     }
 
     try {
-      const { confirmPassword, ...registerData } = formData;
-      console.log("📤 ارسال ثبت‌نام:", registerData);
+      console.log("📤 ارسال درخواست ثبت‌نام:", {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+      });
 
-      const response = await authAPI.registerUser(registerData);
+      const response = await authAPI.registerUser({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email || undefined,
+        password: formData.password,
+      });
+
       console.log("📥 پاسخ:", response);
 
-      if (response.success && response.token) {
-        authAPI.saveToken(response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-        navigate("/profile");
+      if (response && response.token) {
+        // 🔥 توکن و کاربر ذخیره می‌شود (در authAPI انجام می‌شود)
+        const token = localStorage.getItem("token");
+        const user = localStorage.getItem("user");
+        
+        console.log("✅ توکن ذخیره شد:", !!token);
+        console.log("✅ کاربر ذخیره شد:", !!user);
+
+        // 🔥 هدایت به پروفایل
+        navigate("/profile", { replace: true });
       } else {
-        setError(response.error || response.message || "خطا در ثبت‌نام");
+        setError("خطا در ثبت‌نام، لطفاً دوباره تلاش کنید");
       }
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ثبت‌نام");
+      setError(err?.message || "خطا در ثبت‌نام، لطفاً دوباره تلاش کنید");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 p-4 relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
-        <Link to="/" className="inline-block mb-4">
-          <LiquidGlassCard
-            className="px-4 py-2"
-            borderRadius="100px"
-            blurIntensity="sm"
-            glowIntensity="sm"
-            hoverScale={1.05}
-          >
-            <span className="text-gray-300 flex items-center gap-2 text-sm">
-              <ArrowLeft size={16} />
-              بازگشت به صفحه اصلی
-            </span>
-          </LiquidGlassCard>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        <Link to="/" className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors">
+          <ArrowLeft size={18} className="ml-2" />
+          بازگشت به صفحه اصلی
         </Link>
 
         <LiquidGlassCard
           className="p-8"
-          borderRadius="32px"
+          borderRadius="24px"
           blurIntensity="lg"
           glowIntensity="md"
           shadowIntensity="lg"
         >
           <div className="text-center mb-8">
-            <div className="text-5xl mb-3">📱</div>
-            <h1 className="text-3xl font-bold text-white">ثبت‌نام</h1>
-            <p className="text-white/60 mt-2">با شماره تلفن ثبت‌نام کنید</p>
+            <h1 className="text-2xl font-bold text-white">ثبت‌نام</h1>
+            <p className="text-gray-400 text-sm mt-2">
+              ایجاد حساب کاربری جدید
+            </p>
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-center">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
               {error}
             </div>
           )}
@@ -157,6 +156,23 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
+                ایمیل (اختیاری)
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                  placeholder="example@email.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
                 رمز عبور
               </label>
               <div className="relative">
@@ -168,18 +184,16 @@ export default function Register() {
                   onChange={handleChange}
                   className="w-full pl-12 pr-12 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                   placeholder="••••••••"
-                  minLength={6}
-                  autoComplete="new-password"
+                  required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              <p className="text-xs text-white/40 mt-1">حداقل ۶ کاراکتر</p>
             </div>
 
             <div>
@@ -189,55 +203,38 @@ export default function Register() {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="w-full pl-12 pr-12 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                   placeholder="••••••••"
-                  minLength={6}
-                  autoComplete="new-password"
+                  required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
               </div>
             </div>
 
             <GlassButton
               type="submit"
-              fullWidth
               variant="primary"
               size="lg"
+              fullWidth
               loading={loading}
-              icon={<span>→</span>}
-              iconPosition="left"
             >
-              ثبت‌نام
+              {loading ? "در حال ثبت‌نام..." : "ثبت‌نام"}
             </GlassButton>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="text-center mt-6">
             <p className="text-gray-400 text-sm">
-              قبلاً حساب کاربری دارید؟{" "}
-              <Link
-                to="/login"
-                className="text-blue-400 hover:text-blue-300 font-medium transition"
-              >
+              قبلاً ثبت‌نام کرده‌اید؟{" "}
+              <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors">
                 وارد شوید
               </Link>
             </p>
           </div>
         </LiquidGlassCard>
       </div>
-    </section>
+    </div>
   );
 }

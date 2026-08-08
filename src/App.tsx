@@ -26,6 +26,8 @@ import BlogListAdmin from "./pages/admin/Blog/BlogList";
 import BlogCreate from "./pages/admin/Blog/BlogCreate";
 import BlogEdit from "./pages/admin/Blog/BlogEdite";
 import CourseList from "./pages/admin/Courses/CourseList";
+import CourseCreate from "./pages/admin/Courses/CourseCreate";
+import CourseEdit from "./pages/admin/Courses/CourseEdit";
 import EventList from "./pages/admin/Events/EventList";
 import EventCreate from "./pages/admin/Events/EventCreate";
 import EventEdit from "./pages/admin/Events/EventEdit";
@@ -174,7 +176,31 @@ function App() {
     </ProtectedRoute>
   }
 />
-          {/* کارمندان - فقط ادمین */}
+{/* دوره‌ها */}
+<Route
+  path="/admin/courses"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <CourseList />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/courses/create"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <CourseCreate />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/courses/edit/:id"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <CourseEdit />
+    </ProtectedRoute>
+  }
+/>          {/* کارمندان - فقط ادمین */}
           <Route
             path="/admin/employees"
             element={

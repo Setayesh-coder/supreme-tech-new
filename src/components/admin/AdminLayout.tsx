@@ -1,418 +1,199 @@
 // src/components/admin/AdminLayout.tsx
-import { type ReactNode, useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { authAPI } from "../../lib/api/auth";
-import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import { GlassButton } from "../ui/GlassButton";
-import {
-  LayoutDashboard,
-  FileText,
-  Calendar,
-  Users,
-  Settings,
+import { 
+  LayoutDashboard, 
+  Users, 
+  Calendar, 
+  BookOpen, 
+  Settings, 
   LogOut,
   Menu,
   X,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Building2,
-  User,
-  Mail,
+  Briefcase,
+  MessageSquare,
   Ticket,
-  UserCog,
-  HelpCircle,
   Image,
+  Building2,
 } from "lucide-react";
 
 interface AdminLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
-  // 🔥 دریافت اطلاعات کاربر - فقط یک بار
-  const userStr = localStorage.getItem("user");
-  const adminStr = localStorage.getItem("admin");
-  const employeeStr = localStorage.getItem("employee");
-
-  const user = useMemo(() => {
-    if (userStr) return JSON.parse(userStr);
-    if (adminStr) return JSON.parse(adminStr);
-    if (employeeStr) return JSON.parse(employeeStr);
-    return null;
-  }, [userStr, adminStr, employeeStr]);
-
-  // 🔥 تشخیص نقش - با useMemo برای جلوگیری از رندر مجدد
-  const { isAdmin, isEmployee } = useMemo(() => {
-    const admin =
-      user?.role === "ADMIN" || user?.type === "admin" || adminStr !== null;
-    const employee =
-      user?.type === "employee" ||
-      user?.role === "EMPLOYEE" ||
-      employeeStr !== null;
-    return { isAdmin: admin, isEmployee: employee };
-  }, [user, adminStr, employeeStr]);
-
-  // 🔥 بررسی دسترسی - فقط یک بار با useEffect خالی
   useEffect(() => {
-    if (!user) {
-      navigate("/access-denied", { replace: true });
-      setIsAuthenticated(false);
-    } else if (!isAdmin && !isEmployee) {
-      navigate("/access-denied", { replace: true });
-      setIsAuthenticated(false);
-    } else {
-      setIsAuthenticated(true);
+    const storedUser = localStorage.getItem("admin") || localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
     }
-  }, []); // ✅ آرایه خالی - فقط یک بار اجرا میشه
-
-  if (!isAuthenticated || !user || (!isAdmin && !isEmployee)) {
-    return null;
-  }
-
-  const handleLogout = () => {
-    if (confirm("آیا از خروج از حساب کاربری مطمئن هستید؟")) {
-      authAPI.logout();
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("admin");
-      localStorage.removeItem("employee");
-      navigate("/admin/login");
-    }
-  };
-
-  // ============================================================
-  // 🔥 منوی اصلی - با useMemo برای جلوگیری از رندر مجدد
-  // ============================================================
-  const menuItems = useMemo(() => {
-    const items = [
-      {
-        icon: <LayoutDashboard size={20} />,
-        label: "داشبورد",
-        path: "/admin/dashboard",
-        roles: ["ADMIN", "EMPLOYEE", "MANAGER"],
-      },
-      {
-        icon: <FileText size={20} />,
-        label: "بلاگ",
-        path: "/admin/blog",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <Calendar size={20} />,
-        label: "رویدادها",
-        path: "/admin/events",
-        roles: ["ADMIN", "EMPLOYEE", "MANAGER"],
-      },
-      {
-        icon: <Image size={20} />,
-        label: "اسلایدها",
-        path: "/admin/hero",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <Users size={20} />,
-        label: "کاربران",
-        path: "/admin/users",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <UserCog size={20} />,
-        label: "کارمندان",
-        path: "/admin/employees",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <Building2 size={20} />,
-        label: "همکاران",
-        path: "/admin/partners",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <Ticket size={20} />,
-        label: "تیکت‌ها",
-        path: "/admin/tickets",
-        roles: ["ADMIN", "EMPLOYEE", "MANAGER"],
-      },
-      {
-        icon: <Mail size={20} />,
-        label: "پیام‌ها",
-        path: "/admin/messages",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <HelpCircle size={20} />,
-        label: "راهنما",
-        path: "/admin/help",
-        roles: ["ADMIN"],
-      },
-      {
-        icon: <User size={20} />,
-        label: "پروفایل",
-        path: "/profile",
-        roles: ["ADMIN", "EMPLOYEE", "MANAGER"],
-      },
-      {
-        icon: <Settings size={20} />,
-        label: "تنظیمات",
-        path: "/admin/settings",
-        roles: ["ADMIN"],
-      },
-    ];
-    return items;
   }, []);
 
-  // ============================================================
-  // 🔥 فیلتر منو بر اساس نقش
-  // ============================================================
-  const getUserRole = () => {
-    if (isAdmin) return "ADMIN";
-    if (isEmployee) return "EMPLOYEE";
-    return "USER";
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("admin");
+    localStorage.removeItem("employee");
+    navigate("/admin/login");
   };
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    return item.roles.includes(getUserRole());
-  });
+  const menuItems = [
+    { path: "/admin/dashboard", icon: <LayoutDashboard size={20} />, label: "داشبورد" },
+    { path: "/admin/users", icon: <Users size={20} />, label: "کاربران" },
+    { path: "/admin/events", icon: <Calendar size={20} />, label: "رویدادها" },
+    { path: "/admin/courses", icon: <BookOpen size={20} />, label: "دوره‌ها" },
+    { path: "/admin/blog", icon: <MessageSquare size={20} />, label: "وبلاگ" },
+    { path: "/admin/hero", icon: <Image size={20} />, label: "اسلایدر" },
+    { path: "/admin/partners", icon: <Building2 size={20} />, label: "همکاران" },
+    { path: "/admin/team", icon: <Users size={20} />, label: "تیم" },
+    { path: "/admin/employees", icon: <Briefcase size={20} />, label: "کارمندان" },
+    { path: "/admin/tickets", icon: <Ticket size={20} />, label: "تیکت‌ها" },
+    { path: "/admin/settings", icon: <Settings size={20} />, label: "تنظیمات" },
+  ];
 
-  // ============================================================
-  // 🔥 تشخیص مسیر فعال
-  // ============================================================
   const isActive = (path: string) => {
-    return (
-      location.pathname === path || location.pathname.startsWith(path + "/")
-    );
+    return location.pathname === path || location.pathname.startsWith(path + "/");
   };
-
-  // ============================================================
-  // 🔥 عنوان صفحه
-  // ============================================================
-  const pageTitle = (() => {
-    const path = location.pathname;
-    if (path.includes("/admin/hero")) return "مدیریت اسلایدها";
-    if (path.includes("/admin/help")) return "راهنما";
-    if (path.includes("/admin/employees")) return "مدیریت کارمندان";
-    if (path.includes("/admin/events/enrollments")) return "مدیریت ثبت‌نام‌ها";
-    if (path.includes("/admin/events")) return "مدیریت رویدادها";
-    if (path.includes("/admin/blog")) return "مدیریت بلاگ";
-    if (path.includes("/admin/users")) return "مدیریت کاربران";
-    if (path.includes("/admin/tickets")) return "مدیریت تیکت‌ها";
-    if (path.includes("/admin/messages")) return "مدیریت پیام‌ها";
-    if (path.includes("/admin/settings")) return "تنظیمات";
-    if (path.includes("/admin/profile")) return "پروفایل";
-    if (path.includes("/admin/partners")) return "مدیریت همکاران";
-    if (path.includes("/admin/dashboard")) return "داشبورد";
-    return "پنل مدیریت";
-  })();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-      {/* ========== Navbar ========== */}
-      <nav className="sticky top-0 z-50 p-4">
-        <LiquidGlassCard
-          className="px-4 py-2 md:px-6 md:py-3"
-          borderRadius="100px"
-          blurIntensity="lg"
-          glowIntensity="md"
-          shadowIntensity="md"
-        >
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2 md:gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="hidden md:flex p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white/70 hover:text-white"
-              >
-                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
-
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white/70 hover:text-white"
-              >
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
-
-              <Link to="/admin/dashboard" className="flex items-center gap-2">
-                <span className="text-xl md:text-2xl">🚀</span>
-                <span className="text-base md:text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hidden sm:inline">
-                  Supreme Panel
-                </span>
-                <span className="text-base md:text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent sm:hidden">
-                  SP
-                </span>
-              </Link>
-
-              <span className="hidden md:inline text-sm text-white/50 mr-2">
-                / {pageTitle}
-              </span>
-
-              <span className="hidden md:inline text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/20">
-                {isAdmin ? "👑 ادمین" : isEmployee ? "👤 کارمند" : "کاربر"}
-              </span>
-            </div>
-
-            <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
-              <div className="relative w-full">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 z-10" />
-                <input
-                  type="text"
-                  placeholder="جستجو..."
-                  className="w-full px-4 py-1.5 pr-10 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
-                />
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900">
+      {/* سایدبار - همیشه در دسکتاپ باز */}
+      <aside className={`
+        fixed lg:relative top-0 right-0 h-full w-72 bg-gray-900/98 backdrop-blur-xl border-l border-white/10 z-40
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="flex flex-col h-full">
+          {/* لوگو */}
+          <div className="p-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                <span className="text-white font-bold text-lg">S</span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="hidden sm:flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
-                    {user?.name?.charAt(0) || "U"}
-                  </div>
-                  <div className="hidden lg:block">
-                    <p className="text-white text-sm font-medium leading-tight">
-                      {user?.name || "کاربر"}
-                    </p>
-                    <p className="text-white/40 text-xs">
-                      {isAdmin ? "مدیر سیستم" : isEmployee ? "کارمند" : "کاربر"}
-                    </p>
-                  </div>
-                </div>
+              <div>
+                <h1 className="text-white font-bold text-lg">پنل مدیریت</h1>
+                <p className="text-white/40 text-xs">Supreme Tech</p>
               </div>
-
-              <GlassButton
-                icon={<LogOut size={18} />}
-                iconPosition="left"
-                variant="danger"
-                size="sm"
-                onClick={handleLogout}
-                className="!rounded-full !px-3 md:!px-4 !py-1.5"
-              >
-                <span className="hidden md:inline">خروج</span>
-                <span className="md:hidden">🚪</span>
-              </GlassButton>
             </div>
           </div>
-        </LiquidGlassCard>
 
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4">
-            <LiquidGlassCard
-              blurIntensity="lg"
-              borderRadius="24px"
-              glowIntensity="sm"
-              className="p-4"
+          {/* دکمه بستن موبایل */}
+          <div className="lg:hidden flex justify-end p-2">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
             >
-              <nav className="flex flex-col gap-2">
-                {filteredMenuItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive(item.path)
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "text-gray-300 hover:text-white hover:bg-white/10"
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                ))}
-              </nav>
-
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="flex items-center gap-3 px-4 py-2">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                    {user?.name?.charAt(0) || "U"}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">
-                      {user?.name || "کاربر"}
-                    </p>
-                    <p className="text-white/40 text-sm">
-                      {isAdmin ? "مدیر سیستم" : isEmployee ? "کارمند" : "کاربر"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </LiquidGlassCard>
+              <X size={20} className="text-white" />
+            </button>
           </div>
-        )}
-      </nav>
 
-      {/* ========== محتوای اصلی ========== */}
-      <div className="flex gap-4 px-4 pb-4">
-        <aside
-          className={`
-          ${sidebarOpen ? "w-64" : "w-0 md:w-0"}
-          transition-all duration-300 overflow-hidden
-        `}
-        >
-          {sidebarOpen && (
-            <LiquidGlassCard
-              className="p-4"
-              borderRadius="16px"
-              blurIntensity="sm"
-              glowIntensity="sm"
-              shadowIntensity="md"
-            >
-              <nav className="space-y-1">
-                {filteredMenuItems.map((item) => (
+          {/* منو */}
+          <nav className="flex-1 overflow-y-auto p-3">
+            <ul className="space-y-1">
+              {menuItems.map((item) => (
+                <li key={item.path}>
                   <Link
-                    key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                      isActive(item.path)
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "text-white/70 hover:text-white hover:bg-white/10"
-                    }`}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`
+                      flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                      ${isActive(item.path)
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                      }
+                    `}
                   >
-                    <span className="group-hover:scale-110 transition-transform">
+                    <span className={isActive(item.path) ? 'text-blue-400' : 'text-white/40'}>
                       {item.icon}
                     </span>
-                    <span>{item.label}</span>
+                    {item.label}
                   </Link>
-                ))}
-              </nav>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-white/40 hover:text-white/70 hover:bg-white/5 transition-all duration-200"
-              >
-                <ChevronRight size={16} />
-                <span className="text-xs">جمع کردن</span>
-              </button>
-            </LiquidGlassCard>
-          )}
-        </aside>
+          {/* پایین سایدبار */}
+          <div className="p-4 border-t border-white/10">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                {user?.name?.charAt(0) || 'A'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-medium truncate">{user?.name || 'ادمین'}</p>
+                <p className="text-white/40 text-xs truncate">{user?.role || 'ADMIN'}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-colors"
+            >
+              <LogOut size={18} />
+              خروج
+            </button>
+          </div>
+        </div>
+      </aside>
 
-        {!sidebarOpen && (
+      {/* محتوای اصلی */}
+      <div className="flex-1 min-w-0">
+        {/* هدر موبایل */}
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-gray-900/95 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="fixed right-4 bottom-4 md:static md:right-auto md:bottom-auto p-3 rounded-full bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-400 hover:bg-blue-500/30 transition-all duration-300 md:hidden z-40"
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
           >
-            <ChevronLeft size={20} />
+            <Menu size={24} className="text-white" />
           </button>
-        )}
+          <div className="flex items-center gap-2">
+            <span className="text-white font-bold text-sm">پنل مدیریت</span>
+          </div>
+          <div className="w-10"></div>
+        </div>
 
-        <main className="flex-1">
-          <LiquidGlassCard
-            className="p-4 md:p-6 min-h-[calc(100vh-120px)]"
-            borderRadius="16px"
-            blurIntensity="xl"
-            glowIntensity="sm"
-            shadowIntensity="md"
-          >
-            {children}
-          </LiquidGlassCard>
+        {/* هدر دسکتاپ */}
+        <header className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-white/10 bg-gray-900/50 backdrop-blur-sm">
+          <div>
+            <h1 className="text-white font-bold text-xl">پنل مدیریت</h1>
+            <p className="text-white/40 text-sm">به پنل مدیریت خوش آمدید</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                {user?.name?.charAt(0) || 'A'}
+              </div>
+              <div>
+                <p className="text-white text-sm font-medium">{user?.name || 'ادمین'}</p>
+                <p className="text-white/40 text-xs">{user?.role || 'ADMIN'}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
+        </header>
+
+        {/* محتوای صفحه */}
+        <main className="p-4 lg:p-8 pt-20 lg:pt-4">
+          {children}
         </main>
       </div>
+
+      {/* پس‌زمینه سایه برای موبایل */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }

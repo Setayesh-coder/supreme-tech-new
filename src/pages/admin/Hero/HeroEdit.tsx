@@ -94,7 +94,8 @@ export default function HeroEdit() {
 
   const handleRemoveImage = () => {
     setImageFile(null);
-    setImagePreview(currentImage || "");
+    setImagePreview("");
+setCurrentImage("");  
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -128,6 +129,9 @@ export default function HeroEdit() {
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
       }
+if (!imageFile && !currentImage) {
+      imageUrl = "";
+    }
 
       const slideData = {
         title: formData.title,

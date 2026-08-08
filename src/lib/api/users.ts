@@ -8,46 +8,43 @@ export const usersAPI = {
     search?: string;
   }) => {
     const token = localStorage.getItem("token") || "";
-    const query = new URLSearchParams(params as any).toString();
-    const response = await apiClient.get(
-      `/users${query ? "?" + query : ""}`,
-      token,
-    );
+    console.log("📤 usersAPI.getAll - token exists:", !!token);
+    
+    const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.search) query.append("search", params.search || "");
+    
+    const endpoint = `/users${query.toString() ? "?" + query.toString() : ""}`;
+    console.log("📤 usersAPI.getAll endpoint:", endpoint);
+    
+    const response = await apiClient.get(endpoint, token);
+    console.log("📥 usersAPI.getAll response:", response);
     return response;
   },
 
   getById: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get(`/users/${id}`, token);
-    return response;
+    return apiClient.get(`/users/${id}`, token);
   },
 
   create: async (data: any) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.post("/users", data, token);
-    return response;
+    return apiClient.post("/users", data, token);
   },
 
   update: async (id: string, data: any) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.put(`/users/${id}`, data, token);
-    return response;
+    return apiClient.put(`/users/${id}`, data, token);
   },
 
-  // 🔥 تغییر نقش کاربر
   updateRole: async (id: string, role: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.patch(
-      `/users/${id}/role`,
-      { role },
-      token,
-    );
-    return response;
+    return apiClient.patch(`/users/${id}/role`, { role }, token);
   },
 
   delete: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.delete(`/users/${id}`, token);
-    return response;
+    return apiClient.delete(`/users/${id}`, token);
   },
 };

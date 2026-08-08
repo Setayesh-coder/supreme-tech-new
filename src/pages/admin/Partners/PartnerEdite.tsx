@@ -84,7 +84,8 @@ export default function PartnerEdit() {
 
   const handleRemoveLogo = () => {
     setLogo(null);
-    setLogoPreview(currentLogo || "");
+    setLogoPreview("");
+setCurrentLogo("");  
     const input = document.getElementById("logo-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -113,7 +114,9 @@ export default function PartnerEdit() {
       if (logo) {
         logoUrl = await uploadLogo(logo);
       }
-
+if (!logo && !currentLogo) {
+      logoUrl = "";  // رشته خالی
+    }
       const partnerData = {
         ...formData,
         order: Number(formData.order),

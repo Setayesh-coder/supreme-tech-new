@@ -9,6 +9,7 @@ interface PersianDatePickerProps {
   placeholder?: string;
   className?: string;
   includeTime?: boolean;
+  disabled?: boolean;
 }
 
 const persianMonths = [
@@ -81,15 +82,11 @@ const getDaysInMonth = (year: number, month: number) => {
   return isLeap ? 30 : 29;
 };
 
-// 🔥 محاسبه روز اول ماه (شنبه = 0)
 const getFirstDayOfMonth = (year: number, month: number): number => {
   const { gy, gm, gd } = toGregorian(year, month, 1);
   const date = new Date(gy, gm - 1, gd);
-  // در جاوااسکریپت: یکشنبه = 0، دوشنبه = 1، ...
-  // ما می‌خواهیم: شنبه = 0، یکشنبه = 1، ...
-  // پس باید یک روز به عقب برگردیم
-  const day = date.getDay(); // 0=یکشنبه, 1=دوشنبه, ..., 6=شنبه
-  return day === 6 ? 0 : day + 1; // شنبه → 0، یکشنبه → 1، ...
+  const day = date.getDay();
+  return day === 6 ? 0 : day + 1;
 };
 
 const extractTime = (isoDate: string): string => {
@@ -106,6 +103,7 @@ export const PersianDatePicker = ({
   placeholder,
   className,
   includeTime = false,
+  disabled = false,
 }: PersianDatePickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentYear, setCurrentYear] = useState(1405);
@@ -147,7 +145,6 @@ export const PersianDatePicker = ({
     if (currentYear > 0 && currentMonth > 0 && currentMonth <= 12) {
       const daysCount = getDaysInMonth(currentYear, currentMonth);
       setDays(Array.from({ length: daysCount }, (_, i) => i + 1));
-      // 🔥 محاسبه offset روز اول ماه
       setFirstDayOffset(getFirstDayOfMonth(currentYear, currentMonth));
     } else {
       setDays([]);
@@ -251,14 +248,17 @@ export const PersianDatePicker = ({
               type="text"
               value={displayValue}
               readOnly
+              disabled={disabled}
               placeholder={placeholder || "انتخاب تاریخ"}
-              className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 cursor-pointer font-mono ${className || ""}`}
+              className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 ${
+                disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+              } ${className || ""}`}
               dir="ltr"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={() => !disabled && setIsOpen(!isOpen)}
             />
             <Calendar
               className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40 cursor-pointer hover:text-white/60 transition-colors"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={() => !disabled && setIsOpen(!isOpen)}
             />
             {displayValue && (
               <button
@@ -276,7 +276,10 @@ export const PersianDatePicker = ({
                 type="time"
                 value={timeValue}
                 onChange={handleTimeChange}
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 font-mono"
+                disabled={disabled}
+                className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 font-mono ${
+                  disabled ? "opacity-60 cursor-not-allowed" : ""
+                }`}
                 dir="ltr"
               />
               <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
@@ -285,8 +288,28 @@ export const PersianDatePicker = ({
         </div>
       </div>
 
-      {isOpen && (
-        <div className="absolute top-full mt-2 right-0 z-50 bg-gradient-to-br from-gray-900/95 to-blue-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-5 w-80">
+      {/* 🔥 تقویم با z-index بسیار بالا و موقعیت بهبود یافته */}
+      {isOpen && !disabled && (
+        <div 
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999] bg-gradient-to-br from-gray-900/95 to-blue-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-5 w-80 max-h-[90vh] overflow-y-auto"
+          style={{ 
+            zIndex: 99999,
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-white font-bold text-lg">انتخاب تاریخ</span>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-1 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-white/60 hover:text-white" />
+            </button>
+          </div>
+
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-1">
@@ -342,7 +365,6 @@ export const PersianDatePicker = ({
 
           {/* Days grid */}
           <div className="grid grid-cols-7 gap-1">
-            {/* 🔥 جای خالی برای روزهای قبل از اول ماه */}
             {Array.from({ length: firstDayOffset }).map((_, i) => (
               <div key={`empty-${i}`} className="text-center py-2" />
             ))}

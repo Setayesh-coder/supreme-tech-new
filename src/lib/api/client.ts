@@ -4,7 +4,12 @@ const API_URL = import.meta.env.VITE_API_URL || "https://supremetech.ir/api";
 
 // ========== دریافت توکن ==========
 const getToken = () => {
-  return localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  console.log("🔑 getToken:", token ? "✅ دارد" : "❌ ندارد");
+  if (token) {
+    console.log("🔑 token (first 20 chars):", token.substring(0, 20) + "...");
+  }
+  return token;
 };
 
 // ========== ساخت هدر ==========
@@ -16,53 +21,54 @@ const getHeaders = (customToken?: string): HeadersInit => {
   const token = customToken || getToken();
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+    console.log("🔑 هدر Authorization اضافه شد");
+  } else {
+    console.warn("⚠️ توکن وجود ندارد");
   }
 
   return headers;
 };
 
-// ========== تابع کمکی برای مدیریت پاسخ ==========
+// ========== مدیریت پاسخ ==========
 const handleResponse = async (response: Response) => {
+  console.log(`📥 پاسخ: ${response.status} ${response.statusText}`);
+  
   let data;
   try {
     data = await response.json();
+    console.log("📦 داده خام:", JSON.stringify(data).substring(0, 200) + "...");
   } catch {
-    data = { error: "پاسخ نامعتبر از سرور" };
+    data = { error: "پاسخ نامعتبر" };
   }
 
   if (!response.ok) {
-    // 🔥 اگر خطای 401 بود و توکن داشتیم، توکن را پاک کن
-    if (response.status === 401 && getToken()) {
+    if (response.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      // فقط در صورتی که در صفحه لاگین نیستیم
-      if (
-        !window.location.pathname.includes("/login") &&
-        !window.location.pathname.includes("/admin/login")
-      ) {
-        window.location.href = "/login";
-      }
     }
-
-    const error = new Error(data.error || data.message || "خطا در درخواست");
+    const error = new Error(data.error || data.message || "خطا");
     (error as any).status = response.status;
-    (error as any).data = data;
     throw error;
   }
 
-  return data.data !== undefined ? data.data : data;
+  return data;
 };
 
 export const apiClient = {
   get: async (endpoint: string, customToken?: string) => {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log("🌐 GET:", url);
+    
+    const response = await fetch(url, {
       headers: getHeaders(customToken),
     });
     return handleResponse(response);
   },
 
   post: async (endpoint: string, data: any, customToken?: string) => {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log("🌐 POST:", url);
+    const response = await fetch(url, {
       method: "POST",
       headers: getHeaders(customToken),
       body: JSON.stringify(data),
@@ -71,7 +77,9 @@ export const apiClient = {
   },
 
   put: async (endpoint: string, data: any, customToken?: string) => {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log("🌐 PUT:", url);
+    const response = await fetch(url, {
       method: "PUT",
       headers: getHeaders(customToken),
       body: JSON.stringify(data),
@@ -80,7 +88,9 @@ export const apiClient = {
   },
 
   patch: async (endpoint: string, data: any, customToken?: string) => {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log("🌐 PATCH:", url);
+    const response = await fetch(url, {
       method: "PATCH",
       headers: getHeaders(customToken),
       body: JSON.stringify(data),
@@ -89,7 +99,9 @@ export const apiClient = {
   },
 
   delete: async (endpoint: string, customToken?: string) => {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log("🌐 DELETE:", url);
+    const response = await fetch(url, {
       method: "DELETE",
       headers: getHeaders(customToken),
     });
