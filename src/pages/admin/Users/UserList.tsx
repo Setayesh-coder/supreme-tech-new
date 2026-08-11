@@ -101,12 +101,13 @@ export default function UserList() {
         search: search || undefined,
       };
 
-      const data = await usersAPI.getAll(params);
-
-      if (data && data.users && Array.isArray(data.users)) {
-        setUsers(data.users);
-        setTotalPages(data.pagination?.pages || 1);
-        setTotalUsers(data.pagination?.total || data.users.length);
+      const response = await usersAPI.getAll(params);
+      
+      // ✅ ساختار پاسخ: { items: User[], total: number, page: number, limit: number, pages: number }
+      if (response && response.items && Array.isArray(response.items)) {
+        setUsers(response.items);
+        setTotalPages(response.pages || 1);
+        setTotalUsers(response.total || response.items.length);
       } else {
         setUsers([]);
         setTotalPages(1);
@@ -126,7 +127,7 @@ export default function UserList() {
 
     setUpdating(true);
     try {
-      await usersAPI.updateRole(selectedUser.id, newRole);
+      await usersAPI.updateRole(selectedUser.id, newRole as "USER" | "EMPLOYEE" | "ADMIN");
       setUsers(
         users.map((u) =>
           u.id === selectedUser.id ? { ...u, role: newRole as any } : u
@@ -143,7 +144,7 @@ export default function UserList() {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      await usersAPI.update(id, { isActive: !currentStatus });
+      await usersAPI.toggleActive(id);
       setUsers(
         users.map((u) =>
           u.id === id ? { ...u, isActive: !currentStatus } : u

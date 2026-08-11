@@ -3,25 +3,33 @@ import type { ReactNode } from 'react';
 import { settingsAPI } from '../lib/api/settings';
 
 export interface SettingsData {
-  siteName: string;
-  siteDescription: string;
+  site_title?: string;
+  siteName?: string;
+  siteDescription?: string;
+  site_description?: string;
   siteLogo?: string;
-  contactEmail: string;
-  contactPhone: string;
-  contactAddress: string;
+  logo_url?: string;
+  contactEmail?: string;
+  contact_email?: string;
+  contactPhone?: string;
+  contact_phone?: string;
+  contactAddress?: string;
+  address?: string;
   contactMapLink?: string;
-  workingHours: string;
-  socialLinks: {
+  workingHours?: string;
+  socialLinks?: {
     instagram?: string;
     telegram?: string;
     support?: string;
   };
-  seo: {
+  seo?: {
     title?: string;
     description?: string;
     keywords?: string;
   };
-  maintenance: boolean;
+  maintenance?: boolean;
+  maintenance_mode?: boolean;
+  [key: string]: any;
 }
 
 interface SettingsContextType {
@@ -37,10 +45,15 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 const defaultSettings: SettingsData = {
   siteName: 'Supreme Tech',
+  site_title: 'Supreme Tech',
   siteDescription: 'پیشرو در توسعه AI Agent های هوشمند',
+  site_description: 'پیشرو در توسعه AI Agent های هوشمند',
   contactEmail: 'info@supremetech.ir',
+  contact_email: 'info@supremetech.ir',
   contactPhone: '09121234567',
+  contact_phone: '09121234567',
   contactAddress: 'تهران، بزرگراه اشرفی اصفهانی، مجتمع نیایش',
+  address: 'تهران، بزرگراه اشرفی اصفهانی، مجتمع نیایش',
   contactMapLink: 'https://maps.app.goo.gl/3JnB1ePWY57CiHkf6',
   workingHours: 'شنبه تا چهارشنبه ۹ الی ۱۸',
   socialLinks: {
@@ -54,6 +67,7 @@ const defaultSettings: SettingsData = {
     keywords: '',
   },
   maintenance: false,
+  maintenance_mode: false,
 };
 
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -73,6 +87,19 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const newSettings = {
           ...defaultSettings,
           ...data,
+          // ✅ اطمینان از هماهنگی siteName و site_title
+          siteName: data.site_title || data.siteName || defaultSettings.siteName,
+          site_title: data.site_title || data.siteName || defaultSettings.site_title,
+          siteDescription: data.site_description || data.siteDescription || defaultSettings.siteDescription,
+          site_description: data.site_description || data.siteDescription || defaultSettings.site_description,
+          contactEmail: data.contact_email || data.contactEmail || defaultSettings.contactEmail,
+          contact_email: data.contact_email || data.contactEmail || defaultSettings.contact_email,
+          contactPhone: data.contact_phone || data.contactPhone || defaultSettings.contactPhone,
+          contact_phone: data.contact_phone || data.contactPhone || defaultSettings.contact_phone,
+          contactAddress: data.address || data.contactAddress || defaultSettings.contactAddress,
+          address: data.address || data.contactAddress || defaultSettings.address,
+          maintenance: data.maintenance_mode !== undefined ? data.maintenance_mode : data.maintenance,
+          maintenance_mode: data.maintenance_mode !== undefined ? data.maintenance_mode : data.maintenance,
           socialLinks: {
             ...defaultSettings.socialLinks,
             ...(data.socialLinks || {}),
@@ -104,12 +131,73 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       console.log('🔄 بروزرسانی تنظیمات:', newSettings);
       
-      await settingsAPI.update({ ...settings, ...newSettings });
+      // ✅ تبدیل به فرمت مورد انتظار بک‌اند و هماهنگ کردن هر دو فیلد
+      const payload: any = {};
       
-      setSettingsState(prev => ({
-        ...prev,
-        ...newSettings,
-      }));
+      // اگر siteName تغییر کرده، هم siteName و هم site_title را به‌روز کن
+      if (newSettings.siteName !== undefined) {
+        payload.site_title = newSettings.siteName;
+        payload.siteName = newSettings.siteName;
+      }
+      if (newSettings.site_title !== undefined) {
+        payload.site_title = newSettings.site_title;
+        payload.siteName = newSettings.site_title;
+      }
+      
+      if (newSettings.siteDescription !== undefined) {
+        payload.site_description = newSettings.siteDescription;
+        payload.siteDescription = newSettings.siteDescription;
+      }
+      if (newSettings.site_description !== undefined) {
+        payload.site_description = newSettings.site_description;
+        payload.siteDescription = newSettings.site_description;
+      }
+      
+      if (newSettings.contactEmail !== undefined) {
+        payload.contact_email = newSettings.contactEmail;
+        payload.contactEmail = newSettings.contactEmail;
+      }
+      if (newSettings.contact_email !== undefined) {
+        payload.contact_email = newSettings.contact_email;
+        payload.contactEmail = newSettings.contact_email;
+      }
+      
+      if (newSettings.contactPhone !== undefined) {
+        payload.contact_phone = newSettings.contactPhone;
+        payload.contactPhone = newSettings.contactPhone;
+      }
+      if (newSettings.contact_phone !== undefined) {
+        payload.contact_phone = newSettings.contact_phone;
+        payload.contactPhone = newSettings.contact_phone;
+      }
+      
+      if (newSettings.contactAddress !== undefined) {
+        payload.address = newSettings.contactAddress;
+        payload.contactAddress = newSettings.contactAddress;
+      }
+      if (newSettings.address !== undefined) {
+        payload.address = newSettings.address;
+        payload.contactAddress = newSettings.address;
+      }
+      
+      if (newSettings.maintenance !== undefined) {
+        payload.maintenance_mode = newSettings.maintenance;
+        payload.maintenance = newSettings.maintenance;
+      }
+      if (newSettings.maintenance_mode !== undefined) {
+        payload.maintenance_mode = newSettings.maintenance_mode;
+        payload.maintenance = newSettings.maintenance_mode;
+      }
+      
+      if (newSettings.socialLinks) payload.socialLinks = newSettings.socialLinks;
+      if (newSettings.seo) payload.seo = newSettings.seo;
+      
+      console.log('📤 payload ارسال به سرور:', payload);
+      
+      await settingsAPI.update(payload);
+      
+      // ✅ بعد از ذخیره، دوباره دریافت کن تا مطمئن شویم
+      await fetchSettings();
       
       console.log('✅ تنظیمات با موفقیت به‌روزرسانی شد');
     } catch (err) {

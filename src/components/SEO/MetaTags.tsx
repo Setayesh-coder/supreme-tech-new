@@ -18,8 +18,8 @@ export default function MetaTags({
 }: MetaTagsProps) {
   const { settings } = useSettings();
   
-  const pageTitle = title || settings?.seo?.title || settings?.siteName || 'Supreme Tech';
-  const pageDescription = description || settings?.seo?.description || settings?.siteDescription || '';
+  const pageTitle = title || settings?.seo?.title || settings?.site_title || 'Supreme Tech';
+  const pageDescription = description || settings?.seo?.description || settings?.site_description || '';
   const pageKeywords = keywords || settings?.seo?.keywords || '';
   
   return (
@@ -31,7 +31,7 @@ export default function MetaTags({
       {/* Open Graph / Facebook */}
       <meta property="og:title" content={pageTitle} />
       <meta property="og:description" content={pageDescription} />
-      <meta property="og:site_name" content={settings?.siteName || 'Supreme Tech'} />
+      <meta property="og:site_name" content={settings?.site_description || 'Supreme Tech'} />
       {image && <meta property="og:image" content={image} />}
       {url && <meta property="og:url" content={url} />}
       <meta property="og:type" content="website" />

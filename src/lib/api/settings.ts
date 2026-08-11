@@ -1,30 +1,34 @@
-import { apiClient } from "./client";
+// src/lib/api/settings.ts
+import api from './axios';
 
 export const settingsAPI = {
-  // 🔥 دریافت تنظیمات عمومی (بدون نیاز به توکن)
   getPublic: async () => {
-    const response = await apiClient.get("/settings/public");
-    return response;
+    const response = await api.get("/settings/public");
+    return response.data;
   },
 
-  // دریافت تنظیمات کامل (فقط ادمین - نیاز به توکن)
   getAll: async () => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get("/settings", token);
-    return response;
+    const response = await api.get("/settings", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // بروزرسانی تنظیمات (فقط ادمین)
   update: async (data: any) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.put("/settings", data, token);
-    return response;
+    console.log("📤 بروزرسانی تنظیمات با axios به:", "/settings");
+    const response = await api.put("/settings", data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // ریست تنظیمات (فقط ادمین)
   reset: async () => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.post("/settings/reset", {}, token);
-    return response;
+    const response = await api.post("/settings/reset", {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 };

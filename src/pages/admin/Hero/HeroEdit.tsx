@@ -105,7 +105,7 @@ setCurrentImage("");
     formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImage(formData);
+      const response = await uploadAPI.uploadImageWithFormData(formData);
       console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error) {

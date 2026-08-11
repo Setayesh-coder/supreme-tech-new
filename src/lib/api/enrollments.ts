@@ -1,93 +1,71 @@
 // src/lib/api/enrollments.ts
-import { apiClient } from "./client";
+import api from './axios';
 
 export const enrollmentsAPI = {
-  // دریافت ثبت‌نام‌های کاربر جاری
   getMyEnrollments: async () => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get("/enrollments/my", token);
-    return response;
+    const response = await api.get("/enrollments/my", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // ایجاد ثبت‌نام جدید
   create: async (data: any) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.post("/enrollments", data, token);
-    return response;
+    const response = await api.post("/enrollments", data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // پردازش پرداخت
   processPayment: async (enrollmentId: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.post(
-      `/enrollments/${enrollmentId}/pay`,
-      {},
-      token,
-    );
-    return response;
+    const response = await api.post(`/enrollments/${enrollmentId}/pay`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // دریافت لینک جلسه
-  getMeetingLink: async (enrollmentId: string) => {
+  // ✅ اضافه کردن getEventEnrollments
+  getEventEnrollments: async (eventId: string, params?: any) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get(
-      `/enrollments/${enrollmentId}/meeting`,
-      token,
-    );
-    return response;
+    const response = await api.get(`/enrollments/event/${eventId}`, {
+      params,
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // 🔥 دریافت ثبت‌نام‌های یک رویداد (برای ادمین و کارمند)
-  getEventEnrollments: async (
-    eventId: string,
-    params?: { status?: string; search?: string },
-  ) => {
+  getByEvent: async (eventId: string) => {
     const token = localStorage.getItem("token") || "";
-    const query = new URLSearchParams();
-    if (params?.status) query.append("status", params.status);
-    if (params?.search) query.append("search", params.search);
-    const url = `/enrollments/event/${eventId}${query.toString() ? `?${query.toString()}` : ""}`;
-    const response = await apiClient.get(url, token);
-    return response;
+    const response = await api.get(`/enrollments/event/${eventId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // 🔥 به‌روزرسانی وضعیت ثبت‌نام
   updateStatus: async (id: string, status: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.patch(
-      `/enrollments/${id}/status`,
-      { status },
-      token,
-    );
-    return response;
+    const response = await api.patch(`/enrollments/${id}/status`, { status }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // 🔥 ارسال لینک جلسه
-  sendMeetingLink: async (id: string, meetingLink: string) => {
+  // ✅ اضافه کردن sendMeetingLink
+  sendMeetingLink: async (enrollmentId: string, meetingLink: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.post(
-      `/enrollments/${id}/meeting-link`,
-      { meetingLink },
-      token,
-    );
-    return response;
+    const response = await api.post(`/enrollments/${enrollmentId}/meeting-link`, { meetingLink }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // به‌روزرسانی وضعیت پرداخت
-  updatePayment: async (id: string, paymentStatus: string) => {
+  delete: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.patch(
-      `/enrollments/${id}/payment`,
-      { paymentStatus },
-      token,
-    );
-    return response;
-  },
-
-  // لغو ثبت‌نام
-  cancel: async (id: string) => {
-    const token = localStorage.getItem("token") || "";
-    const response = await apiClient.delete(`/enrollments/${id}`, token);
-    return response;
+    const response = await api.delete(`/enrollments/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 };

@@ -1,101 +1,65 @@
 // src/components/admin/Tickets/TicketCreate.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdminLayout } from "../../../components/admin/AdminLayout";
+import { ticketsAPI } from "../../../lib/api/tickets";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { ticketsAPI } from "../../../lib/api/tickets";
-import { usersAPI } from "../../../lib/api/users";
-import { ArrowLeft, Save, User, Ticket } from "lucide-react";
+import { ArrowLeft, Save, Ticket, AlertCircle } from "lucide-react";
 
 export default function TicketCreate() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    userId: "",
     title: "",
-    description: "",
-    priority: "MEDIUM",
+    message: "",
+    department: "",
+    priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
   });
 
-  // 🔥 تشخیص نوع کاربر
-  const userStr = localStorage.getItem("user");
-  const adminStr = localStorage.getItem("admin");
-  const employeeStr = localStorage.getItem("employee");
-
-  const user = userStr
-    ? JSON.parse(userStr)
-    : adminStr
-      ? JSON.parse(adminStr)
-      : employeeStr
-        ? JSON.parse(employeeStr)
-        : null;
-  const isAdmin =
-    adminStr !== null || user?.role === "ADMIN" || user?.type === "admin";
-  const isEmployee =
-    employeeStr !== null ||
-    user?.type === "employee" ||
-    user?.role === "EMPLOYEE";
-
-  // 🔥 استفاده از ref برای جلوگیری از اجرای مجدد
-  const hasSetUserId = useRef(false);
-
-  useEffect(() => {
-    // اگر کارمند هست و userId تنظیم نشده
-    if (isEmployee && !isAdmin && user?.id && !hasSetUserId.current) {
-      setFormData((prev) => ({ ...prev, userId: user.id }));
-      hasSetUserId.current = true;
-    }
-
-    // فقط ادمین‌ها لیست کاربران رو می‌بینن
-    if (isAdmin && users.length === 0) {
-      fetchUsers();
-    }
-  }, [isAdmin, isEmployee, user]); // ✅ وابستگی‌ها
-
-  const fetchUsers = async () => {
-    try {
-      const data = await usersAPI.getAll({ limit: 100 });
-      setUsers(data.users || []);
-    } catch (err) {
-      console.error("خطا در دریافت کاربران:", err);
-    }
-  };
-
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
-      await ticketsAPI.create(formData);
-      navigate("/admin/tickets");
+      await ticketsAPI.create({
+        title: formData.title,
+        message: formData.message,
+        department: formData.department || undefined,
+        priority: formData.priority,
+      });
+      
+      setSuccess("✅ تیکت با موفقیت ایجاد شد!");
+      setTimeout(() => {
+        navigate("/admin/tickets");
+      }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در ایجاد تیکت");
+      console.error("❌ خطا:", err);
+      setError(err.response?.data?.detail || "خطا در ایجاد تیکت");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AdminLayout>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate("/admin/tickets")}
             className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
           >
-            <ArrowLeft size={24} className="text-white" />
+            <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Ticket className="w-6 h-6 text-blue-400" />
@@ -103,59 +67,23 @@ export default function TicketCreate() {
           </h1>
         </div>
 
-        <LiquidGlassCard
-          className="p-6 md:p-8"
-          borderRadius="20px"
-          blurIntensity="lg"
-          glowIntensity="md"
-        >
+        <LiquidGlassCard className="p-6 md:p-8" borderRadius="20px" blurIntensity="lg" glowIntensity="md">
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
+              {success}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 🔥 انتخاب کاربر - فقط برای ادمین */}
-            {isAdmin ? (
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  کاربر
-                </label>
-                <select
-                  name="userId"
-                  value={formData.userId}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
-                  required
-                >
-                  <option value="">انتخاب کاربر...</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} - {user.phone}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  کاربر
-                </label>
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white/60">
-                  <User size={18} className="text-white/40" />
-                  <span>{user?.name || "کاربر جاری"}</span>
-                  <span className="text-xs text-white/30">(شما)</span>
-                </div>
-                {/* 🔥 مخفی برای ارسال userId */}
-                <input type="hidden" name="userId" value={formData.userId} />
-              </div>
-            )}
-
-            {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان تیکت
+                عنوان تیکت <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -168,23 +96,39 @@ export default function TicketCreate() {
               />
             </div>
 
-            {/* توضیحات */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                توضیحات
+                دپارتمان
+              </label>
+              <select
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+              >
+                <option value="">انتخاب دپارتمان...</option>
+                <option value="technical">فنی</option>
+                <option value="support">پشتیبانی</option>
+                <option value="sales">فروش</option>
+                <option value="general">عمومی</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                پیام <span className="text-red-400">*</span>
               </label>
               <textarea
-                name="description"
-                value={formData.description}
+                name="message"
+                value={formData.message}
                 onChange={handleChange}
-                rows={4}
+                rows={5}
                 placeholder="توضیحات کامل تیکت را وارد کنید..."
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                 required
               />
             </div>
 
-            {/* اولویت */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 اولویت
@@ -195,20 +139,20 @@ export default function TicketCreate() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
               >
-                <option value="LOW">کم</option>
-                <option value="MEDIUM">متوسط</option>
-                <option value="HIGH">بالا</option>
-                <option value="URGENT">فوری</option>
+                <option value="LOW">🔵 کم</option>
+                <option value="MEDIUM">🟡 متوسط</option>
+                <option value="HIGH">🟠 بالا</option>
+                <option value="URGENT">🔴 فوری</option>
               </select>
             </div>
 
-            {/* دکمه‌ها */}
             <div className="flex gap-3 pt-4">
               <GlassButton
                 type="button"
                 variant="white"
                 size="md"
                 onClick={() => navigate("/admin/tickets")}
+                className="flex-1"
               >
                 انصراف
               </GlassButton>
@@ -220,6 +164,7 @@ export default function TicketCreate() {
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={loading}
+                className="flex-1"
               >
                 {loading ? "در حال ایجاد..." : "ایجاد تیکت"}
               </GlassButton>
@@ -227,6 +172,6 @@ export default function TicketCreate() {
           </form>
         </LiquidGlassCard>
       </div>
-    </AdminLayout>
+    </div>
   );
 }

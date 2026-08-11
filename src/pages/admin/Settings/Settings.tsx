@@ -44,10 +44,30 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [localSettings, setLocalSettings] = useState(settings);
+  const [localSettings, setLocalSettings] = useState<any>({});
 
   useEffect(() => {
-    setLocalSettings(settings);
+    if (settings) {
+      setLocalSettings({
+        site_title: settings.site_title || settings.siteName || "",
+        site_description: settings.site_description || settings.siteDescription || "",
+        contact_email: settings.contact_email || settings.contactEmail || "",
+        contact_phone: settings.contact_phone || settings.contactPhone || "",
+        address: settings.address || settings.contactAddress || "",
+        workingHours: settings.workingHours || "",
+        socialLinks: {
+          instagram: settings.socialLinks?.instagram || "",
+          telegram: settings.socialLinks?.telegram || "",
+          support: settings.socialLinks?.support || "",
+        },
+        seo: {
+          title: settings.seo?.title || "",
+          description: settings.seo?.description || "",
+          keywords: settings.seo?.keywords || "",
+        },
+        maintenance: settings.maintenance !== undefined ? settings.maintenance : settings.maintenance_mode,
+      });
+    }
   }, [settings]);
 
   const handleChange = (
@@ -57,31 +77,22 @@ export default function Settings() {
     
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
-      setLocalSettings({
-        ...localSettings,
+      setLocalSettings((prev: any) => ({
+        ...prev,
         [name]: checked,
-      });
+      }));
     } else if (name.includes(".")) {
+      // برای فیلدهای تو در تو مثل socialLinks.instagram
       const [parent, child] = name.split(".");
-      if (parent === 'socialLinks') {
-        setLocalSettings({
-          ...localSettings,
-          socialLinks: {
-            ...localSettings.socialLinks,
-            [child]: value,
-          }
-        });
-      } else if (parent === 'seo') {
-        setLocalSettings({
-          ...localSettings,
-          seo: {
-            ...localSettings.seo,
-            [child]: value,
-          }
-        });
-      }
+      setLocalSettings((prev: any) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        }
+      }));
     } else {
-      setLocalSettings({ ...localSettings, [name]: value });
+      setLocalSettings((prev: any) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -91,12 +102,20 @@ export default function Settings() {
     setSuccess("");
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("برای ذخیره تنظیمات باید وارد شوید");
-      }
+      // تبدیل به فرمت مورد انتظار بک‌اند
+      const payload = {
+        site_title: localSettings.site_title,
+        site_description: localSettings.site_description,
+        contact_email: localSettings.contact_email,
+        contact_phone: localSettings.contact_phone,
+        address: localSettings.address,
+        workingHours: localSettings.workingHours,
+        socialLinks: localSettings.socialLinks,
+        seo: localSettings.seo,
+        maintenance_mode: localSettings.maintenance || false,
+      };
       
-      await updateSettings(localSettings);
+      await updateSettings(payload);
       
       setSuccess("✅ تنظیمات با موفقیت ذخیره شد");
       setTimeout(() => setSuccess(""), 3000);
@@ -175,8 +194,8 @@ export default function Settings() {
                 </label>
                 <input
                   type="text"
-                  name="siteName"
-                  value={localSettings?.siteName || ""}
+                  name="site_title"
+                  value={localSettings?.site_title || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
@@ -186,8 +205,8 @@ export default function Settings() {
                   توضیحات سایت
                 </label>
                 <textarea
-                  name="siteDescription"
-                  value={localSettings?.siteDescription || ""}
+                  name="site_description"
+                  value={localSettings?.site_description || ""}
                   onChange={handleChange}
                   rows={3}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -216,8 +235,8 @@ export default function Settings() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
                     type="email"
-                    name="contactEmail"
-                    value={localSettings?.contactEmail || ""}
+                    name="contact_email"
+                    value={localSettings?.contact_email || ""}
                     onChange={handleChange}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -231,8 +250,8 @@ export default function Settings() {
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
                     type="text"
-                    name="contactPhone"
-                    value={localSettings?.contactPhone || ""}
+                    name="contact_phone"
+                    value={localSettings?.contact_phone || ""}
                     onChange={handleChange}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -245,8 +264,8 @@ export default function Settings() {
                 <div className="relative">
                   <MapPin className="absolute left-4 top-4 w-5 h-5 text-white/40" />
                   <textarea
-                    name="contactAddress"
-                    value={localSettings?.contactAddress || ""}
+                    name="address"
+                    value={localSettings?.address || ""}
                     onChange={handleChange}
                     rows={2}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -271,7 +290,7 @@ export default function Settings() {
             </div>
           </LiquidGlassCard>
 
-          {/* شبکه‌های اجتماعی - فقط اینستاگرام، کانال تلگرام، پشتیبانی تلگرام */}
+          {/* شبکه‌های اجتماعی */}
           <LiquidGlassCard
             className="p-6"
             borderRadius="16px"
@@ -283,7 +302,6 @@ export default function Settings() {
               شبکه‌های اجتماعی
             </h2>
             <div className="space-y-4">
-              {/* اینستاگرام */}
               <div>
                 <label className="block text-sm font-medium text-white/60 mb-1 flex items-center gap-2">
                   <InstagramIcon />
@@ -300,7 +318,6 @@ export default function Settings() {
                 <p className="text-xs text-gray-500 mt-1">لینک صفحه اینستاگرام</p>
               </div>
 
-              {/* تلگرام کانال */}
               <div>
                 <label className="block text-sm font-medium text-white/60 mb-1 flex items-center gap-2">
                   <Send size={18} className="text-blue-400" />
@@ -317,7 +334,6 @@ export default function Settings() {
                 <p className="text-xs text-gray-500 mt-1">لینک کانال تلگرام</p>
               </div>
 
-              {/* تلگرام پشتیبانی */}
               <div>
                 <label className="block text-sm font-medium text-white/60 mb-1 flex items-center gap-2">
                   <MessageCircle size={18} className="text-cyan-400" />

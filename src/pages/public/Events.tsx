@@ -1,23 +1,23 @@
-// src/pages/public/Events.tsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { eventsAPI } from "../../lib/api/events";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import {
   Calendar,
-  MapPin,
-  Users,
-  Clock,
-  Star,
-  Ticket,
   ChevronLeft,
   ImageOff,
-  Flame,
+  Filter,
+  Search,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
 } from "lucide-react";
 import { EventsSkeleton } from "../../components/skeletons/EventSkeletons";
 import SectionHeader from "../../components/ui/SectionHeader";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Event {
   id: string;
@@ -26,10 +26,7 @@ interface Event {
   description: string;
   image?: string;
   date: string;
-  duration?: string;
   capacity: number;
-  price: number;
-  location?: string;
   type: string;
   featured: boolean;
   isActive: boolean;
@@ -38,7 +35,7 @@ interface Event {
   };
 }
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "https://supremetech.ir";
+const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
 
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
@@ -46,58 +43,37 @@ const getImageUrl = (imagePath?: string) => {
   return `${BASE_URL}${imagePath}`;
 };
 
-const getEventTypeLabel = (type: string) => {
-  const types: { [key: string]: string } = {
-    WORKSHOP: "کارگاه",
-    COURSE: "دوره",
-    WEBINAR: "وبینار",
-    CONFERENCE: "کنفرانس",
-    MEETUP: "دیدار",
-    BOOTCAMP: "بوت‌کمپ",
-  };
-  return types[type] || type;
-};
-
-const getEventTypeColor = (type: string) => {
-  const colors: { [key: string]: string } = {
-    WORKSHOP: "from-blue-500 to-cyan-500",
-    COURSE: "from-green-500 to-emerald-500",
-    WEBINAR: "from-purple-500 to-pink-500",
-    CONFERENCE: "from-orange-500 to-red-500",
-    MEETUP: "from-yellow-500 to-amber-500",
-    BOOTCAMP: "from-red-500 to-rose-500",
-  };
-  return colors[type] || "from-gray-500 to-gray-600";
-};
-
-const getDaysLeft = (dateString: string) => {
-  const diffMs = new Date(dateString).getTime() - Date.now();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-};
-
-const getCapacityColor = (ratio: number) => {
-  if (ratio >= 0.9) return "bg-red-400";
-  if (ratio >= 0.6) return "bg-amber-400";
-  return "bg-emerald-400";
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 };
 
 export default function Events() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const data = await eventsAPI.getAll({ limit: 20 });
-        const activeEvents = (data.events || []).filter(
-          (event: Event) => event.isActive === true,
-        );
+        const data = await eventsAPI.getAll({ limit: 50 });
+        
+        const activeEvents = (data.events || [])
+          .filter((event: Event) => event.isActive === true);
+        
         setEvents(activeEvents);
       } catch (err) {
         setError("خطا در دریافت رویدادها");
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -105,26 +81,28 @@ export default function Events() {
     fetchEvents();
   }, []);
 
-  const filteredEvents = events.filter((event) => {
-    if (filter === "featured") return event.featured;
-    if (filter === "upcoming") return new Date(event.date) > new Date();
-    return true;
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+  const filteredEvents = events
+    .filter((event) => {
+      if (filter === "featured") return event.featured;
+      if (filter === "upcoming") return new Date(event.date) > new Date();
+      return true;
+    })
+    .filter((event) => {
+      if (!searchTerm) return true;
+      return event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             event.description.toLowerCase().includes(searchTerm.toLowerCase());
     });
-  };
 
   const handleImageError = (eventId: string) => {
     setImageErrors((prev) => ({ ...prev, [eventId]: true }));
   };
 
-  // ✅ مدیریت خطا
+  const handleCardClick = (slug: string) => {
+    if (slug) {
+      navigate(`/events/${slug}`);
+    }
+  };
+
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
@@ -153,54 +131,100 @@ export default function Events() {
     return <EventsSkeleton />;
   }
 
-  // ✅ نمایش اصلی
   return (
-    <section className="py-12 px-4 md:px-6 relative overflow-hidden min-h-screen">
+    <section className="py-8 px-4 md:px-6 lg:px-8 relative overflow-hidden min-h-screen">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/10 to-transparent" />
       <div className="absolute top-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
-      <div className="container mx-auto relative z-10">
-        <SectionHeader
-          badge="رویدادهای Supreme Tech"
-          badgeIcon={<Calendar className="w-4 h-4 text-blue-400" />}
-          title=" رویدادها"
-          subtitle="در رویدادهای ما شرکت کنید و مهارت‌های خود را ارتقا دهید"
-          description="از کارگاه‌ها و وبینارهای تخصصی تا کنفرانس‌های بزرگ"
-        />
+      <div className="container mx-auto relative z-10 max-w-7xl">
+        <div className="mb-8">
+          <SectionHeader
+            badge="دوره‌ها و رویدادهای Supreme Tech"
+            badgeIcon={<Sparkles className="w-4 h-4 text-blue-400" />}
+            title="دوره‌های آموزشی"
+            subtitle="مهارت‌های خود را با دوره‌های تخصصی ما ارتقا دهید"
+            description="از کارگاه‌های عملی تا وبینارهای تخصصی و بوت‌کمپ‌های فشرده"
+          />
 
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
-              filter === "all"
-                ? "bg-blue-500/20 text-blue-400 border border-blue-400/30"
-                : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
-            }`}
-          >
-            همه رویدادها
-          </button>
-          <button
-            onClick={() => setFilter("featured")}
-            className={`px-4 py-2 rounded-full text-sm transition-all duration-300 flex items-center gap-1 ${
-              filter === "featured"
-                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-400/30"
-                : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
-            }`}
-          >
-            <Star className="w-4 h-4" />
-            ویژه
-          </button>
-          <button
-            onClick={() => setFilter("upcoming")}
-            className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
-              filter === "upcoming"
-                ? "bg-green-500/20 text-green-400 border border-green-400/30"
-                : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
-            }`}
-          >
-            رویدادهای آینده
-          </button>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="flex-1 relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="جستجوی دوره‌ها..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-full py-3 pr-12 pl-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+            
+            <GlassButton
+              variant="secondary"
+              size="md"
+              onClick={() => setShowFilters(!showFilters)}
+              icon={<Filter className="w-4 h-4" />}
+              iconPosition="left"
+              className="sm:!w-auto !w-full"
+            >
+              فیلترها {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </GlassButton>
+          </div>
+
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden mt-4"
+              >
+                <LiquidGlassCard className="p-4 md:p-6" borderRadius="16px" blurIntensity="sm" glowIntensity="sm">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setFilter("all")}
+                      className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                        filter === "all"
+                          ? "bg-blue-500/20 text-blue-400 border border-blue-400/30"
+                          : "bg-white/5 text-gray-400 hover:bg-white/10"
+                      }`}
+                    >
+                      همه
+                    </button>
+                    <button
+                      onClick={() => setFilter("upcoming")}
+                      className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                        filter === "upcoming"
+                          ? "bg-green-500/20 text-green-400 border border-green-400/30"
+                          : "bg-white/5 text-gray-400 hover:bg-white/10"
+                      }`}
+                    >
+                      رویدادهای آینده
+                    </button>
+                    <button
+                      onClick={() => setFilter("featured")}
+                      className={`px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-1 ${
+                        filter === "featured"
+                          ? "bg-yellow-500/20 text-yellow-400 border border-yellow-400/30"
+                          : "bg-white/5 text-gray-400 hover:bg-white/10"
+                      }`}
+                    >
+                      ویژه
+                    </button>
+                  </div>
+                </LiquidGlassCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {filteredEvents.length === 0 ? (
@@ -213,173 +237,72 @@ export default function Events() {
             >
               <div className="text-6xl mb-4">📭</div>
               <h3 className="text-2xl font-bold text-white mb-2">
-                رویدادی یافت نشد
+                دوره‌ای یافت نشد
               </h3>
               <p className="text-gray-400">
-                {filter === "featured"
-                  ? "هنوز رویداد ویژه‌ای برگزار نشده است"
-                  : filter === "upcoming"
-                    ? "هیچ رویداد آینده‌ای برنامه‌ریزی نشده است"
-                    : "به زودی رویدادهای جدید برگزار خواهد شد"}
+                {searchTerm || filter !== "all"
+                  ? "با فیلترهای متفاوت جستجو کنید"
+                  : "به زودی دوره‌های جدید برگزار خواهد شد"}
               </p>
             </LiquidGlassCard>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredEvents.map((event) => {
               const imageUrl = getImageUrl(event.image);
               const hasError = imageErrors[event.id];
-              const daysLeft = getDaysLeft(event.date);
-              const enrolled = event._count?.enrollments || 0;
-              const ratio = event.capacity > 0 ? enrolled / event.capacity : 0;
-              const isFull = enrolled >= event.capacity && event.capacity > 0;
 
               return (
-                <LiquidGlassCard
+                <motion.div
                   key={event.id}
-                  className="overflow-hidden h-full group flex flex-col"
-                  borderRadius="16px"
-                  blurIntensity="sm"
-                  glowIntensity="sm"
-                  hoverScale={1.03}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  className="cursor-pointer group"
+                  onClick={() => handleCardClick(event.slug)}
                 >
-                  {/* ✅ استفاده از OptimizedImage به جای img */}
-                  {event.image && imageUrl && !hasError ? (
-                    <div className="relative overflow-hidden h-48">
-                      <OptimizedImage
-                        src={imageUrl}
-                        alt={event.title}
-                        className="w-full h-full transition-transform duration-500 group-hover:scale-110"
-                        objectFit="cover"
-                        quality={80}
-                        loading="lazy"
-                        onError={() => handleImageError(event.id)}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-
-                      <div className="absolute top-3 right-3">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium text-white bg-gradient-to-r ${getEventTypeColor(
-                            event.type,
-                          )}`}
-                        >
-                          {getEventTypeLabel(event.type)}
-                        </span>
+                  <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+                    {/* تصویر */}
+                    {event.image && imageUrl && !hasError ? (
+                      <>
+                        <OptimizedImage
+                          src={imageUrl}
+                          alt={event.title}
+                          className="w-full h-full transition-transform duration-700 group-hover:scale-110"
+                          objectFit="cover"
+                          quality={80}
+                          loading="lazy"
+                          onError={() => handleImageError(event.id)}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent group-hover:from-black/90 transition-all duration-300" />
+                      </>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex flex-col items-center justify-center">
+                        <ImageOff className="w-12 h-12 text-white/20" />
                       </div>
-
-                      {event.featured && (
-                        <div className="absolute top-3 left-3">
-                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/80 text-white backdrop-blur-sm flex items-center gap-1">
-                            <Star className="w-3 h-3" />
-                            ویژه
-                          </span>
-                        </div>
-                      )}
-
-                      {daysLeft >= 0 && daysLeft <= 14 && (
-                        <div className="absolute bottom-3 right-3">
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/50 text-orange-300 backdrop-blur-sm flex items-center gap-1 border border-orange-400/30">
-                            <Flame className="w-3 h-3" />
-                            {daysLeft === 0
-                              ? "امروز برگزار می‌شود"
-                              : `${daysLeft} روز مانده`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-48 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-2">
-                      <ImageOff className="w-12 h-12 text-white/20" />
-                      <span className="text-white/30 text-sm">بدون تصویر</span>
-                    </div>
-                  )}
-
-                  <div className="p-6 space-y-3 flex flex-col flex-1">
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        {formatDate(event.date)}
-                      </span>
-                      {event.duration && (
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} />
-                          {event.duration}
-                        </span>
-                      )}
-                    </div>
-
-                    <h2 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors duration-300 line-clamp-2">
-                      {event.title}
-                    </h2>
-
-                    <p className="text-gray-400 text-sm line-clamp-2">
-                      {event.description}
-                    </p>
-
-                    {event.location && (
-                      <span className="flex items-center gap-1 text-sm text-gray-400">
-                        <MapPin size={14} />
-                        {event.location}
-                      </span>
                     )}
 
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Users size={12} />
-                          {enrolled} / {event.capacity} نفر
-                        </span>
-                        {isFull && (
-                          <span className="text-red-400 font-medium">
-                            تکمیل ظرفیت
-                          </span>
-                        )}
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${getCapacityColor(ratio)}`}
-                          style={{ width: `${Math.min(ratio, 1) * 100}%` }}
-                        />
-                      </div>
-                    </div>
+                    {/* محتوای روی تصویر */}
+                    <div className="absolute bottom-0 right-0 left-0 p-4 md:p-5">
+                      {/* عنوان */}
+                      <h3 className="text-white font-bold text-base md:text-lg lg:text-xl mb-1.5 line-clamp-2 group-hover:text-blue-400 transition-colors">
+                        {event.title}
+                      </h3>
 
-                    <div className="flex items-center justify-between pt-4 mt-auto border-t border-white/5">
-                      <span className="text-lg font-bold text-white">
-                        {event.price === 0 ? (
-                          <span className="text-green-400 text-sm">رایگان</span>
-                        ) : (
-                          `${event.price.toLocaleString()} تومان`
-                        )}
-                      </span>
+                      {/* توضیحات */}
+                      <p className="text-gray-300 text-xs md:text-sm line-clamp-2 mb-2 opacity-90">
+                        {event.description}
+                      </p>
 
-                      {event.slug ? (
-                        <Link to={`/events/${event.slug}`}>
-                          <GlassButton
-                            variant="primary"
-                            size="sm"
-                            disabled={isFull}
-                            icon={<Ticket className="w-4 h-4" />}
-                            iconPosition="left"
-                            className="!rounded-full !px-4 !py-1.5"
-                          >
-                            {isFull ? "تکمیل" : "ثبت نام"}
-                          </GlassButton>
-                        </Link>
-                      ) : (
-                        <GlassButton
-                          disabled
-                          variant="primary"
-                          size="sm"
-                          icon={<Ticket className="w-4 h-4" />}
-                          iconPosition="left"
-                          className="!rounded-full !px-4 !py-1.5"
-                        >
-                          ثبت نام
-                        </GlassButton>
-                      )}
+                      {/* تاریخ */}
+                      <div className="flex items-center text-xs text-gray-400">
+                        <Calendar size={14} className="ml-1" />
+                        {formatDate(event.date)}
+                      </div>
                     </div>
                   </div>
-                </LiquidGlassCard>
+                </motion.div>
               );
             })}
           </div>

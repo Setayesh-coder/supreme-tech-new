@@ -1,28 +1,27 @@
 // src/pages/public/EventDetail.tsx
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { eventsAPI } from "../../lib/api/events";
-import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import CourseList from "../../components/sections/CourseList";
-// import LikeButton from "../../components/ui/LikeButton";
 import ShareButton from "../../components/ui/ShareButton";
 import {
   Calendar,
   MapPin,
   Users,
   Clock,
-  Ticket,
   ChevronLeft,
   ImageOff,
-  Flame,
-  ShoppingCart,
-  CheckCircle,
+  ArrowLeft,
+  Tag,
+  CalendarDays,
+  Info,
 } from "lucide-react";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import CountdownTimer from "../../components/ui/CountdownTimer";
+import { motion } from "framer-motion";
 
 interface Event {
   id: string;
@@ -65,56 +64,17 @@ const getEventTypeLabel = (type: string) => {
   return types[type] || type;
 };
 
-const getCapacityColor = (ratio: number) => {
-  if (ratio >= 0.9) return "bg-red-400";
-  if (ratio >= 0.6) return "bg-amber-400";
-  return "bg-emerald-400";
-};
-
 const getDaysLeft = (dateString: string) => {
   const diffMs = new Date(dateString).getTime() - Date.now();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
 
-function DetailSkeleton() {
-  return (
-    <section className="py-12 px-4 md:px-6 min-h-screen">
-      <div className="container mx-auto max-w-6xl">
-        <div className="h-8 w-40 bg-white/5 rounded-full animate-pulse mb-6" />
-        <div className="h-72 md:h-[420px] bg-white/5 rounded-3xl animate-pulse mb-6" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="h-10 w-3/4 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-full bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-5/6 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-2/3 bg-white/5 rounded animate-pulse" />
-          </div>
-          <div className="h-64 bg-white/5 rounded-3xl animate-pulse" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export default function EventDetail() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState(false);
-  const [registering, setRegistering] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [enrolled, setEnrolled] = useState(0);
-  const [isUserEnrolled, setIsUserEnrolled] = useState(false);
-  const [enrollmentStatus, setEnrollmentStatus] = useState<string>("");
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -129,10 +89,8 @@ export default function EventDetail() {
 
         if (response && response.data) {
           setEvent(response.data);
-          setEnrolled(response.data._count?.enrollments || 0);
         } else if (response) {
           setEvent(response);
-          setEnrolled(response._count?.enrollments || 0);
         } else {
           setError("رویداد یافت نشد");
         }
@@ -144,30 +102,6 @@ export default function EventDetail() {
     };
     fetchEvent();
   }, [slug]);
-
-  // بررسی وضعیت ثبت‌نام کاربر
-  useEffect(() => {
-    const checkEnrollmentStatus = async () => {
-      if (!event || !user) return;
-
-      try {
-        const enrollments = await enrollmentsAPI.getMyEnrollments();
-        const found = enrollments.find((e: any) => e.eventId === event.id);
-
-        if (found) {
-          setIsUserEnrolled(true);
-          setEnrollmentStatus(found.status);
-          setEnrolled(found.event?._count?.enrollments || enrolled);
-        }
-      } catch (err) {
-        console.error("خطا در بررسی وضعیت ثبت‌نام:", err);
-      }
-    };
-
-    if (event && user) {
-      checkEnrollmentStatus();
-    }
-  }, [event, user]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -184,64 +118,11 @@ export default function EventDetail() {
     return <EventDetailSkeleton />;
   }
 
-  const handleRegister = async () => {
-    if (!event) return;
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید.");
-      navigate("/login");
-      return;
-    }
-
-    if (isUserEnrolled) {
-      alert("شما قبلاً در این رویداد ثبت‌نام کرده‌اید.");
-      return;
-    }
-
-    setRegistering(true);
-
-    try {
-      const result = await enrollmentsAPI.create({
-        eventId: event.id,
-        name: user?.name || "",
-        email: user?.email || "",
-        phone: user?.phone || "",
-      });
-
-      console.log("📥 نتیجه ثبت‌نام:", result);
-
-      if (result && result.success && result.data) {
-        if (event.price === 0) {
-          setEnrolled((prev) => prev + 1);
-          setIsUserEnrolled(true);
-          alert("✅ ثبت‌نام با موفقیت انجام شد!");
-        } else {
-          alert(
-            "✅ ثبت‌نام انجام شد. لطفاً برای تکمیل فرآیند به سبد خرید بروید.",
-          );
-          navigate("/cart");
-        }
-      } else {
-        alert(result?.error || "خطا در ثبت‌نام");
-      }
-    } catch (err: any) {
-      console.error("❌ خطا:", err);
-      alert(err.response?.data?.error || "خطا در ثبت‌نام");
-    } finally {
-      setRegistering(false);
-    }
-  };
-
-  if (loading) {
-    return <DetailSkeleton />;
-  }
-
   if (error || !event) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
         <LiquidGlassCard
-          className="p-8 text-center max-w-md"
+          className="p-6 md:p-8 text-center max-w-md w-full"
           borderRadius="24px"
           blurIntensity="lg"
           glowIntensity="md"
@@ -262,247 +143,284 @@ export default function EventDetail() {
   }
 
   const imageUrl = getImageUrl(event.image);
-  const totalEnrolled = enrolled;
-  const ratio = event.capacity > 0 ? totalEnrolled / event.capacity : 0;
-  const isFull = totalEnrolled >= event.capacity && event.capacity > 0;
+  const totalEnrolled = event._count?.enrollments || 0;
   const daysLeft = getDaysLeft(event.date);
   const isPast = new Date(event.date) < new Date();
   const eventDate = new Date(event.date);
 
   return (
-    <section className="py-12 px-4 md:px-6 relative overflow-hidden min-h-screen">
+    <section className="py-6 px-3 md:py-12 md:px-6 relative overflow-hidden min-h-screen">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/10 to-transparent" />
-      <div className="absolute top-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-20 right-20 w-64 md:w-96 h-64 md:h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 left-20 w-64 md:w-96 h-64 md:h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
       <div className="container mx-auto max-w-6xl relative z-10">
-        <Link to="/events" className="inline-block mb-6">
-          <LiquidGlassCard
-            className="px-4 py-2"
-            borderRadius="100px"
-            blurIntensity="sm"
-            glowIntensity="sm"
-            hoverScale={1.05}
-          >
-            <span className="text-gray-300 flex items-center gap-2 text-sm group">
-              <ChevronLeft
-                size={16}
-                className="group-hover:-translate-x-1 transition-transform"
-              />
-              بازگشت به رویدادها
-            </span>
-          </LiquidGlassCard>
-        </Link>
-
-        {/* Hero */}
-        <LiquidGlassCard
-          className="overflow-hidden mb-6"
-          borderRadius="24px"
-          blurIntensity="lg"
-          glowIntensity="md"
-          shadowIntensity="lg"
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
         >
-          <div className="relative h-64 md:h-[420px]">
-            {event.image && imageUrl && !imageError ? (
-              <OptimizedImage
-                src={imageUrl}
-                alt={event.title}
-                className="w-full h-full"
-                objectFit="cover"
-                quality={90}
-                priority={true}
-                loading="eager"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-3">
-                <ImageOff className="w-16 h-16 text-white/20" />
-                <span className="text-white/30 text-lg">بدون تصویر</span>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-            <div className="absolute top-4 right-4 flex gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-medium text-white bg-gradient-to-r from-blue-500 to-cyan-500">
-                {getEventTypeLabel(event.type)}
-              </span>
-              {daysLeft >= 0 && daysLeft <= 14 && (
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/50 text-orange-300 backdrop-blur-sm flex items-center gap-1 border border-orange-400/30">
-                  <Flame className="w-3 h-3" />
-                  {daysLeft === 0 ? "امروز" : `${daysLeft} روز مانده`}
-                </span>
-              )}
-            </div>
-
-            <div className="absolute bottom-0 right-0 left-0 p-6 md:p-8">
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-3">
-                {event.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-200">
-                <span className="flex items-center gap-1.5">
-                  <Calendar size={16} />
-                  {formatDate(event.date)}
-                </span>
-                {event.duration && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock size={16} />
-                    {event.duration}
-                  </span>
-                )}
-                {event.location && (
-                  <span className="flex items-center gap-1.5">
-                    <MapPin size={16} />
-                    {event.location}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </LiquidGlassCard>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* محتوای اصلی */}
-          <div className="lg:col-span-2">
+          <Link to="/events" className="inline-block mb-4 md:mb-6">
             <LiquidGlassCard
-              className="p-6 md:p-8"
-              borderRadius="24px"
-              blurIntensity="lg"
-              glowIntensity="md"
+              className="px-3 py-1.5 md:px-4 md:py-2"
+              borderRadius="9999px"
+              blurIntensity="sm"
+              glowIntensity="sm"
+              hoverScale={1.05}
             >
-              <div className="prose prose-invert max-w-none">
-                <p className="text-gray-300 leading-relaxed mb-4">
-                  {event.description}
-                </p>
-                {event.content && (
-                  <div
-                    className="text-gray-300 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: event.content }}
+              <span className="text-gray-300 flex items-center gap-1.5 text-xs md:text-sm group">
+                <ChevronLeft
+                  size={14}
+                  className="group-hover:-translate-x-1 transition-transform"
+                />
+                بازگشت به رویدادها
+              </span>
+            </LiquidGlassCard>
+          </Link>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <LiquidGlassCard
+            className="overflow-hidden mb-4 md:mb-6"
+            borderRadius="24px"
+            blurIntensity="lg"
+            glowIntensity="md"
+            shadowIntensity="lg"
+          >
+            <div className="relative h-48 sm:h-64 md:h-[420px]">
+              {event.image && imageUrl && !imageError ? (
+                <>
+                  <OptimizedImage
+                    src={imageUrl}
+                    alt={event.title}
+                    className="w-full h-full"
+                    objectFit="cover"
+                    quality={90}
+                    priority={true}
+                    loading="eager"
+                    onError={() => setImageError(true)}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                </>
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-3">
+                  <ImageOff className="w-12 h-12 md:w-16 md:h-16 text-white/20" />
+                  <span className="text-white/30 text-sm md:text-lg">بدون تصویر</span>
+                </div>
+              )}
+
+              <div className="absolute top-3 right-3 md:top-4 md:right-4 flex flex-wrap gap-1.5 md:gap-2">
+                <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium text-white bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg">
+                  {getEventTypeLabel(event.type)}
+                </span>
+                {event.featured && (
+                  <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium bg-yellow-500/90 text-white backdrop-blur-sm shadow-lg">
+                    ⭐ ویژه
+                  </span>
                 )}
               </div>
-            </LiquidGlassCard>
+
+              <div className="absolute bottom-0 right-0 left-0 p-4 md:p-6 lg:p-8">
+                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-2 md:mb-3 line-clamp-3 drop-shadow-lg">
+                  {event.title}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-200">
+                  <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                    <Calendar size={14} className="md:w-4 md:h-4" />
+                    {formatDate(event.date)}
+                  </span>
+                  {event.duration && (
+                    <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <Clock size={14} className="md:w-4 md:h-4" />
+                      {event.duration}
+                    </span>
+                  )}
+                  {event.location && (
+                    <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <MapPin size={14} className="md:w-4 md:h-4" />
+                      {event.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </LiquidGlassCard>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <LiquidGlassCard
+                className="p-4 md:p-6 lg:p-8"
+                borderRadius="24px"
+                blurIntensity="lg"
+                glowIntensity="md"
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <Info className="w-5 h-5 text-blue-400" />
+                  <h2 className="text-lg md:text-xl font-bold text-white">درباره رویداد</h2>
+                </div>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4">
+                    {event.description}
+                  </p>
+                  {event.content && (
+                    <div
+                      className="text-gray-300 leading-relaxed text-sm md:text-base"
+                      dangerouslySetInnerHTML={{ __html: event.content }}
+                    />
+                  )}
+                </div>
+              </LiquidGlassCard>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <div id="courses-section">
+                <CourseList eventId={event.id} eventTitle={event.title} />
+              </div>
+            </motion.div>
           </div>
 
-          {/* 🔥 کارت ثبت‌نام با تایمر شمارش معکوس */}
-          <div className="lg:sticky lg:top-6 space-y-4">
-            {/* 🔥 تایمر شمارش معکوس - فقط اگر رویداد آینده باشد */}
+          <motion.div
+            className="lg:sticky lg:top-6 space-y-3 md:space-y-4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             {!isPast && eventDate > new Date() && (
               <LiquidGlassCard
-                className="p-6"
+                className="p-4 md:p-6"
                 borderRadius="24px"
                 blurIntensity="lg"
                 glowIntensity="md"
                 shadowIntensity="lg"
               >
-                <div className="text-center mb-4">
+                <div className="text-center">
                   <CountdownTimer targetDate={eventDate} />
-                  <p className="text-sm text-gray-400 mt-2">
-                    زمان باقی‌مانده تا شروع رویداد
+                  <p className="text-xs md:text-sm text-gray-400 mt-2">
+                    ⏳ زمان باقی‌مانده تا شروع رویداد
                   </p>
                 </div>
               </LiquidGlassCard>
             )}
 
-            {/* کارت ثبت‌نام */}
             <LiquidGlassCard
-              className="p-6"
+              className="p-4 md:p-6"
               borderRadius="24px"
               blurIntensity="lg"
               glowIntensity="md"
               shadowIntensity="lg"
             >
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-2xl font-bold text-white">
-                  {event.price === 0 ? (
-                    <span className="text-green-400">رایگان</span>
-                  ) : (
-                    `${event.price.toLocaleString()} تومان`
-                  )}
-                </span>
-                {/* 🔥 اشتراک‌گذاری */}
+              <div className="flex items-center justify-between mb-4 md:mb-5 pb-3 border-b border-white/5">
                 <div className="flex items-center gap-2">
-                  <ShareButton
-                    title={event.title}
-                    excerpt={event.description}
-                    url={window.location.href}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5 mb-5">
-                <div className="flex items-center justify-between text-sm text-gray-400">
-                  <span className="flex items-center gap-1.5">
-                    <Users size={14} />
-                    {totalEnrolled} / {event.capacity} نفر ثبت‌نام کرده‌اند
+                  <CalendarDays className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
+                  <span className="text-sm md:text-base font-medium text-white">
+                    اطلاعات رویداد
                   </span>
-                  {isFull && (
-                    <span className="text-red-400 font-medium">تکمیل</span>
-                  )}
-                  {isPast && (
-                    <span className="text-gray-500 font-medium">گذشته</span>
-                  )}
                 </div>
-                <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${getCapacityColor(ratio)}`}
-                    style={{ width: `${Math.min(ratio, 1) * 100}%` }}
-                  />
+                <ShareButton
+                  title={event.title}
+                  excerpt={event.description}
+                  url={window.location.href}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">تاریخ برگزاری</p>
+                    <p className="text-sm text-white">{formatDate(event.date)}</p>
+                  </div>
+                </div>
+
+                {event.duration && (
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <Clock className="w-4 h-4 text-blue-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">مدت زمان</p>
+                      <p className="text-sm text-white">{event.duration}</p>
+                    </div>
+                  </div>
+                )}
+
+                {event.location && (
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <MapPin className="w-4 h-4 text-blue-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">مکان</p>
+                      <p className="text-sm text-white">{event.location}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <Tag className="w-4 h-4 text-blue-400" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">نوع رویداد</p>
+                    <p className="text-sm text-white">{getEventTypeLabel(event.type)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">شرکت‌کنندگان</p>
+                    <p className="text-sm text-white">
+                      {totalEnrolled} نفر از {event.capacity} نفر
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* 🔥 وضعیت ثبت‌نام کاربر */}
-              {isUserEnrolled && (
-                <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-xl text-green-400 text-center text-sm">
-                  ✅ شما در این رویداد ثبت‌نام کرده‌اید
-                  {enrollmentStatus === "PENDING" && (
-                    <span className="block text-yellow-400 text-xs mt-1">
-                      ⏳ در انتظار پرداخت
+              <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">وضعیت</span>
+                  {isPast ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
+                      به پایان رسیده
+                    </span>
+                  ) : daysLeft <= 7 ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">
+                      {daysLeft === 0 ? "امروز" : `${daysLeft} روز مانده`}
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                      در حال برگزاری
                     </span>
                   )}
                 </div>
-              )}
+              </div>
 
-              {/* 🔥 دکمه ثبت‌نام */}
-              <GlassButton
-                variant={isUserEnrolled ? "white" : "primary"}
-                size="lg"
-                disabled={isFull || registering || isPast || isUserEnrolled}
-                icon={
-                  isUserEnrolled ? (
-                    <CheckCircle size={18} />
-                  ) : event.price === 0 ? (
-                    <Ticket className="w-5 h-5" />
-                  ) : (
-                    <ShoppingCart className="w-5 h-5" />
-                  )
-                }
-                iconPosition="left"
-                onClick={handleRegister}
-                className="w-full justify-center"
-              >
-                {isUserEnrolled
-                  ? "ثبت‌نام شده"
-                  : isPast
-                    ? "رویداد گذشته"
-                    : isFull
-                      ? "ظرفیت تکمیل شده"
-                      : registering
-                        ? "در حال ثبت..."
-                        : event.price === 0
-                          ? "ثبت نام رایگان"
-                          : "ثبت نام و پرداخت"}
-              </GlassButton>
-
-              <p className="text-xs text-gray-500 text-center mt-4">
-                {event.price === 0
-                  ? "با ثبت‌نام، جای خود را در این رویداد قطعی می‌کنید."
-                  : "پس از ثبت‌نام، برای تکمیل فرآیند به سبد خرید هدایت می‌شوید."}
-              </p>
+              <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
+                <button
+                  onClick={() => {
+                    const courseSection = document.getElementById('courses-section');
+                    if (courseSection) {
+                      courseSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="w-full text-blue-400 hover:text-blue-300 transition-all text-sm md:text-base flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <ArrowLeft size={16} className="md:w-5 md:h-5" />
+                  مشاهده دوره‌های مرتبط
+                </button>
+              </div>
             </LiquidGlassCard>
-          </div>
+          </motion.div>
         </div>
-{/* دوره‌های آموزشی */}
-<CourseList eventId={event.id} eventTitle={event.title} />
       </div>
     </section>
   );

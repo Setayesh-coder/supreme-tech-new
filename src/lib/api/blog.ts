@@ -1,54 +1,80 @@
-// src/lib/api/blog.ts
-import { apiClient } from "./client";
+import api from './axios';
 
 export const blogAPI = {
-  // دریافت همه پست‌ها
-  getAll: (params?: { page?: number; limit?: number; tag?: string }) => {
-    const query = new URLSearchParams(params as any).toString();
-    return apiClient.get(`/blog${query ? "?" + query : ""}`);
+  // دریافت همه پست‌ها - با پارامترهای object
+  getAll: async (params?: { page?: number; limit?: number; search?: string; tag?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.search) query.append('search', params.search);
+    if (params?.tag) query.append('tag', params.tag);
+    
+    const url = `/blog${query.toString() ? '?' + query.toString() : ''}`;
+    const response = await api.get(url);
+    return response.data;
   },
 
-  // دریافت پست با slug (عمومی)
-  getBySlug: (slug: string) => {
-    return apiClient.get(`/blog/slug/${slug}`);
+  getBySlug: async (slug: string) => {
+    const response = await api.get(`/blog/slug/${slug}`);
+    return response.data;
   },
 
-  // 🔥 دریافت پست با id (برای ویرایش)
-  getById: (id: string) => {
-    return apiClient.get(`/blog/id/${id}`);
+  getById: async (id: string) => {
+    const response = await api.get(`/blog/id/${id}`);
+    return response.data;
   },
 
-  // ایجاد پست جدید
-  create: (data: any) => {
+  create: async (data: any) => {
     const token = localStorage.getItem("token") || "";
-    return apiClient.post("/blog", data, token);
+    const response = await api.post("/blog", data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // ویرایش پست
-  update: (id: string, data: any) => {
+  update: async (id: string, data: any) => {
     const token = localStorage.getItem("token") || "";
-    return apiClient.put(`/blog/${id}`, data, token);
+    const response = await api.put(`/blog/${id}`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // حذف پست
-  delete: (id: string) => {
+  delete: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    return apiClient.delete(`/blog/${id}`, token);
+    const response = await api.delete(`/blog/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // دریافت تگ‌ها
-  getTags: () => {
-    return apiClient.get("/blog/tags");
-  },
-  // لایک کردن پست
-  toggleLike: (id: string) => {
-    const token = localStorage.getItem("token") || "";
-    return apiClient.post(`/blog/${id}/like`, {}, token);
+  getTags: async () => {
+    const response = await api.get("/blog/tags");
+    return response.data;
   },
 
-  // بررسی وضعیت لایک
-  getLikeStatus: (id: string) => {
+  like: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    return apiClient.get(`/blog/${id}/like-status`, token);
+    const response = await api.post(`/blog/${id}/like`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  },
+
+  // ✅ اضافه کردن toggleLike
+  toggleLike: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.post(`/blog/${id}/like`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  },
+
+  getLikeStatus: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get(`/blog/${id}/like-status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 };

@@ -1,82 +1,66 @@
-// src/components/ui/LikeButton.tsx
-import { useState, useEffect } from "react";
-import { Heart } from "lucide-react";
-import { blogAPI } from "../../lib/api/blog";
+import { useState, useEffect } from 'react';
+import { Heart } from 'lucide-react';
+import { blogAPI } from '../../lib/api/blog';
 
 interface LikeButtonProps {
   postId: string;
   initialLikes?: number;
-  onLikeChange?: (liked: boolean, likes: number) => void;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function LikeButton({
-  postId,
-  initialLikes = 0,
-  onLikeChange,
-}: LikeButtonProps) {
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(initialLikes);
+export default function LikeButton({ postId, initialLikes = 0, size = 'md' }: LikeButtonProps) {
+  const [likes, setLikes] = useState(initialLikes);
+  const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const checkStatus = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      try {
-        const response = await blogAPI.getLikeStatus(postId);
-        if (response.success) {
-          setLiked(response.liked);
-        }
-      } catch (error) {
-        console.error("❌ خطا در بررسی وضعیت لایک:", error);
-      }
-    };
-    checkStatus();
+    checkLikeStatus();
   }, [postId]);
 
-  const handleLike = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("برای لایک کردن باید وارد حساب کاربری خود شوید.");
-      return;
+  const checkLikeStatus = async () => {
+    try {
+      const response = await blogAPI.getLikeStatus(postId);
+      setIsLiked(response.isLiked || false);
+      if (response.likes !== undefined) {
+        setLikes(response.likes);
+      }
+    } catch (error) {
+      console.error('خطا در بررسی وضعیت لایک:', error);
     }
+  };
 
+  const toggleLike = async () => {
     if (loading) return;
     setLoading(true);
 
     try {
       const response = await blogAPI.toggleLike(postId);
-      if (response.success) {
-        setLiked(response.liked);
-        setLikesCount(response.likes);
-        onLikeChange?.(response.liked, response.likes);
-      }
+      setIsLiked(response.isLiked || !isLiked);
+      setLikes(response.likes || likes + (isLiked ? -1 : 1));
     } catch (error) {
-      console.error("❌ خطا در لایک کردن:", error);
+      console.error('خطا در لایک:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-6 h-6',
+  };
+
   return (
     <button
-      onClick={handleLike}
+      onClick={toggleLike}
       disabled={loading}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${
-        liked
-          ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-          : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-      } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+      className="flex items-center gap-1.5 transition-colors hover:text-red-500 group"
     >
       <Heart
-        size={18}
-        className={`transition-all duration-300 ${
-          liked ? "fill-red-400 scale-110" : ""
-        } ${loading ? "animate-pulse" : ""}`}
+        className={`${sizeClasses[size]} transition-all ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400 group-hover:text-red-400'}`}
       />
-      <span className="text-sm font-medium">
-        {likesCount > 0 ? likesCount.toLocaleString() : "لایک"}
+      <span className={`text-sm ${isLiked ? 'text-red-500' : 'text-gray-400'}`}>
+        {likes}
       </span>
     </button>
   );

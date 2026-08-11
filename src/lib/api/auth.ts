@@ -1,80 +1,41 @@
 // src/lib/api/auth.ts
-import { apiClient } from "./client";
-
-// ========== تایپ‌ها ==========
-interface RegisterUserData {
-  phone: string;
-  name: string;
-  password?: string;
-  email?: string;
-}
-
-interface LoginUserData {
-  phone: string;
-  password?: string;
-}
-
-interface UpdateProfileData {
-  name?: string;
-  phone?: string;
-  email?: string;
-  province?: string;
-  birthDate?: string;
-  gender?: string;
-  avatar?: string;
-}
+import api from './axios';
 
 export const authAPI = {
-  // ========== ادمین ==========
   registerAdmin: (data: { phone: string; password: string; name: string }) => {
-    return apiClient.post("/admin/register", data);
+    return api.post("/admin/register", data);
   },
 
   loginAdmin: (data: { phone: string; password: string }) => {
-    return apiClient.post("/admin/login", data);
+    return api.post("/admin/login", data);
   },
 
-  // ========== کاربر عادی ==========
-  registerUser: async (data: RegisterUserData) => {
-    const response = await apiClient.post("/users/register", data);
-    // 🔥 اگر پاسخ شامل توکن بود، ذخیره کن
-    if (response && response.token) {
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+  registerUser: async (data: { phone: string; name: string; password?: string; email?: string }) => {
+    const response = await api.post("/users/register", data);
+    if (response.data?.token) {
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
     }
-    return response;
+    return response.data;
   },
 
-  loginUser: async (data: LoginUserData) => {
-    const response = await apiClient.post("/users/login", data);
-    // 🔥 اگر پاسخ شامل توکن بود، ذخیره کن
-    if (response && response.token) {
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+  loginUser: async (data: { phone: string; password?: string }) => {
+    const response = await api.post("/users/login", data);
+    if (response.data?.token) {
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
     }
-    return response;
+    return response.data;
   },
 
-  // ========== پروفایل ==========
   getProfile: async () => {
-    const token = localStorage.getItem("token") || undefined;
-    const response = await apiClient.get("/users/profile", token);
-    return response;
+    const response = await api.get("/users/profile");
+    return response.data;
   },
 
-  updateProfile: async (data: UpdateProfileData) => {
-    const token = localStorage.getItem("token") || undefined;
-    const response = await apiClient.put("/users/profile", data, token);
-    return response;
-  },
-
-  // ========== توکن ==========
-  saveToken: (token: string) => {
-    localStorage.setItem("token", token);
-  },
-
-  saveUser: (user: any) => {
-    localStorage.setItem("user", JSON.stringify(user));
+  updateProfile: async (data: any) => {
+    const response = await api.put("/users/profile", data);
+    return response.data;
   },
 
   getToken: () => {
@@ -94,12 +55,7 @@ export const authAPI = {
   },
 
   changePassword: async (data: { current: string; new: string }) => {
-    const token = localStorage.getItem("token") || "";
-    const response = await apiClient.patch(
-      "/admin/change-password",
-      data,
-      token,
-    );
-    return response;
+    const response = await api.patch("/admin/change-password", data);
+    return response.data;
   },
 };

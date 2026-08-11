@@ -1,42 +1,22 @@
 // src/pages/admin/Hero/HeroList.tsx
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { heroAPI } from "../../../lib/api/hero";
+import type { HeroSlide } from "../../../lib/api/hero";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { OptimizedImage } from "../../../components/ui/OptimizedImage";
-import { heroAPI } from "../../../lib/api/hero";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Loader2,
-  Image,
-  Check,
-  X,
-  ArrowUp,
-  ArrowDown,
+import { 
+  Plus, Edit, Trash2, 
+  Loader2, Search, 
+  ArrowUp, ArrowDown
 } from "lucide-react";
-
-interface HeroSlide {
-  id: string;
-  title: string;
-  subtitle?: string;
-  description?: string;
-  image: string;
-  buttonText?: string;
-  buttonLink?: string;
-  color?: string;
-  order: number;
-  isActive: boolean;
-  createdAt: string;
-}
 
 export default function HeroList() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchSlides();
@@ -59,63 +39,41 @@ export default function HeroList() {
     if (!confirm("آیا از حذف این اسلاید مطمئن هستید؟")) return;
     try {
       await heroAPI.delete(id);
-      setSlides(slides.filter((s) => s.id !== id));
+      setSlides(slides.filter(s => s.id !== id));
     } catch (err) {
       alert("خطا در حذف اسلاید");
     }
   };
 
-  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
-    try {
-      await heroAPI.update(id, { isActive: !currentStatus });
-      setSlides(
-        slides.map((s) =>
-          s.id === id ? { ...s, isActive: !currentStatus } : s,
-        ),
-      );
-    } catch (err) {
-      alert("خطا در تغییر وضعیت");
-    }
-  };
-
-  const handleMove = async (id: string, direction: "up" | "down") => {
-    const index = slides.findIndex((s) => s.id === id);
-    if (
-      (direction === "up" && index === 0) ||
-      (direction === "down" && index === slides.length - 1)
-    )
-      return;
+  const handleReorder = async (id: string, direction: 'up' | 'down') => {
+    const index = slides.findIndex(s => s.id === id);
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === slides.length - 1) return;
 
     const newSlides = [...slides];
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    [newSlides[index], newSlides[targetIndex]] = [
-      newSlides[targetIndex],
-      newSlides[index],
-    ];
-
-    // به‌روزرسانی order
-    const updatedSlides = newSlides.map((s, i) => ({ ...s, order: i }));
-    setSlides(updatedSlides);
-
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    [newSlides[index], newSlides[newIndex]] = [newSlides[newIndex], newSlides[index]];
+    
+    const reorderItems = newSlides.map((s, i) => ({ id: s.id, order: i }));
     try {
-      await heroAPI.reorder(
-        updatedSlides.map((s) => ({ id: s.id, order: s.order })),
-      );
+      await heroAPI.reorder(reorderItems);
+      setSlides(newSlides);
     } catch (err) {
-      console.error("خطا در ذخیره ترتیب:", err);
-      fetchSlides();
+      alert("خطا در تغییر ترتیب");
     }
   };
 
-  const handleImageError = (slideId: string) => {
-    setImageErrors((prev) => ({ ...prev, [slideId]: true }));
-  };
+  const filteredSlides = slides.filter(slide =>
+    slide.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    slide.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center min-h-[400px]">
           <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+          <span className="text-gray-400 mr-3">در حال بارگذاری...</span>
         </div>
       </AdminLayout>
     );
@@ -123,171 +81,98 @@ export default function HeroList() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">
-              🎨 مدیریت اسلایدها
-            </h1>
-            <p className="text-white/60 text-sm">اسلایدهای صفحه اصلی</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">مدیریت اسلایدر</h1>
+            <p className="text-gray-400 text-sm mt-1">مدیریت اسلایدهای صفحه اصلی</p>
           </div>
           <Link to="/admin/hero/create">
-            <GlassButton
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-4 h-4" />}
-              iconPosition="left"
-            >
+            <GlassButton variant="primary" icon={<Plus className="w-4 h-4" />} iconPosition="left">
               اسلاید جدید
             </GlassButton>
           </Link>
         </div>
 
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="جستجوی اسلایدها..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pr-10 pl-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+          </div>
+        </div>
+
         {error && (
-          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl">
-            {error}
+          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4">
+            ❌ {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4">
-          {slides.map((slide, index) => {
-            const hasError = imageErrors[slide.id];
-            
-            return (
-              <LiquidGlassCard
-                key={slide.id}
-                className="p-4"
-                borderRadius="16px"
-                blurIntensity="sm"
-                glowIntensity="sm"
-              >
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                  {/* 🔥 تصویر با OptimizedImage */}
-                  <div className="w-32 h-20 bg-white/5 rounded-lg overflow-hidden shrink-0">
-                    {slide.image && !hasError ? (
-                      <OptimizedImage
-                        src={slide.image}
-                        alt={slide.title}
-                        className="w-full h-full"
-                        objectFit="cover"
-                        quality={80}
-                        loading="lazy"
-                        fallback="https://via.placeholder.com/128x80?text=No+Image"
-                        placeholder={false}
-                        onError={() => handleImageError(slide.id)}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-                        <Image className="w-8 h-8 text-white/20" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* اطلاعات */}
+        {filteredSlides.length === 0 ? (
+          <LiquidGlassCard className="p-12 text-center" borderRadius="16px" blurIntensity="sm">
+            <div className="text-6xl mb-4">🖼️</div>
+            <h3 className="text-xl font-bold text-white mb-2">اسلایدی یافت نشد</h3>
+            <p className="text-gray-400">هنوز اسلایدی ایجاد نشده است</p>
+          </LiquidGlassCard>
+        ) : (
+          <div className="space-y-3">
+            {filteredSlides.map((slide, index) => (
+              <LiquidGlassCard key={slide.id} className="p-4" borderRadius="16px" blurIntensity="sm" glowIntensity="sm">
+                <div className="flex items-center gap-4">
+                  <img
+                    src={slide.image || slide.image_url || '/slides/ai-hero-new.webp'}
+                    alt={slide.title}
+                    className="w-24 h-16 object-cover rounded-lg"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/slides/ai-hero-new.webp';
+                    }}
+                  />
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-lg font-bold text-white">
-                          {slide.title}
-                        </h3>
-                        {slide.subtitle && (
-                          <p className="text-sm text-gray-400">
-                            {slide.subtitle}
-                          </p>
-                        )}
-                        {slide.description && (
-                          <p className="text-sm text-gray-500 line-clamp-1">
-                            {slide.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            slide.isActive
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}
-                        >
-                          {slide.isActive ? (
-                            <span className="flex items-center gap-1">
-                              <Check className="w-3 h-3" /> فعال
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              <X className="w-3 h-3" /> غیرفعال
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ترتیب: {slide.order + 1}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
-                      {slide.buttonText && <span>🔗 {slide.buttonText}</span>}
-                      {slide.color && (
-                        <span className="flex items-center gap-1">
-                          🎨
-                          <span
-                            className="w-4 h-4 rounded-full border border-white/10"
-                            style={{ backgroundColor: slide.color }}
-                          />
-                        </span>
-                      )}
+                    <h3 className="text-lg font-bold text-white">{slide.title}</h3>
+                    <p className="text-gray-400 text-sm truncate">{slide.subtitle}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${slide.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                        {slide.isActive ? 'فعال' : 'غیرفعال'}
+                      </span>
+                      <span className="text-xs text-gray-500">ترتیب: {slide.order}</span>
                     </div>
                   </div>
 
-                  {/* عملیات */}
-                  <div className="flex flex-wrap items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleMove(slide.id, "up")}
+                      onClick={() => handleReorder(slide.id, 'up')}
                       disabled={index === 0}
-                      className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
                     >
-                      <ArrowUp size={18} />
+                      <ArrowUp size={16} className="text-white" />
                     </button>
                     <button
-                      onClick={() => handleMove(slide.id, "down")}
-                      disabled={index === slides.length - 1}
-                      className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      onClick={() => handleReorder(slide.id, 'down')}
+                      disabled={index === filteredSlides.length - 1}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
                     >
-                      <ArrowDown size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleToggleStatus(slide.id, slide.isActive)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        slide.isActive
-                          ? "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400"
-                          : "bg-green-500/20 hover:bg-green-500/30 text-green-400"
-                      }`}
-                    >
-                      {slide.isActive ? <X size={18} /> : <Check size={18} />}
+                      <ArrowDown size={16} className="text-white" />
                     </button>
                     <Link to={`/admin/hero/edit/${slide.id}`}>
-                      <button className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors">
-                        <Edit size={18} />
-                      </button>
+                      <GlassButton variant="secondary" size="sm" icon={<Edit className="w-4 h-4" />} iconPosition="left">
+                        ویرایش
+                      </GlassButton>
                     </Link>
                     <button
                       onClick={() => handleDelete(slide.id)}
-                      className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
               </LiquidGlassCard>
-            );
-          })}
-        </div>
-
-        {slides.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-lg">هیچ اسلایدی ایجاد نشده است</p>
-            <p className="text-sm text-gray-600">اولین اسلاید را اضافه کنید</p>
+            ))}
           </div>
         )}
       </div>

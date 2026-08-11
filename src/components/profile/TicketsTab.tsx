@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
@@ -14,27 +15,10 @@ import {
   Send,
   X,
 } from "lucide-react";
-
-interface Ticket {
-  id: string;
-  title: string;
-  description: string;
-  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  createdAt: string;
-  updatedAt: string;
-  category: string;
-  messages?: {
-    id: string;
-    content: string;
-    senderId: string;
-    senderType: "USER" | "ADMIN";
-    createdAt: string;
-  }[];
-}
+import { type Ticket as TicketType, type TicketMessage } from "../../lib/api/tickets";
 
 interface TicketsTabProps {
-  tickets: Ticket[];
+  tickets: TicketType[];
   loading: boolean;
   navigate: (path: string) => void;
   onCreateTicket: () => void;
@@ -47,11 +31,10 @@ export function TicketsTab({
   tickets,
   loading,
   onCreateTicket,
-  // onViewTicket,
   onDeleteTicket,
   onSendMessage,
 }: TicketsTabProps) {
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
@@ -66,13 +49,13 @@ export function TicketsTab({
         icon: <AlertCircle size={14} />,
         color: "text-blue-400",
       },
-      IN_PROGRESS: {
-        label: "در حال بررسی",
+      PENDING: {
+        label: "در انتظار",
         icon: <Clock size={14} />,
         color: "text-yellow-400",
       },
-      RESOLVED: {
-        label: "حل شده",
+      ANSWERED: {
+        label: "پاسخ داده شده",
         icon: <CheckCircle size={14} />,
         color: "text-green-400",
       },
@@ -96,6 +79,7 @@ export function TicketsTab({
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("fa-IR", {
       year: "numeric",
       month: "long",
@@ -105,7 +89,7 @@ export function TicketsTab({
     });
   };
 
-  const handleViewTicket = (ticket: Ticket) => {
+  const handleViewTicket = (ticket: TicketType) => {
     setSelectedTicket(ticket);
     setShowDetail(true);
   };
@@ -117,21 +101,20 @@ export function TicketsTab({
     try {
       await onSendMessage(selectedTicket.id, reply);
       setReply("");
-      // به‌روزرسانی تیکت با پیام جدید
-      const updatedTicket = {
-        ...selectedTicket,
-        messages: [
-          ...(selectedTicket.messages || []),
-          {
-            id: Date.now().toString(),
-            content: reply,
-            senderId: "user",
-            senderType: "USER" as const,
-            createdAt: new Date().toISOString(),
-          },
-        ],
+      
+      // ایجاد پیام جدید با ساختار صحیح
+      const newMessage: TicketMessage = {
+        id: Date.now().toString(),
+        ticket_id: selectedTicket.id,
+        sender_id: "user",
+        message: reply,
+        created_at: new Date().toISOString(),
       };
-      setSelectedTicket(updatedTicket);
+      
+      setSelectedTicket({
+        ...selectedTicket,
+        messages: [...(selectedTicket.messages || []), newMessage],
+      });
     } catch (err) {
       alert("خطا در ارسال پیام");
     } finally {
@@ -225,19 +208,17 @@ export function TicketsTab({
                         </div>
                       </div>
 
-                      <p className="text-gray-400 text-sm line-clamp-1 mt-1">
-                        {ticket.description}
-                      </p>
-
                       <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {formatDate(ticket.createdAt)}
+                          {formatDate(ticket.created_at)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {ticket.category}
-                        </span>
+                        {ticket.department && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {ticket.department}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -277,14 +258,14 @@ export function TicketsTab({
           <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-gray-500">
             <span>
               آخرین بروزرسانی:{" "}
-              {formatDate(tickets[0]?.updatedAt || new Date().toISOString())}
+              {formatDate(tickets[0]?.updated_at || new Date().toISOString())}
             </span>
             <span>کل تیکت‌ها: {tickets.length}</span>
           </div>
         )}
       </LiquidGlassCard>
 
-      {/* 🔥 مودال جزئیات تیکت */}
+      {/* مودال جزئیات تیکت */}
       {showDetail && selectedTicket && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -305,7 +286,7 @@ export function TicketsTab({
                     </span>
                     <span className="text-sm text-white/40">•</span>
                     <span className="text-sm text-white/40">
-                      {formatDate(selectedTicket.createdAt)}
+                      {formatDate(selectedTicket.created_at)}
                     </span>
                   </div>
                 </div>
@@ -320,10 +301,6 @@ export function TicketsTab({
                 </button>
               </div>
 
-              <p className="text-gray-400 text-sm mb-4">
-                {selectedTicket.description}
-              </p>
-
               <div className="text-xs text-gray-500 flex gap-4 mb-4 pb-4 border-b border-white/10">
                 <span
                   className={`px-2 py-1 rounded-full ${getStatusLabel(selectedTicket.status).color} bg-white/5`}
@@ -335,35 +312,44 @@ export function TicketsTab({
                 >
                   {getPriorityLabel(selectedTicket.priority).label}
                 </span>
+                {selectedTicket.department && (
+                  <span className="px-2 py-1 rounded-full bg-white/5 text-gray-400">
+                    {selectedTicket.department}
+                  </span>
+                )}
               </div>
 
               {/* پیام‌ها */}
               <div className="space-y-3 max-h-60 overflow-y-auto mb-4 bg-white/5 rounded-xl p-4">
-                {selectedTicket.messages?.length === 0 && (
+                {!selectedTicket.messages || selectedTicket.messages.length === 0 ? (
                   <p className="text-center text-white/40 text-sm py-4">
                     هنوز پیامی ارسال نشده است
                   </p>
+                ) : (
+                  selectedTicket.messages.map((msg) => {
+                    const isAdmin = msg.sender_id !== selectedTicket.creator_id;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`p-3 rounded-xl ${
+                          isAdmin
+                            ? "bg-blue-500/20 ml-auto max-w-[80%]"
+                            : "bg-white/5 mr-auto max-w-[80%]"
+                        }`}
+                      >
+                        <p className="text-white text-sm">{msg.message}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-white/30">
+                            {isAdmin ? "👤 پشتیبانی" : "👤 شما"}
+                          </span>
+                          <span className="text-xs text-white/30">
+                            {formatDate(msg.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
-                {selectedTicket.messages?.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`p-3 rounded-xl ${
-                      msg.senderType === "ADMIN"
-                        ? "bg-blue-500/20 ml-auto max-w-[80%]"
-                        : "bg-white/5 mr-auto max-w-[80%]"
-                    }`}
-                  >
-                    <p className="text-white text-sm">{msg.content}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-white/30">
-                        {msg.senderType === "ADMIN" ? "👤 پشتیبانی" : "👤 شما"}
-                      </span>
-                      <span className="text-xs text-white/30">
-                        {new Date(msg.createdAt).toLocaleString("fa-IR")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
               </div>
 
               {/* ارسال پیام */}

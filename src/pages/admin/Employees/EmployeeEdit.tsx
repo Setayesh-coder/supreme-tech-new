@@ -1,30 +1,23 @@
-// src/pages/admin/Employees/EmployeeEdit.tsx
-import { useEffect, useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { employeesAPI } from "../../../lib/api/employees";
+import type { Employee } from "../../../lib/api/employees";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import {
-  User,
-  Phone,
-  Mail,
-  Shield,
-  Briefcase,
-  Building,
-  Loader2,
-  ArrowLeft,
-  Save,
-} from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Briefcase, Building, Shield } from "lucide-react";
+import { AdminLayout } from "../../../components/admin/AdminLayout";
+
+// تایپ پاسخ از API
+type ApiResponse<T> = T | { data: T };
 
 export default function EmployeeEdit() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<Employee>>({
     name: "",
     phone: "",
     email: "",
@@ -35,60 +28,68 @@ export default function EmployeeEdit() {
   });
 
   useEffect(() => {
-    const fetchEmployee = async () => {
-      try {
-        const data = await employeesAPI.getById(id!);
-        setFormData({
-          name: data.name || "",
-          phone: data.phone || "",
-          email: data.email || "",
-          role: data.role || "EMPLOYEE",
-          department: data.department || "",
-          position: data.position || "",
-          isActive: data.isActive !== undefined ? data.isActive : true,
-        });
-      } catch (err) {
-        setError("خطا در دریافت اطلاعات کارمند");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchEmployee();
   }, [id]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
+  const fetchEmployee = async () => {
+    try {
+      setFetching(true);
+      const response = (await employeesAPI.getById(id!)) as ApiResponse<Employee>;
+      
+      // ✅ استخراج داده از پاسخ
+      const data: Employee = response && typeof response === 'object' && 'data' in response 
+        ? response.data 
+        : response as Employee;
+      
+      setFormData({
+        name: data?.name || "",
+        phone: data?.phone || "",
+        email: data?.email || "",
+        role: data?.role || "EMPLOYEE",
+        department: data?.department || "",
+        position: data?.position || "",
+        isActive: data?.isActive !== undefined ? data.isActive : true,
+      });
+    } catch (err: any) {
+      setError("خطا در دریافت اطلاعات کارمند");
+      console.error(err);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData({
-      ...formData,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    });
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    setLoading(true);
     setError("");
-    setSuccess("");
 
     try {
       await employeesAPI.update(id!, formData);
-      setSuccess("✅ کارمند با موفقیت ویرایش شد!");
-      setTimeout(() => navigate("/admin/employees"), 1500);
+      navigate("/admin/employees");
     } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در ویرایش کارمند");
+      console.error("❌ خطا:", err);
+      setError(err.response?.data?.error || "خطا در بروزرسانی کارمند");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  if (fetching) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">در حال بارگذاری...</p>
+          </div>
         </div>
       </AdminLayout>
     );
@@ -96,99 +97,82 @@ export default function EmployeeEdit() {
 
   return (
     <AdminLayout>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => navigate("/admin/employees")}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-2xl font-bold text-white">✏️ ویرایش کارمند</h1>
-        </div>
+      <div className="p-4 md:p-6 max-w-2xl mx-auto">
+        <button
+          onClick={() => navigate("/admin/employees")}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
+        >
+          <ArrowLeft size={20} />
+          بازگشت به لیست کارمندان
+        </button>
 
         <LiquidGlassCard
           className="p-6 md:p-8"
-          borderRadius="20px"
+          borderRadius="24px"
           blurIntensity="lg"
           glowIntensity="md"
         >
+          <h1 className="text-2xl font-bold text-white mb-6">ویرایش کارمند</h1>
+
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
-              ✅ {success}
+              ❌ {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* نام */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-1">
-                نام کامل
-              </label>
-              <div className="relative">
-                <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* تلفن و ایمیل */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-1">
-                  شماره تماس
-                </label>
+                <label className="block text-sm text-gray-400 mb-1.5">نام کامل</label>
                 <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
+                    type="text"
+                    name="name"
+                    value={formData.name || ""}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                     required
                   />
                 </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-1">
-                  ایمیل (اختیاری)
-                </label>
+                <label className="block text-sm text-gray-400 mb-1.5">شماره تلفن</label>
+                <div className="relative">
+                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone || ""}
+                    onChange={handleChange}
+                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1.5">ایمیل</label>
                 <div className="relative">
                   <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="email"
                     name="email"
-                    value={formData.email}
+                    value={formData.email || ""}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* نقش و دپارتمان */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-1">
-                  نقش
-                </label>
+                <label className="block text-sm text-gray-400 mb-1.5">نقش</label>
                 <div className="relative">
                   <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <select
                     name="role"
-                    value={formData.role}
+                    value={formData.role || "EMPLOYEE"}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
                   >
@@ -198,74 +182,67 @@ export default function EmployeeEdit() {
                   </select>
                 </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-1">
-                  دپارتمان
-                </label>
+                <label className="block text-sm text-gray-400 mb-1.5">بخش</label>
                 <div className="relative">
                   <Building className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="text"
                     name="department"
-                    value={formData.department}
+                    value={formData.department || ""}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* موقعیت شغلی */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-1">
-                موقعیت شغلی
-              </label>
-              <div className="relative">
-                <Briefcase className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  name="position"
-                  value={formData.position}
-                  onChange={handleChange}
-                  className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                />
+              <div>
+                <label className="block text-sm text-gray-400 mb-1.5">سمت</label>
+                <div className="relative">
+                  <Briefcase className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    name="position"
+                    value={formData.position || ""}
+                    onChange={handleChange}
+                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-3 text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    checked={formData.isActive !== false}
+                    onChange={handleChange}
+                    className="w-5 h-5 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
+                  />
+                  فعال بودن
+                </label>
               </div>
             </div>
 
-            {/* فعال/غیرفعال */}
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-white/80 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                  className="w-4 h-4 accent-blue-500"
-                />
-                فعال
-              </label>
-            </div>
-
-            {/* دکمه‌ها */}
             <div className="flex gap-3 pt-4">
-              <GlassButton
-                type="button"
-                variant="white"
-                size="md"
-                onClick={() => navigate("/admin/employees")}
-              >
-                انصراف
-              </GlassButton>
               <GlassButton
                 type="submit"
                 variant="primary"
-                size="md"
-                loading={submitting}
-                disabled={submitting}
-                icon={<Save className="w-4 h-4" />}
-                iconPosition="left"
+                size="lg"
+                fullWidth
+                loading={loading}
+                disabled={loading}
               >
-                ذخیره تغییرات
+                {loading ? "در حال بروزرسانی..." : "بروزرسانی کارمند"}
+              </GlassButton>
+              <GlassButton
+                type="button"
+                variant="secondary"
+                size="lg"
+                onClick={() => navigate("/admin/employees")}
+              >
+                انصراف
               </GlassButton>
             </div>
           </form>

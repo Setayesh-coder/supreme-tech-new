@@ -51,7 +51,7 @@ export default function Footer() {
               />
               <div>
                 <h3 className="text-sm md:text-xl font-bold bg-gradient-to-l from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  {loading ? "..." : settings?.siteName || "Supreme Tech"}
+                  {loading ? "..." : settings?.site_title || "Supreme Tech"}
                 </h3>
                 <p className="text-[8px] md:text-xs text-gray-500">
                   AI Agent Solutions
@@ -61,7 +61,7 @@ export default function Footer() {
             <p className="text-[9px] md:text-sm text-gray-500 leading-relaxed hidden md:block">
               {loading
                 ? "..."
-                : settings?.siteDescription ||
+                : settings?.site_description ||
                   "پیشرو در توسعه AI Agent های هوشمند"}
             </p>
           </div>
@@ -115,7 +115,7 @@ export default function Footer() {
                 className="flex items-center gap-1.5 md:gap-2 group cursor-pointer justify-center"
                 onClick={() =>
                   copyToClipboard(
-                    settings?.contactEmail || "info@supremetech.ir",
+                    settings?.contact_email || "info@supremetech.ir",
                     "ایمیل",
                   )
                 }
@@ -124,7 +124,7 @@ export default function Footer() {
                 <span className="text-[8px] md:text-sm text-gray-500 group-hover:text-cyan-400 break-all">
                   {loading
                     ? "..."
-                    : settings?.contactEmail || "info@supremetech.ir"}
+                    : settings?.contact_email || "info@supremetech.ir"}
                 </span>
               </div>
               <div
@@ -138,7 +138,7 @@ export default function Footer() {
               >
                 <Phone className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-400 group-hover:scale-110 transition shrink-0" />
                 <span className="text-[8px] md:text-sm text-gray-500 group-hover:text-cyan-400">
-                  {loading ? "..." : settings?.contactPhone || "09121234567"}
+                  {loading ? "..." : settings?.contact_phone || "09121234567"}
                 </span>
               </div>
               <div
@@ -146,7 +146,7 @@ export default function Footer() {
                 onClick={() =>
                   window.open(
                     "https://maps.google.com/?q=" +
-                      encodeURIComponent(settings?.contactAddress || "تهران"),
+                      encodeURIComponent(settings?.address || "تهران"),
                     "_blank",
                   )
                 }
@@ -200,7 +200,7 @@ export default function Footer() {
         <p className="text-[9px] text-gray-500 leading-relaxed text-center mt-2 md:hidden">
           {loading
             ? "..."
-            : settings?.siteDescription || "پیشرو در توسعه AI Agent های هوشمند"}
+            : settings?.site_description || "پیشرو در توسعه AI Agent های هوشمند"}
         </p>
 
         <div className="border-t border-white/10 pt-4 md:pt-8 text-center space-y-1.5 md:space-y-3 mt-2">

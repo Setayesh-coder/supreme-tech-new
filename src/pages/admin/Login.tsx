@@ -1,8 +1,8 @@
-// src/pages/admin/Login.tsx
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../lib/api/admin";
-import { employeesAPI } from "../../lib/api/employees"; // 🔥 یا employees
+import { employeesAPI } from "../../lib/api/employees";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { User, Lock, Shield, Briefcase } from "lucide-react";
@@ -24,27 +24,38 @@ export default function AdminLogin() {
       let response;
 
       if (loginType === "admin") {
-        response = await adminAPI.login(phone, password);
+        // ✅ اصلاح: ارسال به صورت شیء
+        response = await adminAPI.login({ phone, password });
       } else {
-        response = await employeesAPI.login(phone, password);
+        response = await employeesAPI.login({ phone, password });
       }
 
-      if (response.success) {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
+      console.log("📥 پاسخ کامل:", response);
+
+      // ✅ بررسی ساختار پاسخ - ممکن است مستقیم یا داخل data باشد
+      const data = response.data || response;
+      const token = data?.token || response?.token || null;
+      const user = data?.user || response?.user || null;
+
+      if (token) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user || { phone }));
 
         if (loginType === "admin") {
-          localStorage.setItem("admin", JSON.stringify(response.user));
+          localStorage.setItem("admin", JSON.stringify(user || { phone }));
         } else {
-          localStorage.setItem("employee", JSON.stringify(response.user));
+          localStorage.setItem("employee", JSON.stringify(user || { phone }));
         }
 
         navigate("/admin/dashboard");
       } else {
-        setError(response.error || "خطا در ورود");
+        console.error("❌ توکن در پاسخ وجود ندارد:", response);
+        setError("پاسخ نامعتبر از سرور");
       }
     } catch (err: any) {
-      setError(err.message || "خطا در ورود");
+      console.error("❌ خطا:", err);
+      console.error("❌ پاسخ خطا:", err.response?.data);
+      setError(err.response?.data?.detail || err.response?.data?.error || "خطا در ورود");
     } finally {
       setLoading(false);
     }
@@ -99,7 +110,7 @@ export default function AdminLogin() {
 
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-sm text-center">
-            {error}
+            ❌ {error}
           </div>
         )}
 

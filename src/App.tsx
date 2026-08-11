@@ -12,6 +12,7 @@ import BlogList from "./pages/public/BlogList";
 import BlogPost from "./pages/public/BlogPost";
 import Events from "./pages/public/Events";
 import EventDetail from "./pages/public/EventDetail";
+import CourseDetail from "./pages/public/CourseDetail";
 import Profile from "./pages/Profile/Profile"; 
 import NotFound from "./pages/NotFound";
 import Cart from "./pages/Cart";
@@ -28,6 +29,7 @@ import BlogEdit from "./pages/admin/Blog/BlogEdite";
 import CourseList from "./pages/admin/Courses/CourseList";
 import CourseCreate from "./pages/admin/Courses/CourseCreate";
 import CourseEdit from "./pages/admin/Courses/CourseEdit";
+import CourseEnrollments from "./pages/admin/Courses/CourseEnrollments";
 import EventList from "./pages/admin/Events/EventList";
 import EventCreate from "./pages/admin/Events/EventCreate";
 import EventEdit from "./pages/admin/Events/EventEdit";
@@ -77,6 +79,7 @@ function App() {
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/:slug" element={<EventDetail />} />
+            <Route path="/courses/:slug" element={<CourseDetail />} />
             <Route path="/access-denied" element={<AccessDenied />} />
 
             {/* 🔥 مسیرهای تیکت برای کاربران عادی */}
@@ -168,39 +171,41 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* دوره‌ها */}
+          <Route
+            path="/admin/courses"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <CourseList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/courses/create"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <CourseCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/courses/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <CourseEdit />
+              </ProtectedRoute>
+            }
+          />
 <Route
-  path="/admin/courses"
+  path="/admin/courses/enrollments/:courseId"
   element={
     <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <CourseList />
+      <CourseEnrollments />
     </ProtectedRoute>
   }
 />
-{/* دوره‌ها */}
-<Route
-  path="/admin/courses"
-  element={
-    <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <CourseList />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/admin/courses/create"
-  element={
-    <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <CourseCreate />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/admin/courses/edit/:id"
-  element={
-    <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <CourseEdit />
-    </ProtectedRoute>
-  }
-/>          {/* کارمندان - فقط ادمین */}
+          {/* کارمندان - فقط ادمین */}
           <Route
             path="/admin/employees"
             element={
@@ -335,6 +340,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           {/* Hero */}
           <Route
             path="/admin/hero"

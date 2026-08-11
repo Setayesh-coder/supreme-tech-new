@@ -1,30 +1,32 @@
-import { apiClient } from "./client";
+import api from './axios';
 
 export const statsAPI = {
-  // دریافت آمار کلی (ادمین)
-  getOverview: (token: string) => {
-    return apiClient.get("/stats/overview", token);
+  getOverview: async () => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get("/stats/overview", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // دریافت آمار روزانه (ادمین)
-  getDaily: (days?: number, token?: string) => {
-    const query = days ? `?days=${days}` : "";
-    return apiClient.get(`/stats/daily${query}`, token);
+  getDaily: async (date: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get(`/stats/daily?date=${date}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // دریافت آمار صفحات (ادمین)
-  getPages: (token: string) => {
-    return apiClient.get("/stats/pages", token);
+  getPages: async () => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get("/stats/pages", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // ثبت بازدید (عمومی)
-  trackView: (data: {
-    path: string;
-    referrer?: string;
-    userAgent?: string;
-    ip?: string;
-    sessionId?: string;
-  }) => {
-    return apiClient.post("/stats/view", data);
+  trackView: async (data: { path: string }) => {
+    const response = await api.post("/stats/view", data);
+    return response.data;
   },
 };

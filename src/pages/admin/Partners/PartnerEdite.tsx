@@ -95,7 +95,7 @@ setCurrentLogo("");
     formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImage(formData);
+      const response = await uploadAPI.uploadImageWithFormData(formData);
       return response.url;
     } catch (error) {
       throw new Error("خطا در آپلود لوگو");

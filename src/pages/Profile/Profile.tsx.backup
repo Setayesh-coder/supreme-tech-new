@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
-import { ticketsAPI, type Ticket } from "../../lib/api/tickets";
+import { ticketsAPI,Ticket } from "../../lib/api/tickets";
 import { messagesAPI } from "../../lib/api/messages";
 import { uploadAPI } from "../../lib/api/upload";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
@@ -61,6 +61,17 @@ interface Enrollment {
   createdAt: string;
   paymentStatus?: "PENDING" | "PAID" | "FAILED";
   meetingLink?: string;
+}
+
+interface Ticket {
+  id: string;
+  title: string;
+  description: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  createdAt: string;
+  updatedAt: string;
+  category: string;
 }
 
 interface MessageReply {
@@ -225,7 +236,7 @@ export default function Profile() {
       }
 
       const data = await ticketsAPI.getMyTickets();
-      setTickets(Array.isArray(data) ? data : []);
+      setTickets(Array.isArray(data) ? data : {});
     } catch (err: any) {
       console.error("❌ خطا در دریافت تیکت‌ها:", err);
       setError("خطا در دریافت تیکت‌ها");
@@ -253,7 +264,7 @@ export default function Profile() {
       try {
         const token = localStorage.getItem("token");
         const storedUser = localStorage.getItem("user");
-
+        
         console.log("🔍 بررسی localStorage:", { token: !!token, user: !!storedUser });
 
         if (!token) {
@@ -578,6 +589,10 @@ export default function Profile() {
 
   const handleSendTicketMessage = async (ticketId: string, message: string) => {
     try {
+      // await ticketsAPI.addMessage(ticketId, {
+      //   content: message,
+      //   senderType: "USER",
+      // });
       await ticketsAPI.addMessage(ticketId, message);
       await fetchTickets();
     } catch (err) {
@@ -709,7 +724,7 @@ export default function Profile() {
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
-                  alt={user.name || "کاربر"}
+                  alt={user.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "/placeholder-avatar.jpg";
@@ -717,7 +732,7 @@ export default function Profile() {
                 />
               ) : (
                 <span className="text-4xl text-white font-bold">
-                  {user?.name?.charAt(0) || user?.phone?.charAt(0) || "U"}
+                  {user.name?.charAt(0) || "U"}
                 </span>
               )}
             </div>
@@ -771,6 +786,7 @@ export default function Profile() {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 🔥 ProfileInfo - الان در بالاترین سطح و بدون تداخل */}
           <div className="lg:col-span-1">
             <ProfileInfo
               user={user}

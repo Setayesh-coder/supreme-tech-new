@@ -1,7 +1,7 @@
 // src/pages/TicketDetail.tsx
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ticketsAPI } from "../lib/api/tickets";
+import { ticketsAPI, type Ticket } from "../lib/api/tickets";
 import { LiquidGlassCard } from "../components/ui/LiquidGlassCard";
 import { GlassButton } from "../components/ui/GlassButton";
 import {
@@ -12,24 +12,6 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-
-interface Ticket {
-  id: string;
-  title: string;
-  description: string;
-  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  createdAt: string;
-  updatedAt: string;
-  messages: {
-    id: string;
-    content: string;
-    senderId: string;
-    senderType: "USER" | "ADMIN";
-    createdAt: string;
-  }[];
-  user?: { name: string; phone: string };
-}
 
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
@@ -42,25 +24,12 @@ export default function TicketDetail() {
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        // 🔥 بررسی وجود id
         if (!id) {
           setError("آدرس تیکت نامعتبر است");
           setLoading(false);
           return;
         }
 
-        // 🔥 دریافت همه تیکت‌های کاربر
-        const allTickets = await ticketsAPI.getMyTickets();
-        // 🔥 پیدا کردن تیکت مورد نظر
-        const found = allTickets.find((t: any) => t.id === id);
-
-        if (!found) {
-          setError("تیکت یافت نشد");
-          setLoading(false);
-          return;
-        }
-
-        // 🔥 دریافت جزئیات کامل تیکت (با messages)
         const fullTicket = await ticketsAPI.getById(id);
         setTicket(fullTicket);
       } catch (err) {
@@ -78,12 +47,7 @@ export default function TicketDetail() {
 
     setSending(true);
     try {
-      await ticketsAPI.addMessage(ticket.id, {
-        content: reply,
-        senderType: "USER",
-      });
-
-      // به‌روزرسانی تیکت
+      await ticketsAPI.addMessage(ticket.id, reply);
       const updated = await ticketsAPI.getById(ticket.id);
       setTicket(updated);
       setReply("");
@@ -95,22 +59,24 @@ export default function TicketDetail() {
   };
 
   const getStatusLabel = (status: string) => {
-    const labels: Record<string, { label: string; color: string; icon: any }> =
-      {
-        OPEN: { label: "باز", color: "text-blue-400", icon: AlertCircle },
-        IN_PROGRESS: {
-          label: "در حال بررسی",
-          color: "text-yellow-400",
-          icon: Clock,
-        },
-        RESOLVED: {
-          label: "حل شده",
-          color: "text-green-400",
-          icon: CheckCircle,
-        },
-        CLOSED: { label: "بسته شده", color: "text-gray-400", icon: XCircle },
-      };
+    const labels: Record<string, { label: string; color: string; icon: any }> = {
+      OPEN: { label: "باز", color: "text-blue-400", icon: AlertCircle },
+      PENDING: { label: "در انتظار", color: "text-yellow-400", icon: Clock },
+      ANSWERED: { label: "پاسخ داده شده", color: "text-green-400", icon: CheckCircle },
+      CLOSED: { label: "بسته شده", color: "text-gray-400", icon: XCircle },
+    };
     return labels[status] || labels.OPEN;
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("fa-IR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   if (loading) {
@@ -124,10 +90,7 @@ export default function TicketDetail() {
   if (error || !ticket) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-        <LiquidGlassCard
-          className="p-8 text-center max-w-md"
-          borderRadius="24px"
-        >
+        <LiquidGlassCard className="p-8 text-center max-w-md" borderRadius="24px">
           <div className="text-6xl mb-4">😕</div>
           <h3 className="text-xl font-bold text-white mb-2">
             {error || "تیکت یافت نشد"}
@@ -162,52 +125,49 @@ export default function TicketDetail() {
           </span>
         </div>
 
-        <LiquidGlassCard
-          className="p-6"
-          borderRadius="20px"
-          blurIntensity="lg"
-          glowIntensity="md"
-        >
+        <LiquidGlassCard className="p-6" borderRadius="20px" blurIntensity="lg" glowIntensity="md">
           <h2 className="text-xl font-bold text-white mb-2">{ticket.title}</h2>
-          <p className="text-gray-400 text-sm mb-4">{ticket.description}</p>
-
-          <div className="text-xs text-gray-500 flex gap-4 mb-6 pb-4 border-b border-white/10">
+          
+          <div className="text-xs text-gray-500 flex flex-wrap gap-4 mb-4 pb-4 border-b border-white/10">
             <span>🆔 #{ticket.id.slice(0, 8)}</span>
-            <span>
-              📅 {new Date(ticket.createdAt).toLocaleDateString("fa-IR")}
-            </span>
-            <span>
-              🕐 {new Date(ticket.createdAt).toLocaleTimeString("fa-IR")}
-            </span>
+            <span>📅 {formatDate(ticket.created_at)}</span>
+            {ticket.department && (
+              <span>🏢 دپارتمان: {ticket.department}</span>
+            )}
+            <span>⚡ اولویت: {ticket.priority}</span>
           </div>
 
           {/* پیام‌ها */}
           <div className="space-y-3 max-h-96 overflow-y-auto mb-4 bg-white/5 rounded-xl p-4">
-            {ticket.messages?.length === 0 && (
+            {!ticket.messages || ticket.messages.length === 0 ? (
               <p className="text-center text-white/40 text-sm py-4">
                 هنوز پیامی ارسال نشده است
               </p>
+            ) : (
+              ticket.messages.map((msg) => {
+                const isAdmin = msg.sender_id !== ticket.creator_id;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`p-3 rounded-xl ${
+                      isAdmin
+                        ? "bg-blue-500/20 ml-auto max-w-[80%]"
+                        : "bg-white/5 mr-auto max-w-[80%]"
+                    }`}
+                  >
+                    <p className="text-white text-sm">{msg.message}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-white/30">
+                        {isAdmin ? "👤 پشتیبانی" : "👤 شما"}
+                      </span>
+                      <span className="text-xs text-white/30">
+                        {formatDate(msg.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
             )}
-            {ticket.messages?.map((msg) => (
-              <div
-                key={msg.id}
-                className={`p-3 rounded-xl ${
-                  msg.senderType === "ADMIN"
-                    ? "bg-blue-500/20 ml-auto max-w-[80%]"
-                    : "bg-white/5 mr-auto max-w-[80%]"
-                }`}
-              >
-                <p className="text-white text-sm">{msg.content}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-white/30">
-                    {msg.senderType === "ADMIN" ? "👤 پشتیبانی" : "👤 شما"}
-                  </span>
-                  <span className="text-xs text-white/30">
-                    {new Date(msg.createdAt).toLocaleString("fa-IR")}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
 
           {/* ارسال پیام */}

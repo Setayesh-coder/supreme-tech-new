@@ -1,73 +1,75 @@
 // src/lib/api/messages.ts
-import { apiClient } from "./client";
+import api from './axios';
 
 export const messagesAPI = {
-  // 🔥 ایجاد پیام جدید (عمومی - بدون نیاز به احراز هویت)
-  create: async (data: {
-    name: string;
-    email?: string;
-    phone?: string;
-    subject: string;
-    message: string;
-    userId?: string;
-  }) => {
-    const response = await apiClient.post("/messages", data);
-    return response;
+  create: async (data: any) => {
+    const response = await api.post("/messages", data);
+    return response.data;
   },
 
-  // دریافت همه پیام‌ها (فقط ادمین)
   getAll: async () => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get("/messages", token);
-    return response;
+    const response = await api.get("/messages", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // دریافت پیام با ID (فقط ادمین)
   getById: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get(`/messages/${id}`, token);
-    return response;
+    const response = await api.get(`/messages/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // 🔥 ارسال پاسخ (ادمین)
-  sendReply: async (id: string, data: { reply: string; to: string }) => {
-    const token = localStorage.getItem("token") || "";
-    const response = await apiClient.post(`/messages/${id}/reply`, data, token);
-    return response;
-  },
-
-  // 🔥 دریافت پاسخ‌های کاربر (برای پروفایل)
   getUserReplies: async (userId: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.get(
-      `/messages/user/${userId}/replies`,
-      token,
-    );
-    return response;
+    const response = await api.get(`/messages/user/${userId}/replies`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // علامت‌گذاری به عنوان خوانده شده (فقط ادمین)
-  markAsRead: async (id: string) => {
+  reply: async (id: string, data: any) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.patch(`/messages/${id}/read`, {}, token);
-    return response;
+    const response = await api.post(`/messages/${id}/reply`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // علامت‌گذاری به عنوان پاسخ داده شده (فقط ادمین)
+  // ✅ اضافه کردن markAsReplied
   markAsReplied: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.patch(
-      `/messages/${id}/replied`,
-      {},
-      token,
-    );
-    return response;
+    const response = await api.patch(`/messages/${id}/replied`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  // حذف پیام (فقط ادمین)
+  markAsRead: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.patch(`/messages/${id}/read`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  },
+
+  // ✅ اضافه کردن sendReply
+  sendReply: async (id: string, data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.post(`/messages/${id}/reply`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  },
+
   delete: async (id: string) => {
     const token = localStorage.getItem("token") || "";
-    const response = await apiClient.delete(`/messages/${id}`, token);
-    return response;
+    const response = await api.delete(`/messages/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 };

@@ -1,71 +1,64 @@
 // src/pages/TicketCreate.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ticketsAPI } from "../lib/api/tickets";
-import { employeesAPI } from "../lib/api/employees";
 import { LiquidGlassCard } from "../components/ui/LiquidGlassCard";
 import { GlassButton } from "../components/ui/GlassButton";
-import { ArrowLeft, Save, Ticket, User, Briefcase } from "lucide-react";
+import { ArrowLeft, Save, Ticket, User, AlertCircle } from "lucide-react";
 
 export default function TicketCreate() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    employeeId: "",
     title: "",
-    description: "",
-    priority: "MEDIUM",
+    message: "",
+    department: "",
+    priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
   });
 
-  // 🔥 دریافت اطلاعات کاربر جاری
+  // دریافت اطلاعات کاربر جاری
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
-
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      setLoadingEmployees(true);
-      const data = await employeesAPI.getAll();
-      setEmployees(data || []);
-    } catch (err) {
-      console.error("خطا در دریافت کارمندان:", err);
-    } finally {
-      setLoadingEmployees(false);
-    }
-  };
 
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
-      // 🔥 userId = کاربر جاری، employeeId = کارمند انتخاب شده
+      if (!user) {
+        setError("لطفاً ابتدا وارد حساب کاربری خود شوید");
+        setLoading(false);
+        return;
+      }
+
       await ticketsAPI.create({
-        userId: user?.id,
-        employeeId: formData.employeeId,
         title: formData.title,
-        description: formData.description,
+        message: formData.message,
+        department: formData.department || undefined,
         priority: formData.priority,
       });
-      alert("✅ تیکت با موفقیت ایجاد شد!");
-      navigate("/profile");
+
+      setSuccess("✅ تیکت با موفقیت ایجاد شد!");
+
+      setTimeout(() => {
+        navigate("/profile");
+      }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در ایجاد تیکت");
+      console.error("❌ خطا:", err);
+      setError(err.response?.data?.detail || "خطا در ایجاد تیکت");
     } finally {
       setLoading(false);
     }
@@ -98,44 +91,23 @@ export default function TicketCreate() {
           </p>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* انتخاب کارمند */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                <Briefcase className="inline w-4 h-4 mr-1" />
-                کارمند پاسخ‌دهنده
-              </label>
-              <select
-                name="employeeId"
-                value={formData.employeeId}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
-                required
-                disabled={loadingEmployees}
-              >
-                <option value="">انتخاب کارمند...</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} - {emp.position || "کارمند"} ({emp.phone})
-                  </option>
-                ))}
-              </select>
-              {loadingEmployees && (
-                <p className="text-xs text-gray-500 mt-1">
-                  در حال بارگذاری کارمندان...
-                </p>
-              )}
+          {success && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
+              {success}
             </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان تیکت
+                عنوان تیکت <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -145,19 +117,39 @@ export default function TicketCreate() {
                 placeholder="عنوان تیکت را وارد کنید"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 required
+                maxLength={100}
               />
             </div>
 
-            {/* توضیحات */}
+            {/* دپارتمان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                توضیحات
+                دپارتمان
+              </label>
+              <select
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+              >
+                <option value="">انتخاب دپارتمان...</option>
+                <option value="technical">فنی</option>
+                <option value="support">پشتیبانی</option>
+                <option value="sales">فروش</option>
+                <option value="general">عمومی</option>
+              </select>
+            </div>
+
+            {/* پیام */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                پیام <span className="text-red-400">*</span>
               </label>
               <textarea
-                name="description"
-                value={formData.description}
+                name="message"
+                value={formData.message}
                 onChange={handleChange}
-                rows={4}
+                rows={5}
                 placeholder="توضیحات کامل تیکت را وارد کنید..."
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                 required
@@ -175,10 +167,10 @@ export default function TicketCreate() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
               >
-                <option value="LOW">کم</option>
-                <option value="MEDIUM">متوسط</option>
-                <option value="HIGH">بالا</option>
-                <option value="URGENT">فوری</option>
+                <option value="LOW">🔵 کم</option>
+                <option value="MEDIUM">🟡 متوسط</option>
+                <option value="HIGH">🟠 بالا</option>
+                <option value="URGENT">🔴 فوری</option>
               </select>
             </div>
 
@@ -187,8 +179,18 @@ export default function TicketCreate() {
               <p className="text-sm text-gray-400 flex items-center gap-2">
                 <User className="w-4 h-4" />
                 ارسال‌کننده:{" "}
-                <span className="text-white">{user?.name || "کاربر"}</span>
+                <span className="text-white font-medium">
+                  {user?.name || "کاربر"}
+                </span>
+                {user?.phone && (
+                  <span className="text-gray-500 text-xs">({user.phone})</span>
+                )}
               </p>
+              {!user && (
+                <p className="text-sm text-red-400 mt-1">
+                  ⚠️ برای ایجاد تیکت باید وارد حساب کاربری شوید
+                </p>
+              )}
             </div>
 
             {/* دکمه‌ها */}
@@ -198,6 +200,7 @@ export default function TicketCreate() {
                 variant="white"
                 size="md"
                 onClick={() => navigate("/profile")}
+                className="flex-1"
               >
                 انصراف
               </GlassButton>
@@ -208,7 +211,8 @@ export default function TicketCreate() {
                 loading={loading}
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
-                disabled={loading}
+                disabled={loading || !user}
+                className="flex-1"
               >
                 {loading ? "در حال ایجاد..." : "ایجاد تیکت"}
               </GlassButton>

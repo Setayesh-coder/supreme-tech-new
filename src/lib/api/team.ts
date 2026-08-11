@@ -1,23 +1,38 @@
-import { apiClient } from "./client";
+// src/lib/api/team.ts
+import api from './axios';
 
 export const teamAPI = {
-  getAll: () => {
-    return apiClient.get("/team");
+  getAll: async () => {
+    const response = await api.get("/team");
+    return response.data;
   },
 
-  getById: (id: string) => {
-    return apiClient.get(`/team/${id}`);
+  getById: async (id: string) => {
+    const response = await api.get(`/team/${id}`);
+    return response.data;
   },
 
-  create: (data: any, token: string) => {
-    return apiClient.post("/team", data, token);
+  create: async (data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.post("/team", data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  update: (id: string, data: any, token: string) => {
-    return apiClient.put(`/team/${id}`, data, token);
+  update: async (id: string, data: any) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.put(`/team/${id}`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 
-  delete: (id: string, token: string) => {
-    return apiClient.delete(`/team/${id}`, token);
+  delete: async (id: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.delete(`/team/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   },
 };

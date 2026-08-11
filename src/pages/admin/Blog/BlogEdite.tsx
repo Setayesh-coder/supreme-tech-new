@@ -101,7 +101,7 @@ export default function BlogEdit() {
 
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImage(formData);
+      const response = await uploadAPI.uploadImageWithFormData(formData);
       return response.url;
     } catch (error) {
       throw new Error("خطا در آپلود عکس");

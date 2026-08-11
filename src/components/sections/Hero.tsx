@@ -9,87 +9,77 @@ import {
 } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { heroAPI } from "../../lib/api/hero";
+import type { HeroSlide } from "../../lib/api/hero";
 import { settingsAPI } from "../../lib/api/settings";
 import { GlassButton } from "../ui/GlassButton";
 
-interface HeroSlide {
-  id: string;
-  title: string;
-  subtitle?: string;
-  description?: string;
-  image: string;
-  buttonText?: string;
-  buttonLink?: string;
-  color?: string;
-  order: number;
-  isActive: boolean;
-  heroTagline?: string;
-}
-
-// 🔥 اسلایدهای پیش‌فرض
-const defaultSlides: HeroSlide[] = [
-  {
-    id: "default-1",
-    title: "هوش مصنوعی در خدمت شما",
-    subtitle: "پیشرو در توسعه AI Agent های هوشمند",
-    description: "با تیم Supreme Tech، آینده فناوری را امروز تجربه کنید",
-    image: "/assets/ai-hero-new.webp",
-    buttonText: "شروع کنید",
-    buttonLink: "/services",
-    color: "from-blue-400 to-cyan-400",
-    order: 0,
-    isActive: true,
-    heroTagline: "🚀 مرکز توسعه فناوری‌های برتر تهران",
-  },
-  {
-    id: "default-2",
-    title: "تحول دیجیتال با AI",
-    subtitle: "بهینه‌سازی کسب‌وکار با هوش مصنوعی",
-    description:
-      "با استفاده از AI Agent های هوشمند، کارایی کسب‌وکار خود را چندین برابر کنید",
-    image: "/assets/ai-robot-hero.jpg",
-    buttonText: "مشاوره رایگان",
-    buttonLink: "/contact",
-    color: "from-purple-400 to-pink-400",
-    order: 1,
-    isActive: true,
-    heroTagline: "🚀 مرکز توسعه فناوری‌های برتر تهران",
-  },
-  {
-    id: "default-3",
-    title: "آینده از امروز شروع می‌شود",
-    subtitle: "همراه با پیشرفته‌ترین فناوری‌ها",
-    description:
-      "تیم Supreme Tech با تکیه بر دانش روز و تجربه، بهترین راه‌حل‌های هوشمند را ارائه می‌دهد",
-    image: "/assets/ai-face-hero.jpg",
-    buttonText: "درباره ما",
-    buttonLink: "/about",
-    color: "from-green-400 to-teal-400",
-    order: 2,
-    isActive: true,
-    heroTagline: "🚀 مرکز توسعه فناوری‌های برتر تهران",
-  },
-];
-
 export default function Hero() {
-  const [slides, setSlides] = useState<HeroSlide[]>(defaultSlides);
+  const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // 🔥 دریافت اسلایدها و تنظیمات
+  // اسلایدهای پیش‌فرض
+  const defaultSlides: HeroSlide[] = [
+    {
+      id: "default-1",
+      title: "هوش مصنوعی در خدمت شما",
+      subtitle: "پیشرو در توسعه AI Agent های هوشمند",
+      description: "با تیم Supreme Tech، آینده فناوری را امروز تجربه کنید",
+      image: "/assets/ai-hero-new.webp",
+      image_url: "/assets/ai-hero-new.webp",
+      buttonText: "شروع کنید",
+      buttonLink: "/services",
+      color: "from-blue-400 to-cyan-400",
+      order: 0,
+      isActive: true,
+      heroTagline: "🚀 مرکز توسعه فناوری‌های برتر تهران",
+    },
+    {
+      id: "default-2",
+      title: "تحول دیجیتال با AI",
+      subtitle: "بهینه‌سازی کسب‌وکار با هوش مصنوعی",
+      description: "با استفاده از AI Agent های هوشمند، کارایی کسب‌وکار خود را چندین برابر کنید",
+      image: "/assets/ai-robot-hero.jpg",
+      image_url: "/assets/ai-robot-hero.jpg",
+      buttonText: "مشاوره رایگان",
+      buttonLink: "/contact",
+      color: "from-purple-400 to-pink-400",
+      order: 1,
+      isActive: true,
+      heroTagline: "🚀 مرکز توسعه فناوری‌های برتر تهران",
+    },
+    {
+      id: "default-3",
+      title: "آینده از امروز شروع می‌شود",
+      subtitle: "همراه با پیشرفته‌ترین فناوری‌ها",
+      description: "تیم Supreme Tech با تکیه بر دانش روز و تجربه، بهترین راه‌حل‌های هوشمند را ارائه می‌دهد",
+      image: "/assets/ai-face-hero.jpg",
+      image_url: "/assets/ai-face-hero.jpg",
+      buttonText: "درباره ما",
+      buttonLink: "/about",
+      color: "from-green-400 to-teal-400",
+      order: 2,
+      isActive: true,
+      heroTagline: "🚀 مرکز توسعه فناوری‌های برتر تهران",
+    },
+  ];
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const slidesData = await heroAPI.getAll();
         if (slidesData && slidesData.length > 0) {
           const activeSlides = slidesData
-            .filter((slide: HeroSlide) => slide.isActive === true)
-            .sort((a: HeroSlide, b: HeroSlide) => a.order - b.order);
-
+            .filter((slide) => slide.isActive !== false)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
           if (activeSlides.length > 0) {
             setSlides(activeSlides);
+          } else {
+            setSlides(defaultSlides);
           }
+        } else {
+          setSlides(defaultSlides);
         }
 
         const settingsData = await settingsAPI.getAll();
@@ -98,6 +88,7 @@ export default function Hero() {
         }
       } catch (error) {
         console.error("خطا در دریافت داده‌ها:", error);
+        setSlides(defaultSlides);
       } finally {
         setLoading(false);
       }
@@ -105,14 +96,11 @@ export default function Hero() {
     fetchData();
   }, []);
 
-  // 🔥 تغییر خودکار اسلایدها
   useEffect(() => {
     if (slides.length <= 1) return;
-
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % slides.length);
     }, 7000);
-
     return () => clearInterval(interval);
   }, [slides.length]);
 
@@ -143,51 +131,40 @@ export default function Hero() {
     return (
       <section className="relative h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
         <div className="text-center">
-          <p className="text-gray-400 text-lg">
-            هیچ اسلایدی برای نمایش وجود ندارد
-          </p>
+          <p className="text-gray-400 text-lg">هیچ اسلایدی برای نمایش وجود ندارد</p>
         </div>
       </section>
     );
   }
 
   const currentSlide = slides[currentIndex] || slides[0];
-
-  const heroTagline =
-    currentSlide.heroTagline ||
-    settings?.heroTagline ||
-    "🚀 مرکز توسعه فناوری‌های برتر تهران";
-
-  // 🔥 رنگ اسلاید - اگر color وجود نداشت از پیش‌فرض استفاده کن
-//  const slideColor = currentSlide.color || "from-blue-400 to-cyan-400";
+  const heroTagline = currentSlide.heroTagline || settings?.heroTagline || "🚀 مرکز توسعه فناوری‌های برتر تهران";
 
   return (
     <section className="relative h-screen w-full overflow-hidden">
       {/* تصویر زمینه */}
-  <div className="absolute inset-0">
- <img
-  src={currentSlide.image}
-  alt={currentSlide.title}
-  className="w-full h-full object-cover"
-  onError={(e) => {
-    console.error('❌ خطا:', currentSlide.image);
-    // از /slides/ استفاده کن (همون فولدر پروژه)
-    const fallbackImages = [
-      '/slides/ai-hero-new.webp',
-      '/slides/ai-hero.webp',
-      '/slides/ai-face-hero.webp'
-    ];
-    const currentSrc = (e.target as HTMLImageElement).src;
-    const index = fallbackImages.indexOf(currentSrc);
-    const nextIndex = (index + 1) % fallbackImages.length;
-    (e.target as HTMLImageElement).src = fallbackImages[nextIndex];
-  }}
-/>
-  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-</div>
+      <div className="absolute inset-0">
+        <img
+          src={currentSlide.image_url || currentSlide.image || '/assets/ai-hero-new.webp'}
+          alt={currentSlide.title}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const fallbackImages = [
+              '/assets/ai-hero-new.webp',
+              '/assets/ai-hero.jpg',
+              '/assets/ai-face-hero.jpg'
+            ];
+            const currentSrc = (e.target as HTMLImageElement).src;
+            const index = fallbackImages.indexOf(currentSrc);
+            const nextIndex = (index + 1) % fallbackImages.length;
+            (e.target as HTMLImageElement).src = fallbackImages[nextIndex];
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+      </div>
+
       {/* محتوای اسلاید */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
-        {/* تگ بالایی */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 mt-16">
           <LiquidGlassCard
             blurIntensity="lg"
@@ -201,23 +178,19 @@ export default function Hero() {
           </LiquidGlassCard>
         </div>
 
-        {/* عنوان اصلی - با رنگ از اسلاید */}
         <div className="mb-6">
-                 <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
             {currentSlide.title}
           </h1>
-
           <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-yellow-400 drop-shadow-md">
             {currentSlide.subtitle}
           </p>
         </div>
 
-        {/* توضیحات */}
         <p className="text-base sm:text-lg text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed drop-shadow-md">
           {currentSlide.description}
         </p>
 
-        {/* دکمه‌ها */}
         <div className="flex flex-col sm:flex-row gap-4">
           <GlassButton
             icon={<Target className="w-5 h-5" />}
@@ -226,8 +199,8 @@ export default function Hero() {
             size="md"
             onClick={scrollToContact}
           >
-{currentSlide.buttonLink ? "بیشتر بدانید" : "درخواست مشاوره"}
-            </GlassButton>
+            {currentSlide.buttonLink ? "بیشتر بدانید" : "درخواست مشاوره"}
+          </GlassButton>
 
           <LiquidGlassCard
             blurIntensity="lg"
@@ -240,10 +213,10 @@ export default function Hero() {
                 (window.location.href = currentSlide.buttonLink || "/contact")
               }
               className="px-8 py-3 text-white font-bold flex items-center gap-2 w-full justify-center 
-             bg-gradient-to-r from-blue-500/80 to-blue-600/80 
-             backdrop-blur-sm border border-blue-400/30"
+                bg-gradient-to-r from-blue-500/80 to-blue-600/80 
+                backdrop-blur-sm border border-blue-400/30"
             >
-  {currentSlide.buttonText || "شروع کنید"}
+              {currentSlide.buttonText || "شروع کنید"}
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
           </LiquidGlassCard>
@@ -266,7 +239,6 @@ export default function Hero() {
               <ChevronLeft className="w-6 h-6 text-white" />
             </LiquidGlassCard>
           </button>
-
           <button
             onClick={prevSlide}
             className="absolute right-4 top-1/2 -translate-y-1/2 z-20"

@@ -225,7 +225,7 @@ export default function Contact() {
               className="p-4 group cursor-pointer hover:scale-105 transition-all duration-300"
               onClick={() =>
                 copyToClipboard(
-                  settings?.contactEmail || "info@supremetech.ir",
+                  settings?.contact_email || "info@supremetech.ir",
                   "ایمیل",
                 )
               }
@@ -239,7 +239,7 @@ export default function Contact() {
                   <p className="text-gray-400 text-xs">
                     {loading
                       ? "..."
-                      : settings?.contactEmail || "info@supremetech.ir"}
+                      : settings?.contact_email || "info@supremetech.ir"}
                   </p>
                 </div>
                 <Copy className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition" />
@@ -253,7 +253,7 @@ export default function Contact() {
               className="p-4 group cursor-pointer hover:scale-105 transition-all duration-300"
               onClick={() =>
                 copyToClipboard(
-                  settings?.contactPhone || "09121234567",
+                  settings?.contact_phone || "09121234567",
                   "شماره تلفن",
                 )
               }
@@ -265,7 +265,7 @@ export default function Contact() {
                 <div className="flex-1">
                   <h4 className="font-semibold text-white text-sm">تلفن</h4>
                   <p className="text-gray-400 text-xs">
-                    {loading ? "..." : settings?.contactPhone || "09121234567"}
+                    {loading ? "..." : settings?.contact_phone || "09121234567"}
                   </p>
                 </div>
                 <Copy className="w-4 h-4 text-gray-500 group-hover:text-cyan-400 transition" />
@@ -393,7 +393,7 @@ export default function Contact() {
                     <p className="text-gray-400 text-xs leading-relaxed">
                       {loading
                         ? "..."
-                        : settings?.contactAddress ||
+                        : settings?.address ||
                           "تهران، بزرگراه اشرفی اصفهانی، بالاتر از میدان پونک، مجتمع نیایش"}
                     </p>
                   </div>
