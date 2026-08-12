@@ -40,9 +40,9 @@ export default function AdminProfile() {
     phone: "",
   });
   const [passwordData, setPasswordData] = useState({
-    current: "",
-    new: "",
-    confirm: "",
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
   });
 
   useEffect(() => {
@@ -94,7 +94,11 @@ export default function AdminProfile() {
         phone: admin.phone || "",
       });
     }
-    setPasswordData({ current: "", new: "", confirm: "" });
+    setPasswordData({
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,11 +128,11 @@ export default function AdminProfile() {
   };
 
   const handleChangePassword = async () => {
-    if (passwordData.new !== passwordData.confirm) {
+    if (passwordData.new_password !== passwordData.confirm_password) {
       setError("رمز عبور جدید و تکرار آن مطابقت ندارند");
       return;
     }
-    if (passwordData.new.length < 6) {
+    if (passwordData.new_password.length < 6) {
       setError("رمز عبور باید حداقل ۶ کاراکتر باشد");
       return;
     }
@@ -139,11 +143,15 @@ export default function AdminProfile() {
 
     try {
       await authAPI.changePassword({
-        current: passwordData.current,
-        new: passwordData.new,
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password,
       });
       setSuccess("رمز عبور با موفقیت تغییر کرد");
-      setPasswordData({ current: "", new: "", confirm: "" });
+      setPasswordData({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
     } catch (err: any) {
       setError(err.response?.data?.error || "خطا در تغییر رمز عبور");
     } finally {
@@ -370,7 +378,7 @@ export default function AdminProfile() {
                 <input
                   type="password"
                   name="current"
-                  value={passwordData.current}
+                  value={passwordData.current_password}
                   onChange={handlePasswordChange}
                   className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="••••••••"
@@ -384,7 +392,7 @@ export default function AdminProfile() {
                 <input
                   type="password"
                   name="new"
-                  value={passwordData.new}
+                  value={passwordData.new_password}
                   onChange={handlePasswordChange}
                   className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="••••••••"
@@ -398,7 +406,7 @@ export default function AdminProfile() {
                 <input
                   type="password"
                   name="confirm"
-                  value={passwordData.confirm}
+                  value={passwordData.confirm_password}
                   onChange={handlePasswordChange}
                   className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="••••••••"

@@ -53,12 +53,15 @@ export default function CourseCreate() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -87,16 +90,13 @@ export default function CourseCreate() {
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      // ✅ آپلود در پوشه events (یا هر پوشه دلخواه)
+      const response = await uploadAPI.uploadImage(file, "events");
       return response.url;
     } catch (error) {
-      throw new Error("خطا در آپلود تصویر");
-    } finally {
-      setUploading(false);
+      throw new Error("خطا در آپلود تصویر رویداد");
     }
   };
 
@@ -202,8 +202,12 @@ export default function CourseCreate() {
                     ) : (
                       <>
                         <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-400">برای آپلود کلیک کنید</p>
-                        <p className="text-xs text-gray-500">PNG, JPG, WEBP (حداکثر ۵MB)</p>
+                        <p className="text-sm text-gray-400">
+                          برای آپلود کلیک کنید
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, WEBP (حداکثر ۵MB)
+                        </p>
                       </>
                     )}
                   </div>

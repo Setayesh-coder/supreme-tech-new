@@ -6,10 +6,14 @@ import type { HeroSlide } from "../../../lib/api/hero";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { 
-  Plus, Edit, Trash2, 
-  Loader2, Search, 
-  ArrowUp, ArrowDown
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  Search,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 export default function HeroList() {
@@ -36,25 +40,36 @@ export default function HeroList() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!id) return;
     if (!confirm("آیا از حذف این اسلاید مطمئن هستید؟")) return;
     try {
       await heroAPI.delete(id);
-      setSlides(slides.filter(s => s.id !== id));
+      setSlides(slides.filter((s) => s.id !== id));
     } catch (err) {
       alert("خطا در حذف اسلاید");
     }
   };
 
-  const handleReorder = async (id: string, direction: 'up' | 'down') => {
-    const index = slides.findIndex(s => s.id === id);
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === slides.length - 1) return;
+  const handleReorder = async (id: string, direction: "up" | "down") => {
+    if (!id) return;
+
+    const index = slides.findIndex((s) => s.id === id);
+    if (index === -1) return;
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === slides.length - 1) return;
 
     const newSlides = [...slides];
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    [newSlides[index], newSlides[newIndex]] = [newSlides[newIndex], newSlides[index]];
-    
-    const reorderItems = newSlides.map((s, i) => ({ id: s.id, order: i }));
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    [newSlides[index], newSlides[newIndex]] = [
+      newSlides[newIndex],
+      newSlides[index],
+    ];
+
+    // ✅ فقط آیتم‌هایی که id دارند را برای reorder بفرست
+    const reorderItems = newSlides
+      .filter((s) => s.id)
+      .map((s, i) => ({ id: s.id!, order: i }));
+
     try {
       await heroAPI.reorder(reorderItems);
       setSlides(newSlides);
@@ -63,9 +78,10 @@ export default function HeroList() {
     }
   };
 
-  const filteredSlides = slides.filter(slide =>
-    slide.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    slide.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSlides = slides.filter(
+    (slide) =>
+      slide.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      slide.subtitle?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading) {
@@ -84,11 +100,19 @@ export default function HeroList() {
       <div className="p-4 md:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">مدیریت اسلایدر</h1>
-            <p className="text-gray-400 text-sm mt-1">مدیریت اسلایدهای صفحه اصلی</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              مدیریت اسلایدر
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              مدیریت اسلایدهای صفحه اصلی
+            </p>
           </div>
           <Link to="/admin/hero/create">
-            <GlassButton variant="primary" icon={<Plus className="w-4 h-4" />} iconPosition="left">
+            <GlassButton
+              variant="primary"
+              icon={<Plus className="w-4 h-4" />}
+              iconPosition="left"
+            >
               اسلاید جدید
             </GlassButton>
           </Link>
@@ -114,57 +138,95 @@ export default function HeroList() {
         )}
 
         {filteredSlides.length === 0 ? (
-          <LiquidGlassCard className="p-12 text-center" borderRadius="16px" blurIntensity="sm">
+          <LiquidGlassCard
+            className="p-12 text-center"
+            borderRadius="16px"
+            blurIntensity="sm"
+          >
             <div className="text-6xl mb-4">🖼️</div>
-            <h3 className="text-xl font-bold text-white mb-2">اسلایدی یافت نشد</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              اسلایدی یافت نشد
+            </h3>
             <p className="text-gray-400">هنوز اسلایدی ایجاد نشده است</p>
           </LiquidGlassCard>
         ) : (
           <div className="space-y-3">
             {filteredSlides.map((slide, index) => (
-              <LiquidGlassCard key={slide.id} className="p-4" borderRadius="16px" blurIntensity="sm" glowIntensity="sm">
+              <LiquidGlassCard
+                key={slide.id || index}
+                className="p-4"
+                borderRadius="16px"
+                blurIntensity="sm"
+                glowIntensity="sm"
+              >
                 <div className="flex items-center gap-4">
+                  {/* تصویر کوچک */}
                   <img
-                    src={slide.image || slide.image_url || '/slides/ai-hero-new.webp'}
+                    src={
+                      slide.image_url ||
+                      slide.image_url ||
+                      "/slides/ai-hero-new.webp"
+                    }
                     alt={slide.title}
                     className="w-24 h-16 object-cover rounded-lg"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/slides/ai-hero-new.webp';
+                      (e.target as HTMLImageElement).src =
+                        "/slides/ai-hero-new.webp";
                     }}
                   />
+
+                  {/* اطلاعات */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-white">{slide.title}</h3>
-                    <p className="text-gray-400 text-sm truncate">{slide.subtitle}</p>
+                    <h3 className="text-lg font-bold text-white">
+                      {slide.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm truncate">
+                      {slide.subtitle}
+                    </p>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${slide.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                        {slide.isActive ? 'فعال' : 'غیرفعال'}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${slide.is_active !== false ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"}`}
+                      >
+                        {slide.is_active !== false ? "فعال" : "غیرفعال"}
                       </span>
-                      <span className="text-xs text-gray-500">ترتیب: {slide.order}</span>
+                      <span className="text-xs text-gray-500">
+                        ترتیب: {slide.order || 0}
+                      </span>
                     </div>
                   </div>
 
+                  {/* دکمه‌ها */}
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleReorder(slide.id, 'up')}
-                      disabled={index === 0}
+                      onClick={() => slide.id && handleReorder(slide.id, "up")}
+                      disabled={index === 0 || !slide.id}
                       className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
                     >
                       <ArrowUp size={16} className="text-white" />
                     </button>
                     <button
-                      onClick={() => handleReorder(slide.id, 'down')}
-                      disabled={index === filteredSlides.length - 1}
+                      onClick={() =>
+                        slide.id && handleReorder(slide.id, "down")
+                      }
+                      disabled={
+                        index === filteredSlides.length - 1 || !slide.id
+                      }
                       className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
                     >
                       <ArrowDown size={16} className="text-white" />
                     </button>
-                    <Link to={`/admin/hero/edit/${slide.id}`}>
-                      <GlassButton variant="secondary" size="sm" icon={<Edit className="w-4 h-4" />} iconPosition="left">
+                    <Link to={`/admin/hero/edit/${slide.id || ""}`}>
+                      <GlassButton
+                        variant="secondary"
+                        size="sm"
+                        icon={<Edit className="w-4 h-4" />}
+                        iconPosition="left"
+                      >
                         ویرایش
                       </GlassButton>
                     </Link>
                     <button
-                      onClick={() => handleDelete(slide.id)}
+                      onClick={() => slide.id && handleDelete(slide.id)}
                       className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />

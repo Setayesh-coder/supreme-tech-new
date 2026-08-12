@@ -1,8 +1,17 @@
-// src/components/profile/ProfileInfo.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { PersianDatePicker } from "../ui/PersianDatePicker";
-import { Edit2, Save, X, User, Phone, Mail, MapPin, Calendar, Users } from "lucide-react";
+import {
+  Edit2,
+  Save,
+  X,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  Users,
+} from "lucide-react";
 
 interface ProfileInfoProps {
   user: any;
@@ -14,11 +23,14 @@ interface ProfileInfoProps {
   onEdit: () => void;
   onCancel: () => void;
   onSave: () => void;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
   onLogout: () => void;
 }
 
-export function ProfileInfo({
+export default function ProfileInfo({
+  // user,
   formData,
   editing,
   saving,
@@ -30,8 +42,26 @@ export function ProfileInfo({
   onChange,
   onLogout,
 }: ProfileInfoProps) {
+  // ✅ تبدیل تاریخ به فرمت بک‌اند
+  const handleDateChange = (date: string) => {
+    console.log("📅 تاریخ انتخاب شده:", date);
+    // ایجاد یک event مصنوعی برای onChange
+    const event = {
+      target: {
+        name: "birthDate",
+        value: date || "",
+      },
+    } as React.ChangeEvent<HTMLInputElement>;
+    onChange(event);
+  };
+
   return (
-    <LiquidGlassCard className="p-6" borderRadius="16px" blurIntensity="lg" glowIntensity="md">
+    <LiquidGlassCard
+      className="p-6"
+      borderRadius="16px"
+      blurIntensity="lg"
+      glowIntensity="md"
+    >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-white">اطلاعات شخصی</h2>
         {!editing ? (
@@ -46,29 +76,33 @@ export function ProfileInfo({
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-2 rounded-lg mb-4 text-sm">
-          {error}
+          ❌ {error}
         </div>
       )}
       {success && (
         <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-2 rounded-lg mb-4 text-sm">
-          {success}
+          ✅ {success}
         </div>
       )}
 
       <div className="space-y-3">
         {/* نام کامل */}
         <div>
-          <label className="block text-xs font-medium text-white/60 mb-1">نام کامل</label>
+          <label className="block text-xs font-medium text-white/60 mb-1">
+            نام کامل
+          </label>
           <div className="relative">
             <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <input
               type="text"
               name="name"
-              value={formData.name}
+              value={formData.name || ""}
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-10 pl-3 py-2 bg-white/5 border rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors ${
-                editing ? "border-white/20 focus:border-blue-500" : "border-transparent cursor-default"
+                editing
+                  ? "border-white/20 focus:border-blue-500"
+                  : "border-transparent cursor-default"
               }`}
               placeholder="نام کامل"
             />
@@ -77,17 +111,21 @@ export function ProfileInfo({
 
         {/* شماره تلفن */}
         <div>
-          <label className="block text-xs font-medium text-white/60 mb-1">شماره تلفن</label>
+          <label className="block text-xs font-medium text-white/60 mb-1">
+            شماره تلفن
+          </label>
           <div className="relative">
             <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <input
               type="text"
               name="phone"
-              value={formData.phone}
+              value={formData.phone || ""}
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-10 pl-3 py-2 bg-white/5 border rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors ${
-                editing ? "border-white/20 focus:border-blue-500" : "border-transparent cursor-default"
+                editing
+                  ? "border-white/20 focus:border-blue-500"
+                  : "border-transparent cursor-default"
               }`}
               placeholder="شماره تلفن"
             />
@@ -96,7 +134,9 @@ export function ProfileInfo({
 
         {/* ایمیل */}
         <div>
-          <label className="block text-xs font-medium text-white/60 mb-1">ایمیل</label>
+          <label className="block text-xs font-medium text-white/60 mb-1">
+            ایمیل
+          </label>
           <div className="relative">
             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <input
@@ -106,7 +146,9 @@ export function ProfileInfo({
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-10 pl-3 py-2 bg-white/5 border rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors ${
-                editing ? "border-white/20 focus:border-blue-500" : "border-transparent cursor-default"
+                editing
+                  ? "border-white/20 focus:border-blue-500"
+                  : "border-transparent cursor-default"
               }`}
               placeholder="ایمیل (اختیاری)"
             />
@@ -128,7 +170,9 @@ export function ProfileInfo({
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-3 pl-3 py-2 bg-white/5 border rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none ${
-                editing ? "border-white/20 focus:border-blue-500" : "border-transparent cursor-default"
+                editing
+                  ? "border-white/20 focus:border-blue-500"
+                  : "border-transparent cursor-default"
               }`}
             >
               <option value="">انتخاب استان</option>
@@ -167,7 +211,7 @@ export function ProfileInfo({
           </div>
         </div>
 
-        {/* تاریخ تولد */}
+        {/* تاریخ تولد - با PersianDatePicker */}
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1">
             <span className="flex items-center gap-1">
@@ -177,14 +221,18 @@ export function ProfileInfo({
           </label>
           <PersianDatePicker
             value={formData.birthDate || ""}
-            onChange={(date) => {
-              const event = { target: { name: "birthDate", value: date } } as any;
-              onChange(event);
-            }}
-            disabled={!editing}
+            onChange={handleDateChange}
             placeholder="انتخاب تاریخ تولد"
-            className={`w-full ${!editing ? "opacity-60 cursor-not-allowed" : ""}`}
+            className="w-full"
+            disabled={!editing}
           />
+          {!editing && (
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.birthDate
+                ? "تاریخ وارد شده است"
+                : "تاریخی وارد نشده است"}
+            </p>
+          )}
         </div>
 
         {/* جنسیت */}
@@ -202,7 +250,9 @@ export function ProfileInfo({
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-3 pl-3 py-2 bg-white/5 border rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none ${
-                editing ? "border-white/20 focus:border-blue-500" : "border-transparent cursor-default"
+                editing
+                  ? "border-white/20 focus:border-blue-500"
+                  : "border-transparent cursor-default"
               }`}
             >
               <option value="">انتخاب جنسیت</option>
@@ -216,11 +266,22 @@ export function ProfileInfo({
       {/* دکمه‌های ویرایش/ذخیره */}
       {editing ? (
         <div className="flex gap-2 mt-4 pt-4 border-t border-white/10">
-          <GlassButton variant="primary" size="sm" onClick={onSave} loading={saving} className="flex-1">
+          <GlassButton
+            variant="primary"
+            size="sm"
+            onClick={onSave}
+            loading={saving}
+            className="flex-1"
+          >
             <Save className="w-4 h-4 ml-1" />
             ذخیره تغییرات
           </GlassButton>
-          <GlassButton variant="white" size="sm" onClick={onCancel} className="flex-1">
+          <GlassButton
+            variant="white"
+            size="sm"
+            onClick={onCancel}
+            className="flex-1"
+          >
             <X className="w-4 h-4 ml-1" />
             انصراف
           </GlassButton>

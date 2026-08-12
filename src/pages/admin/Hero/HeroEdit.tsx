@@ -1,4 +1,3 @@
-// src/pages/admin/Hero/HeroEdit.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
@@ -6,7 +5,7 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { heroAPI } from "../../../lib/api/hero";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, X, Loader2, Image } from "lucide-react";
+import { ArrowLeft, Save, X, Loader2, Image, Upload } from "lucide-react";
 
 export default function HeroEdit() {
   const { id } = useParams<{ id: string }>();
@@ -20,12 +19,10 @@ export default function HeroEdit() {
     title: "",
     subtitle: "",
     description: "",
-    buttonText: "",
-    buttonLink: "",
-    color: "#3b82f6",
+    button_text: "",
+    button_link: "",
     order: 0,
-    isActive: true,
-    heroTagline: "",
+    is_active: true,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -38,22 +35,22 @@ export default function HeroEdit() {
         setLoading(true);
         const data = await heroAPI.getById(id);
         console.log("📥 داده اسلاید:", data);
-        
+
         setFormData({
           title: data.title || "",
           subtitle: data.subtitle || "",
           description: data.description || "",
-          buttonText: data.buttonText || "",
-          buttonLink: data.buttonLink || "",
-          color: data.color || "#3b82f6",
+          button_text: data.button_text || "",
+          button_link: data.button_link || "",
           order: data.order || 0,
-          isActive: data.isActive !== undefined ? data.isActive : true,
-          heroTagline: data.heroTagline || "",
+          is_active: data.is_active !== undefined ? data.is_active : true,
         });
-        
-        if (data.image) {
-          setCurrentImage(data.image);
-          setImagePreview(data.image);
+
+        // ✅ تصویر فعلی را تنظیم کن
+        const imgUrl = data.image_url || data.image_url || "";
+        if (imgUrl) {
+          setCurrentImage(imgUrl);
+          setImagePreview(imgUrl);
         }
       } catch (err: any) {
         console.error("❌ خطا:", err);
@@ -66,12 +63,15 @@ export default function HeroEdit() {
   }, [id]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -95,17 +95,16 @@ export default function HeroEdit() {
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview("");
-setCurrentImage("");  
+    setCurrentImage("");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
 
+  // ✅ اصلاح: استفاده از uploadImage به جای uploadImageWithFormData
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      const response = await uploadAPI.uploadImage(file, "hero");
       console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error) {
@@ -124,26 +123,21 @@ setCurrentImage("");
 
     try {
       let imageUrl = currentImage;
-      
+
       // اگر تصویر جدید آپلود شده
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
       }
-if (!imageFile && !currentImage) {
-      imageUrl = "";
-    }
 
       const slideData = {
         title: formData.title,
-        subtitle: formData.subtitle || "",
-        heroTagline: formData.heroTagline || "",
-        description: formData.description || "",
-        image: imageUrl,
-        buttonText: formData.buttonText || "",
-        buttonLink: formData.buttonLink || "",
-        color: formData.color || "#3b82f6",
+        subtitle: formData.subtitle || undefined,
+        description: formData.description || undefined,
+        image_url: imageUrl,
+        button_text: formData.button_text || undefined,
+        button_link: formData.button_link || undefined,
         order: Number(formData.order) || 0,
-        isActive: formData.isActive,
+        is_active: formData.is_active,
       };
 
       console.log("📤 ارسال داده برای ویرایش:", slideData);
@@ -156,7 +150,11 @@ if (!imageFile && !currentImage) {
       }, 1500);
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ویرایش اسلاید");
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.error ||
+          "خطا در ویرایش اسلاید",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -206,7 +204,7 @@ if (!imageFile && !currentImage) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 🔥 تصویر - استفاده از img معمولی به جای OptimizedImage */}
+            {/* تصویر */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر اسلاید
@@ -219,7 +217,8 @@ if (!imageFile && !currentImage) {
                     className="w-full h-48 object-cover rounded-xl"
                     onError={(e) => {
                       console.error("❌ خطا در لود تصویر:", imagePreview);
-                      (e.target as HTMLImageElement).src = "/placeholder-image.jpg";
+                      (e.target as HTMLImageElement).src =
+                        "/placeholder-image.jpg";
                     }}
                   />
                   <button
@@ -243,7 +242,7 @@ if (!imageFile && !currentImage) {
                       </>
                     ) : (
                       <>
-                        <Image className="w-10 h-10 text-gray-400 mb-2" />
+                        <Upload className="w-10 h-10 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-400">
                           برای آپلود کلیک کنید
                         </p>
@@ -296,24 +295,6 @@ if (!imageFile && !currentImage) {
               />
             </div>
 
-            {/* heroTagline */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                تگ بالای اسلاید (Hero Tagline)
-              </label>
-              <input
-                type="text"
-                name="heroTagline"
-                value={formData.heroTagline || ""}
-                onChange={handleChange}
-                placeholder="مثال: مرکز توسعه فناوری‌های برتر تهران"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                این متن در بالای اسلاید نمایش داده می‌شود
-              </p>
-            </div>
-
             {/* توضیحات */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
@@ -337,8 +318,8 @@ if (!imageFile && !currentImage) {
                 </label>
                 <input
                   type="text"
-                  name="buttonText"
-                  value={formData.buttonText || ""}
+                  name="button_text"
+                  value={formData.button_text || ""}
                   onChange={handleChange}
                   placeholder="مثلاً: شروع کنید"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -350,8 +331,8 @@ if (!imageFile && !currentImage) {
                 </label>
                 <input
                   type="text"
-                  name="buttonLink"
-                  value={formData.buttonLink || ""}
+                  name="button_link"
+                  value={formData.button_link || ""}
                   onChange={handleChange}
                   placeholder="/services یا https://..."
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -359,33 +340,8 @@ if (!imageFile && !currentImage) {
               </div>
             </div>
 
-            {/* رنگ و ترتیب */}
+            {/* ترتیب و وضعیت */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  رنگ گرادیانت
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    name="color"
-                    value={formData.color || "#3b82f6"}
-                    onChange={handleChange}
-                    className="w-12 h-12 rounded-xl border border-white/20 cursor-pointer bg-transparent"
-                  />
-                  <input
-                    type="text"
-                    name="color"
-                    value={formData.color || "#3b82f6"}
-                    onChange={handleChange}
-                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                    placeholder="#3b82f6"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  کد رنگ برای گرادیانت متن در اسلاید
-                </p>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   ترتیب نمایش
@@ -402,23 +358,16 @@ if (!imageFile && !currentImage) {
                   عدد کوچکتر = نمایش زودتر
                 </p>
               </div>
-            </div>
-
-            {/* فعال */}
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-white/80 cursor-pointer">
+              <div className="flex items-center gap-3 pt-6">
                 <input
                   type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
+                  name="is_active"
+                  checked={formData.is_active}
                   onChange={handleChange}
-                  className="w-4 h-4 accent-blue-500"
+                  className="w-5 h-5 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
                 />
-                <span>فعال</span>
-              </label>
-              <span className="text-xs text-gray-500">
-                اسلایدهای غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
-              </span>
+                <label className="text-sm text-gray-400">فعال</label>
+              </div>
             </div>
 
             {/* دکمه‌ها */}

@@ -30,7 +30,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   useEffect(() => {
     const storedUser = localStorage.getItem("admin") || localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
@@ -47,7 +51,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { path: "/admin/users", icon: <Users size={20} />, label: "کاربران" },
     { path: "/admin/events", icon: <Calendar size={20} />, label: "رویدادها" },
     { path: "/admin/courses", icon: <BookOpen size={20} />, label: "دوره‌ها" },
-    
     { path: "/admin/blog", icon: <MessageSquare size={20} />, label: "وبلاگ" },
     { path: "/admin/hero", icon: <Image size={20} />, label: "اسلایدر" },
     { path: "/admin/partners", icon: <Building2 size={20} />, label: "همکاران" },
@@ -61,9 +64,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
+  // ✅ نام کاربر را با safe fallback دریافت کن
+  const userName = user?.name || user?.phone || "کاربر";
+  const userAvatar = user?.name?.charAt(0) || user?.phone?.charAt(0) || "U";
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900">
-      {/* سایدبار - همیشه در دسکتاپ باز */}
+      {/* سایدبار */}
       <aside className={`
         fixed lg:relative top-0 right-0 h-full w-72 bg-gray-900/98 backdrop-blur-xl border-l border-white/10 z-40
         transition-transform duration-300 ease-in-out
@@ -123,10 +130,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="p-4 border-t border-white/10">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                {user?.name?.charAt(0) || 'A'}
+                {userAvatar}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{user?.name || 'ادمین'}</p>
+                <p className="text-white text-sm font-medium truncate">{userName}</p>
                 <p className="text-white/40 text-xs truncate">{user?.role || 'ADMIN'}</p>
               </div>
             </div>
@@ -166,10 +173,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                {user?.name?.charAt(0) || 'A'}
+                {userAvatar}
               </div>
               <div>
-                <p className="text-white text-sm font-medium">{user?.name || 'ادمین'}</p>
+                <p className="text-white text-sm font-medium">{userName}</p>
                 <p className="text-white/40 text-xs">{user?.role || 'ADMIN'}</p>
               </div>
             </div>

@@ -1,10 +1,9 @@
-// src/pages/admin/Partners/PartnerEdit.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { OptimizedImage } from "../../../components/ui/OptimizedImage";
+// import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
@@ -85,7 +84,7 @@ export default function PartnerEdit() {
   const handleRemoveLogo = () => {
     setLogo(null);
     setLogoPreview("");
-setCurrentLogo("");  
+    setCurrentLogo(""); // ✅ تنظیم به رشته خالی
     const input = document.getElementById("logo-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -95,9 +94,11 @@ setCurrentLogo("");
     formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      // ✅ استفاده از uploadImage به جای uploadImageWithFormData
+      const response = await uploadAPI.uploadImage(file, "partners");
       return response.url;
     } catch (error) {
+      console.error("❌ خطا در آپلود:", error);
       throw new Error("خطا در آپلود لوگو");
     } finally {
       setUploading(false);
@@ -111,21 +112,29 @@ setCurrentLogo("");
 
     try {
       let logoUrl = currentLogo;
+
+      // اگر لوگوی جدید آپلود شده
       if (logo) {
         logoUrl = await uploadLogo(logo);
       }
-if (!logo && !currentLogo) {
-      logoUrl = "";  // رشته خالی
-    }
+
+      // اگر هیچ لوگویی وجود ندارد (هم قدیم و هم جدید)
+      if (!logo && !currentLogo) {
+        logoUrl = "";
+      }
+
       const partnerData = {
         ...formData,
         order: Number(formData.order),
         logo: logoUrl,
       };
 
+      console.log("📤 ارسال داده برای ویرایش همکار:", partnerData);
+
       await partnersAPI.update(id!, partnerData);
       navigate("/admin/partners");
     } catch (err: any) {
+      console.error("❌ خطا:", err);
       setError(err.response?.data?.error || "خطا در ویرایش همکار");
     } finally {
       setSubmitting(false);
@@ -163,28 +172,26 @@ if (!logo && !currentLogo) {
         >
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
+              ❌ {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 🔥 لوگو با OptimizedImage */}
+            {/* لوگو */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 لوگو
               </label>
               {logoPreview ? (
                 <div className="relative w-32 h-32">
-                  <OptimizedImage
+                  <img
                     src={logoPreview}
                     alt="پیش‌نمایش لوگو"
-                    className="w-32 h-32 object-contain rounded-xl border border-white/20"
-                    objectFit="contain"
-                    quality={85}
-                    priority={true}
-                    loading="eager"
-                    placeholder={false}
-                    fallback=""
+                    className="w-32 h-32 object-contain rounded-xl border border-white/20 bg-white/5"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "/placeholder-logo.png";
+                    }}
                   />
                   <button
                     type="button"
@@ -193,6 +200,9 @@ if (!logo && !currentLogo) {
                   >
                     <X className="w-4 h-4 text-white" />
                   </button>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {logo ? "لوگوی جدید" : "لوگوی فعلی"}
+                  </p>
                 </div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
@@ -226,13 +236,14 @@ if (!logo && !currentLogo) {
             {/* نام */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                نام همکار
+                نام همکار <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                placeholder="نام همکار را وارد کنید"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
@@ -248,8 +259,8 @@ if (!logo && !currentLogo) {
                 name="website"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 placeholder="https://example.com"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
 
@@ -263,6 +274,7 @@ if (!logo && !currentLogo) {
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
+                placeholder="توضیحات درباره همکار"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
               />
             </div>
@@ -280,6 +292,9 @@ if (!logo && !currentLogo) {
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 min="0"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                عدد کوچکتر = نمایش زودتر
+              </p>
             </div>
 
             {/* فعال */}
@@ -294,6 +309,9 @@ if (!logo && !currentLogo) {
                 />
                 فعال
               </label>
+              <span className="text-xs text-gray-500">
+                همکاران غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
+              </span>
             </div>
 
             {/* دکمه‌ها */}

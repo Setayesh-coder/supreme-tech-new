@@ -1,79 +1,30 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
-import { ViteImageOptimizer } from "vite-plugin-image-optimizer";
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
-export default defineConfig({
-  plugins: [
-    react(),
-    ViteImageOptimizer({
-      png: {
-        quality: 80,
-        compress: {
-          format: "webp",
-          quality: 80,
-        },
-      },
-      jpeg: {
-        quality: 80,
-        compress: {
-          format: "webp",
-          quality: 80,
-        },
-      },
-      jpg: {
-        quality: 80,
-        compress: {
-          format: "webp",
-          quality: 80,
-        },
-      },
-      webp: {
-        quality: 75,
-      },
-      svg: {
-        quality: 100,
-      },
-      cache: true,
-      include: ["**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.webp", "**/*.svg"],
-      exclude: ["**/node_modules/**", "**/dist/**"],
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  
+  return {
+    plugins: [react()],
+    server: {
+      port: 3000,
+      host: true,
+      proxy: {
+        '/api': {
+          target: 'https://supremetech.ir',
+          changeOrigin: true,
+          secure: true,
+        }
+      }
     },
-  },
-  build: {
-    minify: "esbuild",
-    sourcemap: false,
-    target: "es2015",
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // جدا کردن کتابخانه‌های بزرگ
-          if (id.includes("node_modules")) {
-            if (
-              id.includes("react") ||
-              id.includes("react-dom") ||
-              id.includes("react-router")
-            ) {
-              return "react-vendor";
-            }
-            if (id.includes("lucide-react")) {
-              return "ui-vendor";
-            }
-            if (id.includes("axios")) {
-              return "axios-vendor";
-            }
-            return "vendor";
-          }
-        },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
       },
     },
-    chunkSizeWarningLimit: 1000,
-  },
-  server: {
-    port: 3000,
-  },
-});
+    define: {
+      'process.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://supremetech.ir/api/v1'),
+    },
+  }
+})

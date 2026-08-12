@@ -1,5 +1,4 @@
-// src/lib/api/users.ts
-import api from './axios';
+import api from "./axios";
 
 export interface User {
   id: string;
@@ -21,6 +20,7 @@ export interface User {
 }
 
 export const usersAPI = {
+  // ========== پروفایل کاربر ==========
   getMyProfile: async (): Promise<User> => {
     const response = await api.get("/users/me");
     return response.data;
@@ -31,12 +31,20 @@ export const usersAPI = {
     return response.data;
   },
 
-  changeMyPassword: async (data: { current_password: string; new_password: string }): Promise<{ message: string }> => {
+  changeMyPassword: async (data: {
+    current_password: string;
+    new_password: string;
+  }): Promise<{ message: string }> => {
     const response = await api.post("/users/me/change-password", data);
     return response.data;
   },
 
-  getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<{
+  // ========== مدیریت کاربران (ادمین) ==========
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
     items: User[];
     total: number;
     page: number;
@@ -52,7 +60,10 @@ export const usersAPI = {
     return response.data;
   },
 
-  updateRole: async (id: string, role: "USER" | "EMPLOYEE" | "ADMIN"): Promise<User> => {
+  updateRole: async (
+    id: string,
+    role: "USER" | "EMPLOYEE" | "ADMIN",
+  ): Promise<User> => {
     const response = await api.patch(`/users/${id}/role`, { role });
     return response.data;
   },

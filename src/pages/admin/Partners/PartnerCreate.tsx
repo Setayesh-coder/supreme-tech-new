@@ -1,10 +1,8 @@
-// src/pages/admin/Partners/PartnerCreate.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
@@ -62,13 +60,14 @@ export default function PartnerCreate() {
   };
 
   const uploadLogo = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      // ✅ استفاده از uploadImage به جای uploadImageWithFormData
+      const response = await uploadAPI.uploadImage(file, "partners");
+      console.log("✅ لوگو آپلود شد:", response.url);
       return response.url;
     } catch (error) {
+      console.error("❌ خطا در آپلود:", error);
       throw new Error("خطا در آپلود لوگو");
     } finally {
       setUploading(false);
@@ -92,9 +91,12 @@ export default function PartnerCreate() {
         logo: logoUrl,
       };
 
+      console.log("📤 ارسال داده برای ایجاد همکار:", partnerData);
+
       await partnersAPI.create(partnerData);
       navigate("/admin/partners");
     } catch (err: any) {
+      console.error("❌ خطا:", err);
       setError(err.response?.data?.error || "خطا در ایجاد همکار");
     } finally {
       setLoading(false);
@@ -122,28 +124,26 @@ export default function PartnerCreate() {
         >
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
+              ❌ {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 🔥 لوگو با OptimizedImage */}
+            {/* لوگو */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 لوگو
               </label>
               {logoPreview ? (
                 <div className="relative w-32 h-32">
-                  <OptimizedImage
+                  <img
                     src={logoPreview}
                     alt="پیش‌نمایش لوگو"
-                    className="w-32 h-32 object-contain rounded-xl border border-white/20"
-                    objectFit="contain"
-                    quality={85}
-                    priority={true}
-                    loading="eager"
-                    placeholder={false}
-                    fallback=""
+                    className="w-32 h-32 object-contain rounded-xl border border-white/20 bg-white/5"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "/placeholder-logo.png";
+                    }}
                   />
                   <button
                     type="button"
@@ -185,13 +185,14 @@ export default function PartnerCreate() {
             {/* نام */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                نام همکار
+                نام همکار <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                placeholder="نام همکار را وارد کنید"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
@@ -207,8 +208,8 @@ export default function PartnerCreate() {
                 name="website"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 placeholder="https://example.com"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
 
@@ -222,6 +223,7 @@ export default function PartnerCreate() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
+                placeholder="توضیحات درباره همکار"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
               />
             </div>
@@ -239,6 +241,9 @@ export default function PartnerCreate() {
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 min="0"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                عدد کوچکتر = نمایش زودتر
+              </p>
             </div>
 
             {/* فعال */}
@@ -253,6 +258,9 @@ export default function PartnerCreate() {
                 />
                 فعال
               </label>
+              <span className="text-xs text-gray-500">
+                همکاران غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
+              </span>
             </div>
 
             {/* دکمه‌ها */}

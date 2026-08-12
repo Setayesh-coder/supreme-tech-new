@@ -1,18 +1,14 @@
 // // src/lib/api/client.ts
 
-// // 🔥 استفاده مستقیم و قطعی از HTTPS
+// // 🔥 مقدار را مستقیم و ثابت تنظیم کنید
 // const API_URL = "https://supremetech.ir/api/v1";
 
-// console.log("🌐 API Base URL (client):", API_URL);
+// console.log("🌐 client Base URL:", API_URL);
 
-// const getToken = () => {
-//   return localStorage.getItem("token");
-// };
+// const getToken = () => localStorage.getItem("token");
 
 // const getHeaders = (customToken?: string): HeadersInit => {
-//   const headers: HeadersInit = {
-//     "Content-Type": "application/json",
-//   };
+//   const headers: HeadersInit = { "Content-Type": "application/json" };
 //   const token = customToken || getToken();
 //   if (token) {
 //     headers["Authorization"] = `Bearer ${token}`;

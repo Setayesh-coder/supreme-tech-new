@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { settingsAPI } from '../lib/api/settings';
+import api from '../lib/api/axios';
 
 export interface SettingsData {
   site_title?: string;
@@ -80,14 +80,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setLoading(true);
       console.log('🔄 شروع دریافت تنظیمات...');
       
-      const data = await settingsAPI.getPublic();
+      const response = await api.get('/settings/public');
+      const data = response.data;
       console.log('📦 داده‌های دریافت شده از API:', data);
       
       if (data) {
         const newSettings = {
           ...defaultSettings,
           ...data,
-          // ✅ اطمینان از هماهنگی siteName و site_title
           siteName: data.site_title || data.siteName || defaultSettings.siteName,
           site_title: data.site_title || data.siteName || defaultSettings.site_title,
           siteDescription: data.site_description || data.siteDescription || defaultSettings.siteDescription,
@@ -131,10 +131,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       console.log('🔄 بروزرسانی تنظیمات:', newSettings);
       
-      // ✅ تبدیل به فرمت مورد انتظار بک‌اند و هماهنگ کردن هر دو فیلد
       const payload: any = {};
-      
-      // اگر siteName تغییر کرده، هم siteName و هم site_title را به‌روز کن
       if (newSettings.siteName !== undefined) {
         payload.site_title = newSettings.siteName;
         payload.siteName = newSettings.siteName;
@@ -194,9 +191,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       console.log('📤 payload ارسال به سرور:', payload);
       
-      await settingsAPI.update(payload);
+      const response = await api.put('/settings/', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      // ✅ بعد از ذخیره، دوباره دریافت کن تا مطمئن شویم
+      console.log('📥 پاسخ سرور:', response.data);
+      
       await fetchSettings();
       
       console.log('✅ تنظیمات با موفقیت به‌روزرسانی شد');

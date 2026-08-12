@@ -1,7 +1,8 @@
 // src/pages/Profile/Profile.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI } from "../../lib/api/auth";
+import { usersAPI } from "../../lib/api/users";
+import { authAPI } from "../../lib/api";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { ticketsAPI, type Ticket } from "../../lib/api/tickets";
 import { messagesAPI } from "../../lib/api/messages";
@@ -254,7 +255,10 @@ export default function Profile() {
         const token = localStorage.getItem("token");
         const storedUser = localStorage.getItem("user");
 
-        console.log("🔍 بررسی localStorage:", { token: !!token, user: !!storedUser });
+        console.log("🔍 بررسی localStorage:", {
+          token: !!token,
+          user: !!storedUser,
+        });
 
         if (!token) {
           console.warn("⚠️ توکن وجود ندارد، هدایت به لاگین");
@@ -279,7 +283,7 @@ export default function Profile() {
           }
         } else {
           try {
-            const profileData = await authAPI.getProfile();
+            const profileData = await usersAPI.getMyProfile();
             if (profileData) {
               setUser(profileData);
               localStorage.setItem("user", JSON.stringify(profileData));
@@ -359,28 +363,47 @@ export default function Profile() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError("لطفاً یک فایل تصویری انتخاب کنید");
-        return;
-      }
-      if (file.size > 2 * 1024 * 1024) {
-        setError("حجم تصویر نباید بیشتر از ۲ مگابایت باشد");
-        return;
-      }
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-      setError("");
+    if (!file) return;
+
+    try {
+      const imageUrl = await uploadAvatar(file);
+      // ✅ استفاده از authAPI.updateProfile
+      const updatedUser = await usersAPI.updateMyProfile({ avatar: imageUrl });
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setAvatarPreview(imageUrl);
+      setSuccess("آواتار با موفقیت بروزرسانی شد");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      console.error("❌ خطا در آپلود آواتار:", error);
+      setError("خطا در آپلود تصویر");
     }
   };
+
+  // const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     if (!file.type.startsWith("image/")) {
+  //       setError("لطفاً یک فایل تصویری انتخاب کنید");
+  //       return;
+  //     }
+  //     if (file.size > 2 * 1024 * 1024) {
+  //       setError("حجم تصویر نباید بیشتر از ۲ مگابایت باشد");
+  //       return;
+  //     }
+  //     setAvatarFile(file);
+  //     setAvatarPreview(URL.createObjectURL(file));
+  //     setError("");
+  //   }
+  // };
 
   const handleRemoveAvatar = () => {
     setAvatarFile(null);
@@ -388,16 +411,13 @@ export default function Profile() {
   };
 
   const uploadAvatar = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      const response = await uploadAPI.uploadImage(file, "avatars");
       return response.url;
     } catch (error) {
+      console.error("❌ خطا در آپلود آواتار:", error);
       throw new Error("خطا در آپلود تصویر");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -412,24 +432,59 @@ export default function Profile() {
         avatarUrl = await uploadAvatar(avatarFile);
       }
 
-      const updatedUser = await authAPI.updateProfile({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        province: formData.province || undefined,
-        birthDate: formData.birthDate || undefined,
-        gender: formData.gender || undefined,
-        avatar: avatarUrl,
-      });
+      // ✅ داده‌ها را با فرمت بک‌اند ارسال کن (فقط فیلدهای پر شده)
+      const updateData: any = {};
 
+      // فقط فیلدهایی که تغییر کرده‌اند و مقدار معتبر دارند را ارسال کن
+      if (formData.name !== user?.name && formData.name?.trim()) {
+        updateData.name = formData.name.trim();
+      }
+      if (formData.email !== user?.email && formData.email?.trim()) {
+        updateData.email = formData.email.trim();
+      }
+      if (formData.phone !== user?.phone && formData.phone?.trim()) {
+        updateData.phone = formData.phone.trim();
+      }
+      if (formData.province !== user?.province && formData.province?.trim()) {
+        updateData.province = formData.province.trim();
+      }
+      // ✅ فقط اگر birthDate مقدار داشته باشد ارسال کن (نه رشته خالی)
+      if (formData.birthDate && formData.birthDate.trim()) {
+        updateData.birthDate = formData.birthDate.trim();
+      }
+      // ✅ فقط اگر gender مقدار داشته باشد ارسال کن (نه رشته خالی)
+      if (formData.gender && formData.gender.trim()) {
+        updateData.gender = formData.gender.trim();
+      }
+      if (avatarUrl !== user?.avatar && avatarUrl) {
+        updateData.avatar = avatarUrl;
+      }
+
+      // اگر هیچ تغییری نکرده بود
+      if (Object.keys(updateData).length === 0) {
+        setSuccess("هیچ تغییری اعمال نشد");
+        setEditing(false);
+        setSaving(false);
+        return;
+      }
+
+      console.log("📤 ارسال داده برای بروزرسانی:", updateData);
+
+      const updatedUser = await authAPI.updateProfile(updateData);
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
-      setSuccess("اطلاعات با موفقیت بروزرسانی شد");
+      setSuccess("✅ اطلاعات با موفقیت بروزرسانی شد");
       setEditing(false);
       setAvatarFile(null);
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در بروزرسانی");
+      console.error("❌ خطا:", err);
+      console.error("📄 پاسخ خطا:", err.response?.data);
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.error ||
+          "خطا در بروزرسانی",
+      );
     } finally {
       setSaving(false);
     }
@@ -712,7 +767,8 @@ export default function Profile() {
                   alt={user.name || "کاربر"}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder-avatar.jpg";
+                    (e.target as HTMLImageElement).src =
+                      "/placeholder-avatar.jpg";
                   }}
                 />
               ) : (

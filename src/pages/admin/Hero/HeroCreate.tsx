@@ -4,10 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { heroAPI } from "../../../lib/api/hero";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, X, Loader2, Image, HelpCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Image,
+  HelpCircle,
+  Loader2,
+  X,
+  Upload,
+} from "lucide-react";
 
 export default function HeroCreate() {
   const navigate = useNavigate();
@@ -25,7 +32,7 @@ export default function HeroCreate() {
     isActive: true,
     heroTagline: "",
   });
-  const [image, setImage] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
   const handleChange = (
@@ -52,27 +59,26 @@ export default function HeroCreate() {
         setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
         return;
       }
-      setImage(file);
+      setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setError("");
     }
   };
 
   const handleRemoveImage = () => {
-    setImage(null);
+    setImageFile(null);
     setImagePreview("");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
-      return response.url;
+      const response = await uploadAPI.uploadImage(file, "hero");
+      return response.url || response.url || "";
     } catch (error) {
+      console.error("❌ خطا در آپلود:", error);
       throw new Error("خطا در آپلود تصویر");
     } finally {
       setUploading(false);
@@ -86,20 +92,39 @@ export default function HeroCreate() {
 
     try {
       let imageUrl = "";
-      if (image) {
-        imageUrl = await uploadImage(image);
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      if (!imageUrl) {
+        setError("لطفاً یک تصویر انتخاب کنید");
+        setLoading(false);
+        return;
       }
 
       const slideData = {
-        ...formData,
-        order: Number(formData.order),
-        image: imageUrl,
+        title: formData.title.trim(),
+        subtitle: formData.subtitle?.trim() || undefined,
+        description: formData.description?.trim() || undefined,
+        image_url: imageUrl,
+        button_text: formData.buttonText?.trim() || undefined,
+        button_link: formData.buttonLink?.trim() || undefined,
+        order: Number(formData.order) || 0,
+        is_active: formData.isActive !== undefined ? formData.isActive : true,
       };
+
+      console.log("📤 ارسال اسلاید:", slideData);
 
       await heroAPI.create(slideData);
       navigate("/admin/hero");
     } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در ایجاد اسلاید");
+      console.error("❌ خطا:", err);
+      console.error("📄 پاسخ خطا:", err.response?.data);
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "خطا در ایجاد اسلاید",
+      );
     } finally {
       setLoading(false);
     }
@@ -129,28 +154,22 @@ export default function HeroCreate() {
         >
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
+              ❌ {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 🔥 تصویر با OptimizedImage */}
+            {/* تصویر */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                تصویر اسلاید
+                تصویر اسلاید <span className="text-red-400">*</span>
               </label>
               {imagePreview ? (
                 <div className="relative">
-                  <OptimizedImage
+                  <img
                     src={imagePreview}
                     alt="پیش‌نمایش"
-                    className="w-full h-48 rounded-xl"
-                    objectFit="cover"
-                    quality={90}
-                    priority={true}
-                    loading="eager"
-                    placeholder={false}
-                    fallback=""
+                    className="w-full h-48 object-cover rounded-xl"
                   />
                   <button
                     type="button"
@@ -167,7 +186,7 @@ export default function HeroCreate() {
                       <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
                     ) : (
                       <>
-                        <Image className="w-10 h-10 text-gray-400 mb-2" />
+                        <Upload className="w-10 h-10 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-400">
                           برای آپلود کلیک کنید
                         </p>
@@ -192,7 +211,7 @@ export default function HeroCreate() {
             {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان
+                عنوان <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"

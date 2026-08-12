@@ -9,7 +9,8 @@ export const settingsAPI = {
 
   getAll: async () => {
     const token = localStorage.getItem("token") || "";
-    const response = await api.get("/settings", {
+    // ✅ استفاده از /settings/ با خط تیره در انتها
+    const response = await api.get("/settings/", {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
@@ -17,10 +18,32 @@ export const settingsAPI = {
 
   update: async (data: any) => {
     const token = localStorage.getItem("token") || "";
-    console.log("📤 بروزرسانی تنظیمات با axios به:", "/settings");
-    const response = await api.put("/settings", data, {
+    console.log("📤 بروزرسانی تنظیمات:", data);
+    
+    // ✅ فقط فیلدهایی که بک‌اند قبول می‌کند
+    const payload: any = {};
+    if (data.site_title) payload.site_title = data.site_title;
+    if (data.siteName) payload.site_title = data.siteName;
+    if (data.site_description) payload.site_description = data.site_description;
+    if (data.siteDescription) payload.site_description = data.siteDescription;
+    if (data.contact_email) payload.contact_email = data.contact_email;
+    if (data.contactEmail) payload.contact_email = data.contactEmail;
+    if (data.contact_phone) payload.contact_phone = data.contact_phone;
+    if (data.contactPhone) payload.contact_phone = data.contactPhone;
+    if (data.address) payload.address = data.address;
+    if (data.contactAddress) payload.address = data.contactAddress;
+    if (data.socialLinks) payload.socialLinks = data.socialLinks;
+    if (data.seo) payload.seo = data.seo;
+    if (data.maintenance !== undefined) payload.maintenance_mode = data.maintenance;
+    if (data.maintenance_mode !== undefined) payload.maintenance_mode = data.maintenance_mode;
+    
+    console.log("📤 payload نهایی:", payload);
+    
+    // ✅ استفاده از /settings/ با خط تیره در انتها
+    const response = await api.put("/settings/", payload, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    console.log("📥 پاسخ سرور:", response.data);
     return response.data;
   },
 

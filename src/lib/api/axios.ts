@@ -1,10 +1,10 @@
 // src/lib/api/axios.ts
 import axios from "axios";
 
-// 🔥 استفاده مستقیم و قطعی از HTTPS (بدون وابستگی به .env)
-const API_URL = "https://supremetech.ir/api/v1";
+// 🔥 استفاده از متغیر محیطی
+const API_URL = import.meta.env.VITE_API_URL || "https://supremetech.ir/api/v1";
 
-console.log("🌐 API Base URL (axios):", API_URL);
+console.log("🌐 axios Base URL:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,19 +20,14 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
 );
 
 api.interceptors.response.use(
-  (response) => {
-    console.log(`📥 ${response.status} ${response.config.url}`);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error("❌ خطا:", error.response?.status, error.response?.data);
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("admin");
