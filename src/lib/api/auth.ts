@@ -45,27 +45,38 @@ export const authAPI = {
   // ✅ اصلاح: نام فیلدها با بک‌اند هماهنگ
   updateProfile: async (data: any) => {
     // فیلدهای مجاز برای بروزرسانی با نام‌های بک‌اند
-    const allowedFields = ['name', 'email', 'phone', 'province', 'birth_date', 'gender', 'avatar'];
+    const allowedFields = [
+      "name",
+      "email",
+      "phone",
+      "province",
+      "birthDate",
+      "gender",
+      "avatar",
+    ];
     const filteredData: any = {};
-    
+
     for (const key of allowedFields) {
-      if (data[key] !== undefined && data[key] !== null && data[key] !== '') {
+      if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
         filteredData[key] = data[key];
       }
     }
 
     console.log("📤 ارسال به سرور:", filteredData);
-    
+
     // اگر داده‌ای برای ارسال وجود نداشت
     if (Object.keys(filteredData).length === 0) {
       return { message: "هیچ تغییری اعمال نشد" };
     }
-    
+
     const response = await api.patch("/users/me", filteredData);
     return response.data;
   },
 
-  changePassword: async (data: { current_password: string; new_password: string }) => {
+  changePassword: async (data: {
+    current_password: string;
+    new_password: string;
+  }) => {
     const response = await api.post("/users/me/change-password", data);
     return response.data;
   },

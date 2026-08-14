@@ -30,7 +30,7 @@ interface ProfileInfoProps {
 }
 
 export default function ProfileInfo({
-  // user,
+  user,
   formData,
   editing,
   saving,
@@ -166,7 +166,7 @@ export default function ProfileInfo({
           <div className="relative">
             <select
               name="province"
-              value={formData.province || ""}
+              value={user.province || ""}
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-3 pl-3 py-2 bg-white/5 border rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none ${
@@ -246,7 +246,7 @@ export default function ProfileInfo({
           <div className="relative">
             <select
               name="gender"
-              value={formData.gender || ""}
+              value={user.gender || ""}
               onChange={onChange}
               disabled={!editing}
               className={`w-full pr-3 pl-3 py-2 bg-white/5 border rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none ${

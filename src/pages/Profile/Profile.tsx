@@ -763,7 +763,7 @@ export default function Profile() {
             <div className="w-32 h-32 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden">
               {avatarPreview ? (
                 <img
-                  src={avatarPreview}
+                  src={user.avatar}
                   alt={user.name || "کاربر"}
                   className="w-full h-full object-cover"
                   onError={(e) => {

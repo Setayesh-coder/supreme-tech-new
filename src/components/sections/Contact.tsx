@@ -7,15 +7,15 @@ import { messagesAPI } from "../../lib/api/messages";
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
     strokeLinejoin="round"
     className="text-pink-400"
   >
@@ -273,9 +273,9 @@ export default function Contact() {
             </LiquidGlassCard>
 
             {/* 🔥 اینستاگرام */}
-            {settings?.socialLinks?.instagram && (
+            {settings?.instagram_url && (
               <a
-                href={settings.socialLinks.instagram}
+                href={settings.instagram_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"
@@ -291,11 +291,13 @@ export default function Contact() {
                       <InstagramIcon />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-white text-sm">اینستاگرام</h4>
+                      <h4 className="font-semibold text-white text-sm">
+                        اینستاگرام
+                      </h4>
                       <p className="text-gray-400 text-xs">
                         {loading
                           ? "..."
-                          : settings?.socialLinks?.instagram || "@supremetech"}
+                          : settings?.instagram_url || "@supremetech"}
                       </p>
                     </div>
                     <Send className="w-4 h-4 text-gray-500 group-hover:text-pink-400 transition rotate-45" />
@@ -305,9 +307,9 @@ export default function Contact() {
             )}
 
             {/* 🔥 کانال تلگرام */}
-            {settings?.socialLinks?.telegram && (
+            {settings?.telegram_url && (
               <a
-                href={settings.socialLinks.telegram}
+                href={settings.telegram_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"
@@ -323,11 +325,13 @@ export default function Contact() {
                       <Send className="w-6 h-6 text-blue-400" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-white text-sm">کانال تلگرام</h4>
+                      <h4 className="font-semibold text-white text-sm">
+                        کانال تلگرام
+                      </h4>
                       <p className="text-gray-400 text-xs">
                         {loading
                           ? "..."
-                          : settings?.socialLinks?.telegram || "@SupremeTech_co"}
+                          : settings?.telegram_url || "@SupremeTech_co"}
                       </p>
                     </div>
                     <Send className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition rotate-45" />
@@ -337,9 +341,9 @@ export default function Contact() {
             )}
 
             {/* 🔥 تلگرام پشتیبانی */}
-            {settings?.socialLinks?.support && (
+            {settings?.telegram_support_url && (
               <a
-                href={settings.socialLinks.support}
+                href={settings.telegram_support_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"
@@ -355,11 +359,14 @@ export default function Contact() {
                       <MessageCircle className="w-6 h-6 text-cyan-400" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-white text-sm">پشتیبانی تلگرام</h4>
+                      <h4 className="font-semibold text-white text-sm">
+                        پشتیبانی تلگرام
+                      </h4>
                       <p className="text-gray-400 text-xs">
                         {loading
                           ? "..."
-                          : settings?.socialLinks?.support || "@SupremeTech_support"}
+                          : settings?.telegram_support_url ||
+                            "@SupremeTech_support"}
                       </p>
                     </div>
                     <Send className="w-4 h-4 text-gray-500 group-hover:text-cyan-400 transition rotate-45" />
@@ -371,7 +378,7 @@ export default function Contact() {
             {/* آدرس */}
             <a
               href={
-                settings?.contactMapLink ||
+                settings?.address_link ||
                 "https://maps.app.goo.gl/3JnB1ePWY57CiHkf6"
               }
               target="_blank"
@@ -393,12 +400,12 @@ export default function Contact() {
                     <p className="text-gray-400 text-xs leading-relaxed">
                       {loading
                         ? "..."
-                        : settings?.address ||
+                        : settings?.address_link ||
                           "تهران، بزرگراه اشرفی اصفهانی، بالاتر از میدان پونک، مجتمع نیایش"}
                     </p>
                   </div>
-                 <Send className="w-4 h-4 text-gray-500 group-hover:text-green-400 transition rotate-45" />
-                 </div>
+                  <Send className="w-4 h-4 text-gray-500 group-hover:text-green-400 transition rotate-45" />
+                </div>
               </LiquidGlassCard>
             </a>
           </div>

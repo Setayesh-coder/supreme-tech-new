@@ -20,14 +20,14 @@ export default function EmployeesSection() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const data = await employeesAPI.getAll();
+        const data = await employeesAPI.getPublic();
         // فقط کارمندان فعال رو نمایش بده
         const activeEmployees = Array.isArray(data)
           ? data.filter((emp) => emp.isActive === true)
           : [];
         setEmployees(activeEmployees);
       } catch (err) {
-        setError("خطا در دریافت اطلاعات کارمندان");
+        setError("خطا در دریافت اطلاعات اعضای تیم");
         console.error(err);
       } finally {
         setLoading(false);
@@ -36,14 +36,14 @@ export default function EmployeesSection() {
     fetchEmployees();
   }, []);
 
-  const getRoleLabel = (role: string) => {
-    const roles: Record<string, string> = {
-      EMPLOYEE: "کارمند",
-      MANAGER: "مدیر",
-      ADMIN: "ادمین",
-    };
-    return roles[role] || role;
-  };
+  // const getRoleLabel = (role: string) => {
+  //   const roles: Record<string, string> = {
+  //     EMPLOYEE: "کارمند",
+  //     MANAGER: "مدیر",
+  //     ADMIN: "ادمین",
+  //   };
+  //   return roles[role] || role;
+  // };
 
   if (loading) {
     return (
@@ -119,7 +119,7 @@ export default function EmployeesSection() {
           </div>
           <div className="text-center py-12">
             <Users className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            <p className="text-gray-400">هنوز کارمندی ثبت نشده است</p>
+            {/* <p className="text-gray-400">هنوز کارمندی ثبت نشده است</p> */}
             <p className="text-gray-500 text-sm mt-1">
               به زودی تیم ما تکمیل خواهد شد
             </p>
@@ -202,9 +202,9 @@ export default function EmployeesSection() {
               )}
 
               {/* Role Badge */}
-              <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-white/5 text-gray-300 border border-white/10 mb-3">
+              {/* <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-white/5 text-gray-300 border border-white/10 mb-3">
                 {getRoleLabel(employee.role)}
-              </div>
+              </div> */}
 
               {/* Contact */}
               {/* <div className="space-y-1 text-xs text-gray-500">

@@ -1,16 +1,17 @@
 // src/lib/api/employees.ts
-import api from './axios';
+import api from "./axios";
 
 export interface Employee {
   id: string;
   name: string;
   phone: string;
   email?: string;
+  national_id?: string;
   role: "EMPLOYEE" | "MANAGER" | "ADMIN";
   department?: string;
   position?: string;
   avatar?: string;
-  isActive: boolean;
+  is_active: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -20,6 +21,11 @@ export interface Employee {
 }
 
 export const employeesAPI = {
+  getPublic: async () => {
+    const response = await api.get("/employees/public");
+    return response.data;
+  },
+
   login: (data: { phone: string; password: string }) => {
     return api.post("/employees/login", data);
   },
@@ -28,7 +34,7 @@ export const employeesAPI = {
     try {
       const token = localStorage.getItem("token") || "";
       const response = await api.get("/employees", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
     } catch (error) {
@@ -40,7 +46,7 @@ export const employeesAPI = {
   getById: async (id: string): Promise<Employee> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.get(`/employees/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -48,7 +54,7 @@ export const employeesAPI = {
   create: async (data: Partial<Employee>): Promise<Employee> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.post("/employees", data, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -56,7 +62,7 @@ export const employeesAPI = {
   update: async (id: string, data: Partial<Employee>): Promise<Employee> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.put(`/employees/${id}`, data, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -64,7 +70,7 @@ export const employeesAPI = {
   delete: async (id: string): Promise<void> => {
     const token = localStorage.getItem("token") || "";
     await api.delete(`/employees/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 };

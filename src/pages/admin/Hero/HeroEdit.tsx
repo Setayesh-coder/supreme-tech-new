@@ -21,6 +21,7 @@ export default function HeroEdit() {
     description: "",
     button_text: "",
     button_link: "",
+    tagline: "",
     order: 0,
     is_active: true,
   });
@@ -42,6 +43,7 @@ export default function HeroEdit() {
           description: data.description || "",
           button_text: data.button_text || "",
           button_link: data.button_link || "",
+          tagline: data.tagLine || "",
           order: data.order || 0,
           is_active: data.is_active !== undefined ? data.is_active : true,
         });
@@ -309,7 +311,22 @@ export default function HeroEdit() {
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
               />
             </div>
-
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                تگ بالای اسلاید (Hero Tagline)
+              </label>
+              <input
+                type="text"
+                name="tagline"
+                value={formData.tagline}
+                onChange={handleChange}
+                placeholder="مثال: مرکز توسعه فناوری‌های برتر تهران"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                این متن در بالای اسلاید نمایش داده می‌شود
+              </p>
+            </div>
             {/* دکمه */}
             <div className="grid grid-cols-2 gap-4">
               <div>

@@ -28,7 +28,7 @@ export default function EventEdit() {
     location: "",
     type: "WORKSHOP",
     featured: false,
-    isActive: true,
+    is_active: true,
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -55,7 +55,7 @@ export default function EventEdit() {
           location: data.location || "",
           type: data.type || "WORKSHOP",
           featured: data.featured || false,
-          isActive: data.isActive !== undefined ? data.isActive : true,
+          is_active: data.is_active !== undefined ? data.is_active : true,
         });
         if (data.image) {
           setCurrentImage(data.image);
@@ -106,7 +106,7 @@ export default function EventEdit() {
   const handleRemoveImage = () => {
     setImage(null);
     setImagePreview("");
-    setCurrentImage("");     
+    setCurrentImage("");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -143,9 +143,9 @@ export default function EventEdit() {
       if (image) {
         imageUrl = await uploadImage(image);
       }
-    if (!image && !currentImage) {
-      imageUrl = "";
-    }
+      if (!image && !currentImage) {
+        imageUrl = "";
+      }
 
       if (!formData.date) {
         setError("لطفاً تاریخ رویداد را انتخاب کنید");
@@ -168,7 +168,7 @@ export default function EventEdit() {
         location: formData.location,
         type: formData.type,
         featured: formData.featured,
-        isActive: formData.isActive,
+        isActive: formData.is_active,
         image: imageUrl,
       };
 
@@ -435,8 +435,8 @@ export default function EventEdit() {
               <label className="flex items-center gap-2 text-white/80 cursor-pointer">
                 <input
                   type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
+                  name="is_active"
+                  checked={formData.is_active}
                   onChange={handleChange}
                   className="w-4 h-4 accent-blue-500"
                 />

@@ -30,7 +30,7 @@ export default function HeroCreate() {
     color: "#3b82f6",
     order: 0,
     isActive: true,
-    heroTagline: "",
+    tagline: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -246,8 +246,8 @@ export default function HeroCreate() {
               </label>
               <input
                 type="text"
-                name="heroTagline"
-                value={formData.heroTagline}
+                name="tagline"
+                value={formData.tagline}
                 onChange={handleChange}
                 placeholder="مثال: مرکز توسعه فناوری‌های برتر تهران"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"

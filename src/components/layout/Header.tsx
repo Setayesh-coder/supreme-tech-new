@@ -14,7 +14,7 @@ export default function Header() {
     { name: "خدمات", href: "/services" },
     { name: "رویداد", href: "/events" },
     { name: "وبلاگ", href: "/blog" },
-    { name: "رویکرد ما", href: "/approach" },
+    // { name: "رویکرد ما", href: "/approach" },
     { name: "درباره ما", href: "/about" },
     { name: "تماس با ما", href: "/contact" },
   ];
@@ -44,7 +44,7 @@ export default function Header() {
                 alt="لوگو Supreme Tech"
                 className="w-8 h-8"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/favicon.ico';
+                  (e.target as HTMLImageElement).src = "/favicon.ico";
                 }}
               />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">

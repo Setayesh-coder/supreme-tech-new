@@ -37,7 +37,7 @@ interface Event {
   location?: string;
   type: string;
   featured: boolean;
-  isActive: boolean;
+  is_active: boolean;
   meetingLink?: string;
   _count?: {
     enrollments: number;
@@ -209,7 +209,9 @@ export default function EventDetail() {
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-3">
                   <ImageOff className="w-12 h-12 md:w-16 md:h-16 text-white/20" />
-                  <span className="text-white/30 text-sm md:text-lg">بدون تصویر</span>
+                  <span className="text-white/30 text-sm md:text-lg">
+                    بدون تصویر
+                  </span>
                 </div>
               )}
 
@@ -266,7 +268,9 @@ export default function EventDetail() {
               >
                 <div className="flex items-center gap-2 mb-4">
                   <Info className="w-5 h-5 text-blue-400" />
-                  <h2 className="text-lg md:text-xl font-bold text-white">درباره رویداد</h2>
+                  <h2 className="text-lg md:text-xl font-bold text-white">
+                    درباره رویداد
+                  </h2>
                 </div>
                 <div className="prose prose-invert max-w-none">
                   <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4">
@@ -342,7 +346,9 @@ export default function EventDetail() {
                   <Calendar className="w-4 h-4 text-blue-400" />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">تاریخ برگزاری</p>
-                    <p className="text-sm text-white">{formatDate(event.date)}</p>
+                    <p className="text-sm text-white">
+                      {formatDate(event.date)}
+                    </p>
                   </div>
                 </div>
 
@@ -370,7 +376,9 @@ export default function EventDetail() {
                   <Tag className="w-4 h-4 text-blue-400" />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">نوع رویداد</p>
-                    <p className="text-sm text-white">{getEventTypeLabel(event.type)}</p>
+                    <p className="text-sm text-white">
+                      {getEventTypeLabel(event.type)}
+                    </p>
                   </div>
                 </div>
 
@@ -407,9 +415,10 @@ export default function EventDetail() {
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
                 <button
                   onClick={() => {
-                    const courseSection = document.getElementById('courses-section');
+                    const courseSection =
+                      document.getElementById("courses-section");
                     if (courseSection) {
-                      courseSection.scrollIntoView({ behavior: 'smooth' });
+                      courseSection.scrollIntoView({ behavior: "smooth" });
                     }
                   }}
                   className="w-full text-blue-400 hover:text-blue-300 transition-all text-sm md:text-base flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl hover:scale-[1.02] active:scale-[0.98]"

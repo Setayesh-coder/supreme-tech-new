@@ -1,17 +1,9 @@
 // src/components/sections/Approach.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import {
-  Search,
-  PenTool,
-  Code,
-  Rocket,
-  type LucideIcon, // ← اضافه شد
-} from "lucide-react";
-
-// ... بقیه imports
+import { Search, PenTool, Code, Rocket, type LucideIcon } from "lucide-react";
 
 interface ApproachItem {
-  icon: LucideIcon; // ← نوع درست
+  icon: LucideIcon;
   title: string;
   description: string;
   step: string;

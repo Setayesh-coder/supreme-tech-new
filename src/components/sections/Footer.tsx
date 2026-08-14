@@ -4,15 +4,15 @@ import { useSettings } from "../../contexts/SettingsContext";
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="18" 
-    height="18" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
     strokeLinejoin="round"
   >
     <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -45,8 +45,8 @@ export default function Footer() {
                 alt="supreme tech"
                 className="w-12 h-12"
                 onError={(e) => {
-                  console.error('❌ خطا در لود لوگو:', e);
-                  (e.target as HTMLImageElement).src = '/favicon.ico';
+                  console.error("❌ خطا در لود لوگو:", e);
+                  (e.target as HTMLImageElement).src = "/favicon.ico";
                 }}
               />
               <div>
@@ -72,19 +72,34 @@ export default function Footer() {
               دسترسی سریع
             </h4>
             <div className="space-y-1 md:space-y-2">
-              <Link to="/" className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition">
+              <Link
+                to="/"
+                className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition"
+              >
                 خانه
               </Link>
-              <Link to="/services" className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition">
+              <Link
+                to="/services"
+                className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition"
+              >
                 خدمات
               </Link>
-              <Link to="/about" className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition">
+              <Link
+                to="/about"
+                className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition"
+              >
                 درباره ما
               </Link>
-              <Link to="/approach" className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition">
+              <Link
+                to="/approach"
+                className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition"
+              >
                 رویکرد ما
               </Link>
-              <Link to="/contact" className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition">
+              <Link
+                to="/contact"
+                className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition"
+              >
                 تماس با ما
               </Link>
             </div>
@@ -96,12 +111,24 @@ export default function Footer() {
               خدمات
             </h4>
             <div className="space-y-1 md:space-y-2">
-              <p className="text-[9px] md:text-sm text-gray-500">AI Agents سفارشی</p>
-              <p className="text-[9px] md:text-sm text-gray-500">هوش مصنوعی پیشرفته</p>
-              <p className="text-[9px] md:text-sm text-gray-500">توسعه نرم‌افزار</p>
-              <p className="text-[9px] md:text-sm text-gray-500">زیرساخت ابری</p>
-              <p className="text-[9px] md:text-sm text-gray-500">دوره‌های آموزشی</p>
-              <p className="text-[9px] md:text-sm text-gray-500">مشاوره تخصصی</p>
+              <p className="text-[9px] md:text-sm text-gray-500">
+                AI Agents سفارشی
+              </p>
+              <p className="text-[9px] md:text-sm text-gray-500">
+                هوش مصنوعی پیشرفته
+              </p>
+              <p className="text-[9px] md:text-sm text-gray-500">
+                توسعه نرم‌افزار
+              </p>
+              <p className="text-[9px] md:text-sm text-gray-500">
+                زیرساخت ابری
+              </p>
+              <p className="text-[9px] md:text-sm text-gray-500">
+                دوره‌های آموزشی
+              </p>
+              <p className="text-[9px] md:text-sm text-gray-500">
+                مشاوره تخصصی
+              </p>
             </div>
           </div>
 
@@ -156,12 +183,12 @@ export default function Footer() {
                   آدرس
                 </span>
               </div>
-              
+
               {/* شبکه‌های اجتماعی */}
               <div className="flex justify-center gap-3 pt-2">
-                {settings?.socialLinks?.instagram && (
+                {settings?.instagram_url && (
                   <a
-                    href={settings.socialLinks.instagram}
+                    href={settings.instagram_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-500 hover:text-pink-500 transition-colors"
@@ -170,9 +197,9 @@ export default function Footer() {
                     <InstagramIcon />
                   </a>
                 )}
-                {settings?.socialLinks?.telegram && (
+                {settings?.telegram_url && (
                   <a
-                    href={settings.socialLinks.telegram}
+                    href={settings.telegram_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-500 hover:text-blue-400 transition-colors"
@@ -181,9 +208,9 @@ export default function Footer() {
                     <Send size={18} />
                   </a>
                 )}
-                {settings?.socialLinks?.support && (
+                {settings?.telegram_support_url && (
                   <a
-                    href={settings.socialLinks.support}
+                    href={settings.telegram_support_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-500 hover:text-cyan-400 transition-colors"
@@ -200,7 +227,8 @@ export default function Footer() {
         <p className="text-[9px] text-gray-500 leading-relaxed text-center mt-2 md:hidden">
           {loading
             ? "..."
-            : settings?.site_description || "پیشرو در توسعه AI Agent های هوشمند"}
+            : settings?.site_description ||
+              "پیشرو در توسعه AI Agent های هوشمند"}
         </p>
 
         <div className="border-t border-white/10 pt-4 md:pt-8 text-center space-y-1.5 md:space-y-3 mt-2">

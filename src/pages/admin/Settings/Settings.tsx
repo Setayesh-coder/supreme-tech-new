@@ -21,15 +21,15 @@ import {
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="18" 
-    height="18" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
     strokeLinejoin="round"
     className="text-pink-400"
   >
@@ -50,22 +50,30 @@ export default function Settings() {
     if (settings) {
       setLocalSettings({
         site_title: settings.site_title || settings.siteName || "",
-        site_description: settings.site_description || settings.siteDescription || "",
+        site_description:
+          settings.site_description || settings.siteDescription || "",
         contact_email: settings.contact_email || settings.contactEmail || "",
         contact_phone: settings.contact_phone || settings.contactPhone || "",
         address: settings.address || settings.contactAddress || "",
         workingHours: settings.workingHours || "",
-        socialLinks: {
-          instagram: settings.socialLinks?.instagram || "",
-          telegram: settings.socialLinks?.telegram || "",
-          support: settings.socialLinks?.support || "",
-        },
+        telegram_url: settings.telegram_url || "",
+        telegram_support_url: settings.telegram_support_url || "",
+        instagram_url: settings.instagram_url || "",
+        address_link: settings.address_link || "",
+        // socialLinks: {
+        //   instagram: settings.telegram_url || "",
+        //   telegram: settings.socialLinks?.telegram || "",
+        //   support: settings.socialLinks?.support || "",
+        // },
         seo: {
           title: settings.seo?.title || "",
           description: settings.seo?.description || "",
           keywords: settings.seo?.keywords || "",
         },
-        maintenance: settings.maintenance !== undefined ? settings.maintenance : settings.maintenance_mode,
+        maintenance:
+          settings.maintenance !== undefined
+            ? settings.maintenance
+            : settings.maintenance_mode,
       });
     }
   }, [settings]);
@@ -74,7 +82,7 @@ export default function Settings() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setLocalSettings((prev: any) => ({
@@ -89,7 +97,7 @@ export default function Settings() {
         [parent]: {
           ...prev[parent],
           [child]: value,
-        }
+        },
       }));
     } else {
       setLocalSettings((prev: any) => ({ ...prev, [name]: value }));
@@ -108,15 +116,17 @@ export default function Settings() {
         site_description: localSettings.site_description,
         contact_email: localSettings.contact_email,
         contact_phone: localSettings.contact_phone,
-        address: localSettings.address,
+        address_link: localSettings.address_link,
         workingHours: localSettings.workingHours,
-        socialLinks: localSettings.socialLinks,
+        instagam_url: localSettings.instagam_url,
+        telegram_url: localSettings.telegram_url,
+        telegram_support_url: localSettings.telegram_support_url,
         seo: localSettings.seo,
         maintenance_mode: localSettings.maintenance || false,
       };
-      
+
       await updateSettings(payload);
-      
+
       setSuccess("✅ تنظیمات با موفقیت ذخیره شد");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
@@ -265,7 +275,7 @@ export default function Settings() {
                   <MapPin className="absolute left-4 top-4 w-5 h-5 text-white/40" />
                   <textarea
                     name="address"
-                    value={localSettings?.address || ""}
+                    value={localSettings?.address_link || ""}
                     onChange={handleChange}
                     rows={2}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -309,13 +319,15 @@ export default function Settings() {
                 </label>
                 <input
                   type="text"
-                  name="socialLinks.instagram"
-                  value={localSettings?.socialLinks?.instagram || ""}
+                  name="instagram_url"
+                  value={localSettings?.instagram_url || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="https://instagram.com/yourpage"
                 />
-                <p className="text-xs text-gray-500 mt-1">لینک صفحه اینستاگرام</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  لینک صفحه اینستاگرام
+                </p>
               </div>
 
               <div>
@@ -325,8 +337,8 @@ export default function Settings() {
                 </label>
                 <input
                   type="text"
-                  name="socialLinks.telegram"
-                  value={localSettings?.socialLinks?.telegram || ""}
+                  name="telegram_url"
+                  value={localSettings?.telegram_url || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="https://t.me/yourchannel"
@@ -341,13 +353,15 @@ export default function Settings() {
                 </label>
                 <input
                   type="text"
-                  name="socialLinks.support"
-                  value={localSettings?.socialLinks?.support || ""}
+                  name="telegram_support_url"
+                  value={localSettings?.telegram_support_url || ""}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="https://t.me/supportbot"
                 />
-                <p className="text-xs text-gray-500 mt-1">لینک ربات یا اکانت پشتیبانی تلگرام</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  لینک ربات یا اکانت پشتیبانی تلگرام
+                </p>
               </div>
             </div>
           </LiquidGlassCard>

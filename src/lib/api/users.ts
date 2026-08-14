@@ -5,6 +5,7 @@ export interface User {
   name: string;
   phone: string;
   email?: string;
+  password_hash?: string;
   role: "USER" | "EMPLOYEE" | "ADMIN";
   isActive: boolean;
   province?: string;

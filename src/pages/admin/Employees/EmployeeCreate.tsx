@@ -1,18 +1,30 @@
 // src/pages/admin/Employees/EmployeeCreate.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { employeesAPI } from "../../../lib/api/employees";
 import type { Employee } from "../../../lib/api/employees";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { ArrowLeft, User, Phone, Mail, Lock, Briefcase, Building, Shield } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Lock,
+  Briefcase,
+  Building,
+  Shield,
+} from "lucide-react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 
 export default function EmployeeCreate() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState<Partial<Employee> & { password?: string }>({
+  const [formData, setFormData] = useState<
+    Partial<Employee> & { password?: string }
+  >({
     name: "",
     phone: "",
     email: "",
@@ -22,9 +34,38 @@ export default function EmployeeCreate() {
     position: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  useEffect(() => {
+    const fetchEmployee = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        const data = await employeesAPI.getById(id);
+        console.log(" داده های کارمند از پروفایل:", data);
+        setFormData({
+          name: data.name || "",
+          phone: data.phone || "",
+          email: data.email || "",
+          // password:data "",
+          role: data.role || "",
+          department: data.department || "",
+          position: data.position || "",
+        });
+      } catch (err: any) {
+        console.error("❌ خطا:", err);
+        setError(err.response?.data?.error || "خطا در دریافت اطلاعات کارمند");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEmployee();
+  }, [id]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,7 +102,9 @@ export default function EmployeeCreate() {
           blurIntensity="lg"
           glowIntensity="md"
         >
-          <h1 className="text-2xl font-bold text-white mb-6">ایجاد کارمند جدید</h1>
+          <h1 className="text-2xl font-bold text-white mb-6">
+            ایجاد کارمند جدید
+          </h1>
 
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
@@ -72,7 +115,9 @@ export default function EmployeeCreate() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">نام کامل</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  نام کامل
+                </label>
                 <div className="relative">
                   <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -87,7 +132,9 @@ export default function EmployeeCreate() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">شماره تلفن</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  شماره تلفن
+                </label>
                 <div className="relative">
                   <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -102,7 +149,9 @@ export default function EmployeeCreate() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">ایمیل</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  ایمیل
+                </label>
                 <div className="relative">
                   <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -116,7 +165,9 @@ export default function EmployeeCreate() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">رمز عبور</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  رمز عبور
+                </label>
                 <div className="relative">
                   <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -131,7 +182,9 @@ export default function EmployeeCreate() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">نقش</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  نقش
+                </label>
                 <div className="relative">
                   <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <select
@@ -148,7 +201,9 @@ export default function EmployeeCreate() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">بخش</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  بخش
+                </label>
                 <div className="relative">
                   <Building className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -162,7 +217,9 @@ export default function EmployeeCreate() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm text-gray-400 mb-1.5">سمت</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  سمت
+                </label>
                 <div className="relative">
                   <Briefcase className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input

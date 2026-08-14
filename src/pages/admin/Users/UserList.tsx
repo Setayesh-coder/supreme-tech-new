@@ -5,6 +5,7 @@ import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { usersAPI } from "../../../lib/api/users";
+// import { authAPI } from "../../../lib/api";
 import {
   Users,
   Search,
@@ -13,7 +14,7 @@ import {
   Check,
   X,
   Shield,
-  User,
+  UserIcon,
   Mail,
   Phone,
   Calendar,
@@ -34,6 +35,7 @@ interface User {
   isActive: boolean;
   province?: string;
   birthDate?: string;
+  birth_date?: string;
   gender?: string;
   avatar?: string;
   createdAt: string;
@@ -50,7 +52,7 @@ const roleLabels: Record<
 > = {
   USER: {
     label: "کاربر عادی",
-    icon: <User size={14} />,
+    icon: <UserIcon size={14} />,
     color: "text-blue-400",
     badge: "bg-blue-500/20",
   },
@@ -75,6 +77,7 @@ const genderLabels: Record<string, { label: string; icon: string }> = {
 
 export default function UserList() {
   const [users, setUsers] = useState<User[]>([]);
+  const [fromData] = useState({ birthDate: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -100,12 +103,19 @@ export default function UserList() {
         limit: 10,
         search: search || undefined,
       };
+      // const response = await authAPI.getProfile(params);
 
       const response = await usersAPI.getAll(params);
-      
+
       // ✅ ساختار پاسخ: { items: User[], total: number, page: number, limit: number, pages: number }
       if (response && response.items && Array.isArray(response.items)) {
         setUsers(response.items);
+        const mappedUsers = response.items.map((user: any) => ({
+          ...user,
+          birthDate: user.birth_date || fromData.birthDate || "",
+        }));
+        setUsers(mappedUsers);
+
         setTotalPages(response.pages || 1);
         setTotalUsers(response.total || response.items.length);
       } else {
@@ -127,11 +137,11 @@ export default function UserList() {
 
     setUpdating(true);
     try {
-      await usersAPI.updateRole(selectedUser.id, newRole as "USER" | "EMPLOYEE" | "ADMIN");
+      await usersAPI.updateRole(selectedUser.id, newRole as "USER" | "ADMIN");
       setUsers(
         users.map((u) =>
-          u.id === selectedUser.id ? { ...u, role: newRole as any } : u
-        )
+          u.id === selectedUser.id ? { ...u, role: newRole as any } : u,
+        ),
       );
       setShowRoleModal(false);
       setSelectedUser(null);
@@ -147,8 +157,8 @@ export default function UserList() {
       await usersAPI.toggleActive(id);
       setUsers(
         users.map((u) =>
-          u.id === id ? { ...u, isActive: !currentStatus } : u
-        )
+          u.id === id ? { ...u, isActive: !currentStatus } : u,
+        ),
       );
     } catch (err) {
       alert("خطا در تغییر وضعیت");
@@ -187,7 +197,7 @@ export default function UserList() {
     const created = new Date(dateString);
     const diff = now.getTime() - created.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days < 30) return `${days} روز`;
     if (days < 365) return `${Math.floor(days / 30)} ماه`;
     return `${Math.floor(days / 365)} سال`;
@@ -203,10 +213,10 @@ export default function UserList() {
         {/* هدر - ریسپانسیو */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-white">👥 مدیریت کاربران</h1>
-            <p className="text-white/60 text-sm">
-              {totalUsers} کاربر در سیستم
-            </p>
+            <h1 className="text-xl lg:text-2xl font-bold text-white">
+              👥 مدیریت کاربران
+            </h1>
+            <p className="text-white/60 text-sm">{totalUsers} کاربر در سیستم</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-none">
@@ -292,15 +302,19 @@ export default function UserList() {
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${roleInfo.badge} ${roleInfo.color} flex items-center gap-1`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs ${roleInfo.badge} ${roleInfo.color} flex items-center gap-1`}
+                          >
                             {roleInfo.icon}
                             {roleInfo.label}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${
-                            user.isActive
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs ${
+                              user.isActive
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-red-500/20 text-red-400"
+                            }`}
+                          >
                             {user.isActive ? "فعال" : "غیرفعال"}
                           </span>
                         </div>
@@ -315,7 +329,9 @@ export default function UserList() {
                           </span>
                         )}
                         {genderInfo && (
-                          <span>{genderInfo.icon} {genderInfo.label}</span>
+                          <span>
+                            {genderInfo.icon} {genderInfo.label}
+                          </span>
                         )}
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
@@ -333,14 +349,20 @@ export default function UserList() {
                           <Shield size={16} />
                         </button>
                         <button
-                          onClick={() => handleToggleStatus(user.id, user.isActive)}
+                          onClick={() =>
+                            handleToggleStatus(user.id, user.isActive)
+                          }
                           className={`p-1.5 rounded-lg transition-colors ${
                             user.isActive
                               ? "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400"
                               : "bg-green-500/20 hover:bg-green-500/30 text-green-400"
                           }`}
                         >
-                          {user.isActive ? <X size={16} /> : <Check size={16} />}
+                          {user.isActive ? (
+                            <X size={16} />
+                          ) : (
+                            <Check size={16} />
+                          )}
                         </button>
                         <button
                           onClick={() => handleDelete(user.id)}
@@ -362,15 +384,33 @@ export default function UserList() {
           <table className="w-full text-sm text-right">
             <thead className="text-xs text-gray-400 uppercase bg-white/5 rounded-xl">
               <tr>
-                <th scope="col" className="px-4 py-3 rounded-tr-xl">کاربر</th>
-                <th scope="col" className="px-4 py-3">شماره تماس</th>
-                <th scope="col" className="px-4 py-3">نقش</th>
-                <th scope="col" className="px-4 py-3">استان</th>
-                <th scope="col" className="px-4 py-3">تاریخ تولد</th>
-                <th scope="col" className="px-4 py-3">جنسیت</th>
-                <th scope="col" className="px-4 py-3">وضعیت</th>
-                <th scope="col" className="px-4 py-3">ثبت‌نام</th>
-                <th scope="col" className="px-4 py-3 rounded-tl-xl">عملیات</th>
+                <th scope="col" className="px-4 py-3 rounded-tr-xl">
+                  کاربر
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  شماره تماس
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  نقش
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  استان
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  تاریخ تولد
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  جنسیت
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  وضعیت
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  ثبت‌نام
+                </th>
+                <th scope="col" className="px-4 py-3 rounded-tl-xl">
+                  عملیات
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -384,10 +424,15 @@ export default function UserList() {
               ) : (
                 users.map((user) => {
                   const roleInfo = roleLabels[user.role] || roleLabels.USER;
-                  const genderInfo = user.gender ? genderLabels[user.gender] : null;
+                  const genderInfo = user.gender
+                    ? genderLabels[user.gender]
+                    : null;
 
                   return (
-                    <tr key={user.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <tr
+                      key={user.id}
+                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                    >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shrink-0">
@@ -402,7 +447,9 @@ export default function UserList() {
                             )}
                           </div>
                           <div>
-                            <div className="font-medium text-white">{user.name || "نامشخص"}</div>
+                            <div className="font-medium text-white">
+                              {user.name || "نامشخص"}
+                            </div>
                             {user.email && (
                               <div className="text-xs text-gray-400 flex items-center gap-1">
                                 <Mail size={12} />
@@ -419,7 +466,9 @@ export default function UserList() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${roleInfo.badge} ${roleInfo.color} flex items-center gap-1 w-fit`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${roleInfo.badge} ${roleInfo.color} flex items-center gap-1 w-fit`}
+                        >
                           {roleInfo.icon}
                           {roleInfo.label}
                         </span>
@@ -446,17 +495,21 @@ export default function UserList() {
                       </td>
                       <td className="px-4 py-3 text-gray-300">
                         {genderInfo ? (
-                          <span>{genderInfo.icon} {genderInfo.label}</span>
+                          <span>
+                            {genderInfo.icon} {genderInfo.label}
+                          </span>
                         ) : (
                           <span className="text-gray-500">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          user.isActive
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-red-500/20 text-red-400"
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            user.isActive
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
                           {user.isActive ? "فعال" : "غیرفعال"}
                         </span>
                       </td>
@@ -473,7 +526,9 @@ export default function UserList() {
                             <Shield size={16} />
                           </button>
                           <button
-                            onClick={() => handleToggleStatus(user.id, user.isActive)}
+                            onClick={() =>
+                              handleToggleStatus(user.id, user.isActive)
+                            }
                             className={`p-1.5 rounded-lg transition-colors ${
                               user.isActive
                                 ? "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400"
@@ -481,7 +536,11 @@ export default function UserList() {
                             }`}
                             title={user.isActive ? "غیرفعال کردن" : "فعال کردن"}
                           >
-                            {user.isActive ? <X size={16} /> : <Check size={16} />}
+                            {user.isActive ? (
+                              <X size={16} />
+                            ) : (
+                              <Check size={16} />
+                            )}
                           </button>
                           <button
                             onClick={() => handleDelete(user.id)}
@@ -504,7 +563,8 @@ export default function UserList() {
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4">
             <span className="text-sm text-gray-500 text-center sm:text-right">
-              نمایش {((page - 1) * 10) + 1} تا {Math.min(page * 10, totalUsers)} از {totalUsers} کاربر
+              نمایش {(page - 1) * 10 + 1} تا {Math.min(page * 10, totalUsers)}{" "}
+              از {totalUsers} کاربر
             </span>
             <div className="flex gap-2">
               <button
@@ -560,7 +620,7 @@ export default function UserList() {
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors text-sm"
                   >
                     <option value="USER">👤 کاربر عادی</option>
-                    <option value="EMPLOYEE">💼 کارمند</option>
+                    {/* <option value="EMPLOYEE">💼 کارمند</option> */}
                     <option value="ADMIN">🛡️ مدیر ارشد</option>
                   </select>
                 </div>

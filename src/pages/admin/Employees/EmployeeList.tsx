@@ -29,7 +29,7 @@ interface Employee {
   role: "EMPLOYEE" | "MANAGER" | "ADMIN";
   department?: string;
   position?: string;
-  isActive: boolean;
+  is_active: boolean;
   avatar?: string;
   createdAt: string;
   _count?: {
@@ -49,7 +49,7 @@ export default function EmployeeList() {
 
   const fetchEmployees = async () => {
     try {
-      const data = await employeesAPI.getAll();
+      const data = await employeesAPI.getPublic();
       setEmployees(data || []);
     } catch (err) {
       setError("خطا در دریافت لیست کارمندان");
@@ -70,7 +70,7 @@ export default function EmployeeList() {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      await employeesAPI.update(id, { isActive: !currentStatus });
+      await employeesAPI.update(id, { is_active: !currentStatus });
       setEmployees(
         employees.map((e) =>
           e.id === id ? { ...e, isActive: !currentStatus } : e,
@@ -92,8 +92,8 @@ export default function EmployeeList() {
 
   const filteredEmployees = employees.filter((employee) => {
     if (filter === "ALL") return true;
-    if (filter === "ACTIVE") return employee.isActive;
-    if (filter === "INACTIVE") return !employee.isActive;
+    if (filter === "ACTIVE") return employee.is_active;
+    if (filter === "INACTIVE") return !employee.is_active;
     return employee.role === filter;
   });
 
@@ -258,12 +258,12 @@ export default function EmployeeList() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            employee.isActive
+                            employee.is_active
                               ? "bg-green-500/20 text-green-400"
                               : "bg-red-500/20 text-red-400"
                           }`}
                         >
-                          {employee.isActive ? (
+                          {employee.is_active ? (
                             <span className="flex items-center gap-1">
                               <Check className="w-3 h-3" /> فعال
                             </span>
@@ -295,12 +295,12 @@ export default function EmployeeList() {
                   <div className="flex gap-2">
                     <button
                       onClick={() =>
-                        handleToggleStatus(employee.id, employee.isActive)
+                        handleToggleStatus(employee.id, employee.is_active)
                       }
                       className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
-                      title={employee.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                      title={employee.is_active ? "غیرفعال کردن" : "فعال کردن"}
                     >
-                      {employee.isActive ? (
+                      {employee.is_active ? (
                         <X size={18} />
                       ) : (
                         <Check size={18} />

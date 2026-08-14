@@ -1,11 +1,18 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { employeesAPI } from "../../../lib/api/employees";
 import type { Employee } from "../../../lib/api/employees";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { ArrowLeft, User, Phone, Mail, Briefcase, Building, Shield } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Briefcase,
+  Building,
+  Shield,
+} from "lucide-react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 
 // تایپ پاسخ از API
@@ -24,7 +31,7 @@ export default function EmployeeEdit() {
     role: "EMPLOYEE",
     department: "",
     position: "",
-    isActive: true,
+    is_active: true,
   });
 
   useEffect(() => {
@@ -34,13 +41,16 @@ export default function EmployeeEdit() {
   const fetchEmployee = async () => {
     try {
       setFetching(true);
-      const response = (await employeesAPI.getById(id!)) as ApiResponse<Employee>;
-      
+      const response = (await employeesAPI.getById(
+        id!,
+      )) as ApiResponse<Employee>;
+
       // ✅ استخراج داده از پاسخ
-      const data: Employee = response && typeof response === 'object' && 'data' in response 
-        ? response.data 
-        : response as Employee;
-      
+      const data: Employee =
+        response && typeof response === "object" && "data" in response
+          ? response.data
+          : (response as Employee);
+
       setFormData({
         name: data?.name || "",
         phone: data?.phone || "",
@@ -48,7 +58,7 @@ export default function EmployeeEdit() {
         role: data?.role || "EMPLOYEE",
         department: data?.department || "",
         position: data?.position || "",
-        isActive: data?.isActive !== undefined ? data.isActive : true,
+        is_active: data?.is_active !== undefined ? data.is_active : true,
       });
     } catch (err: any) {
       setError("خطا در دریافت اطلاعات کارمند");
@@ -58,11 +68,14 @@ export default function EmployeeEdit() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
@@ -123,7 +136,9 @@ export default function EmployeeEdit() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">نام کامل</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  نام کامل
+                </label>
                 <div className="relative">
                   <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -138,7 +153,9 @@ export default function EmployeeEdit() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">شماره تلفن</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  شماره تلفن
+                </label>
                 <div className="relative">
                   <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -153,7 +170,9 @@ export default function EmployeeEdit() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">ایمیل</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  ایمیل
+                </label>
                 <div className="relative">
                   <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -167,7 +186,9 @@ export default function EmployeeEdit() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">نقش</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  نقش
+                </label>
                 <div className="relative">
                   <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <select
@@ -184,7 +205,9 @@ export default function EmployeeEdit() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">بخش</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  بخش
+                </label>
                 <div className="relative">
                   <Building className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -198,7 +221,9 @@ export default function EmployeeEdit() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">سمت</label>
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  سمت
+                </label>
                 <div className="relative">
                   <Briefcase className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -216,7 +241,7 @@ export default function EmployeeEdit() {
                   <input
                     type="checkbox"
                     name="isActive"
-                    checked={formData.isActive !== false}
+                    checked={formData.is_active !== false}
                     onChange={handleChange}
                     className="w-5 h-5 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
                   />

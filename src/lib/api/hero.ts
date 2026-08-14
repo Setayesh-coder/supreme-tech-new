@@ -1,11 +1,12 @@
 // src/lib/api/hero.ts
-import api from './axios';
+import api from "./axios";
 
 export interface HeroSlide {
   id?: string;
   title: string;
   subtitle?: string;
   description?: string;
+  tagLine?: string;
   image_url?: string;
   button_text?: string;
   button_link?: string;
@@ -24,7 +25,8 @@ export const heroAPI = {
       title: item.title,
       subtitle: item.subtitle,
       description: item.description,
-      image_url: item.image_url || '',
+      tagLine: item.tagLine,
+      image_url: item.image_url || "",
       button_text: item.button_text,
       button_link: item.button_link,
       order: item.order || 0,
@@ -42,7 +44,8 @@ export const heroAPI = {
       title: item.title,
       subtitle: item.subtitle,
       description: item.description,
-      image_url: item.image_url || '',
+      tagLine: item.tagLine,
+      image_url: item.image_url || "",
       button_text: item.button_text,
       button_link: item.button_link,
       order: item.order || 0,
@@ -58,6 +61,7 @@ export const heroAPI = {
       title: data.title,
       subtitle: data.subtitle || null,
       description: data.description || null,
+      tagLine: data.tagLine || null,
       image_url: data.image_url || null,
       button_text: data.button_text || null,
       button_link: data.button_link || null,
@@ -65,7 +69,7 @@ export const heroAPI = {
       is_active: data.is_active !== undefined ? data.is_active : true,
     };
     const response = await api.post("/hero", payload, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data?.data || response.data;
   },
@@ -76,6 +80,7 @@ export const heroAPI = {
       title: data.title,
       subtitle: data.subtitle || null,
       description: data.description || null,
+      tagLine: data.tagLine || null,
       image_url: data.image_url || null,
       button_text: data.button_text || null,
       button_link: data.button_link || null,
@@ -83,7 +88,7 @@ export const heroAPI = {
       is_active: data.is_active !== undefined ? data.is_active : true,
     };
     const response = await api.put(`/hero/${id}`, payload, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data?.data || response.data;
   },
@@ -91,14 +96,18 @@ export const heroAPI = {
   delete: async (id: string): Promise<void> => {
     const token = localStorage.getItem("token") || "";
     await api.delete(`/hero/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 
   reorder: async (items: { id: string; order: number }[]): Promise<void> => {
     const token = localStorage.getItem("token") || "";
-    await api.put("/hero/reorder", { items }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    await api.put(
+      "/hero/reorder",
+      { items },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
   },
 };
