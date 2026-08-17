@@ -110,7 +110,7 @@ export default function Hero() {
 
   const currentSlide = slides[currentIndex] || slides[0];
   const heroTagline =
-    currentSlide.tagLine || "🚀 مرکز توسعه فناوری‌های برتر تهران";
+    currentSlide.tagline || "🚀 مرکز توسعه فناوری‌های برتر تهران";
 
   return (
     <section className="relative w-full py-4 sm:py-6 px-2 sm:px-4">

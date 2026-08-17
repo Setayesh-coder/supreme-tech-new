@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { SettingsProvider } from './contexts/SettingsContext';
+import { SettingsProvider } from "./contexts/SettingsContext";
 import Layout from "./components/layout/Layout";
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
@@ -13,19 +13,19 @@ import BlogPost from "./pages/public/BlogPost";
 import Events from "./pages/public/Events";
 import EventDetail from "./pages/public/EventDetail";
 import CourseDetail from "./pages/public/CourseDetail";
-import Profile from "./pages/Profile/Profile"; 
+import Profile from "./pages/Profile/Profile";
 import NotFound from "./pages/NotFound";
 import Cart from "./pages/Cart";
 import TicketDetail from "./pages/TicketDetail";
-import TicketCreate from "./pages/TicketCreate"; 
-import { HelmetProvider } from 'react-helmet-async';
+import TicketCreate from "./pages/TicketCreate";
+import { HelmetProvider } from "react-helmet-async";
 
 // Admin
 import AdminLogin from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
 import BlogListAdmin from "./pages/admin/Blog/BlogList";
 import BlogCreate from "./pages/admin/Blog/BlogCreate";
-import BlogEdit from "./pages/admin/Blog/BlogEdite";
+import BlogEdit from "./pages/admin/Blog/BlogEdit";
 import CourseList from "./pages/admin/Courses/CourseList";
 import CourseCreate from "./pages/admin/Courses/CourseCreate";
 import CourseEdit from "./pages/admin/Courses/CourseEdit";
@@ -58,321 +58,321 @@ import Help from "./pages/admin/Help";
 
 function App() {
   return (
-   <HelmetProvider>
-    <SettingsProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* ============================================================
+    <HelmetProvider>
+      <SettingsProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* ============================================================
               عمومی (با Layout)
               ============================================================ */}
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/approach" element={<ApproachPage />} />
-            <Route path="/blog" element={<BlogList />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/events/:slug" element={<EventDetail />} />
-            <Route path="/courses/:slug" element={<CourseDetail />} />
-            <Route path="/access-denied" element={<AccessDenied />} />
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/approach" element={<ApproachPage />} />
+              <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/events" element={<Events />} />
+              <Route path="/events/:slug" element={<EventDetail />} />
+              <Route path="/courses/:slug" element={<CourseDetail />} />
+              <Route path="/access-denied" element={<AccessDenied />} />
 
-            {/* 🔥 مسیرهای تیکت برای کاربران عادی */}
-            <Route path="/tickets/create" element={<TicketCreate />} />
-            <Route path="/tickets/:id" element={<TicketDetail />} />
+              {/* 🔥 مسیرهای تیکت برای کاربران عادی */}
+              <Route path="/tickets/create" element={<TicketCreate />} />
+              <Route path="/tickets/:id" element={<TicketDetail />} />
 
-            <Route path="*" element={<NotFound />} />
-          </Route>
+              <Route path="*" element={<NotFound />} />
+            </Route>
 
-          {/* ============================================================
+            {/* ============================================================
               Admin
               ============================================================ */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <Navigate to="/admin/dashboard" replace />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/admin/dashboard" replace />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* بلاگ - فقط ادمین */}
-          <Route
-            path="/admin/blog"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <BlogListAdmin />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/blog/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <BlogCreate />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/blog/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <BlogEdit />
-              </ProtectedRoute>
-            }
-          />
+            {/* بلاگ - فقط ادمین */}
+            <Route
+              path="/admin/blog"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <BlogListAdmin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/blog/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <BlogCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/blog/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <BlogEdit />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* رویدادها - هر دو نقش */}
-          <Route
-            path="/admin/events"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EventList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/events/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EventCreate />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/events/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EventEdit />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/events/enrollments/:eventId"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EventEnrollments />
-              </ProtectedRoute>
-            }
-          />
+            {/* رویدادها - هر دو نقش */}
+            <Route
+              path="/admin/events"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EventList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/events/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EventCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/events/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EventEdit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/events/enrollments/:eventId"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EventEnrollments />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* دوره‌ها */}
-          <Route
-            path="/admin/courses"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <CourseList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/courses/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <CourseCreate />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/courses/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <CourseEdit />
-              </ProtectedRoute>
-            }
-          />
-<Route
-  path="/admin/courses/enrollments/:courseId"
-  element={
-    <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <CourseEnrollments />
-    </ProtectedRoute>
-  }
-/>
-          {/* کارمندان - فقط ادمین */}
-          <Route
-            path="/admin/employees"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EmployeeList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/employees/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EmployeeCreate />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/employees/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <EmployeeEdit />
-              </ProtectedRoute>
-            }
-          />
+            {/* دوره‌ها */}
+            <Route
+              path="/admin/courses"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <CourseList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/courses/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <CourseCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/courses/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <CourseEdit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/courses/enrollments/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <CourseEnrollments />
+                </ProtectedRoute>
+              }
+            />
+            {/* کارمندان - فقط ادمین */}
+            <Route
+              path="/admin/employees"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EmployeeList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EmployeeCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <EmployeeEdit />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* کاربران - فقط ادمین */}
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <UserList />
-              </ProtectedRoute>
-            }
-          />
+            {/* کاربران - فقط ادمین */}
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <UserList />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* تیم - فقط ادمین */}
-          <Route
-            path="/admin/team"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <TeamList />
-              </ProtectedRoute>
-            }
-          />
+            {/* تیم - فقط ادمین */}
+            <Route
+              path="/admin/team"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <TeamList />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* همکاران - فقط ادمین */}
-          <Route
-            path="/admin/partners"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <PartnerList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/partners/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <PartnerCreate />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/partners/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <PartnerEdit />
-              </ProtectedRoute>
-            }
-          />
+            {/* همکاران - فقط ادمین */}
+            <Route
+              path="/admin/partners"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <PartnerList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/partners/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <PartnerCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/partners/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <PartnerEdit />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* تیکت‌ها - هر دو نقش */}
-          <Route
-            path="/admin/tickets"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <TicketList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/tickets/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <TicketCreateAdmin />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/tickets/create-group"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <TicketGroupCreate />
-              </ProtectedRoute>
-            }
-          />
+            {/* تیکت‌ها - هر دو نقش */}
+            <Route
+              path="/admin/tickets"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <TicketList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tickets/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <TicketCreateAdmin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tickets/create-group"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <TicketGroupCreate />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* پیام‌ها - فقط ادمین */}
-          <Route
-            path="/admin/messages"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <MessageList />
-              </ProtectedRoute>
-            }
-          />
+            {/* پیام‌ها - فقط ادمین */}
+            <Route
+              path="/admin/messages"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <MessageList />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* پروفایل ادمین - فقط ادمین */}
-          <Route
-            path="/admin/profile"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <AdminProfile />
-              </ProtectedRoute>
-            }
-          />
+            {/* پروفایل ادمین - فقط ادمین */}
+            <Route
+              path="/admin/profile"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <AdminProfile />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* تنظیمات - فقط ادمین */}
-          <Route
-            path="/admin/settings"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/help"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <Help />
-              </ProtectedRoute>
-            }
-          />
+            {/* تنظیمات - فقط ادمین */}
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/help"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <Help />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Hero */}
-          <Route
-            path="/admin/hero"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <HeroList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/hero/create"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <HeroCreate />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/hero/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <HeroEdit />
-              </ProtectedRoute>
-            }
-          />
+            {/* Hero */}
+            <Route
+              path="/admin/hero"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <HeroList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/hero/create"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <HeroCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/hero/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <HeroEdit />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </SettingsProvider>
-  </HelmetProvider>
- );
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </SettingsProvider>
+    </HelmetProvider>
+  );
 }
 
 export default App;

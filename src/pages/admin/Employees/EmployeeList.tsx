@@ -1,8 +1,9 @@
-// src/pages/admin/Employees/EmployeeList.tsx
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { employeesAPI } from "../../../lib/api/employees";
+import type { EmployeePublic } from "../../../lib/api/employees";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import {
@@ -19,26 +20,26 @@ import {
   Loader2,
   Shield,
   User,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 
-interface Employee {
-  id: string;
-  name: string;
-  phone: string;
+// ✅ تایپ توسعه‌یافته برای نمایش در لیست (با فیلدهای اضافی از API)
+interface EmployeeListItem extends EmployeePublic {
+  phone?: string;
   email?: string;
-  role: "EMPLOYEE" | "MANAGER" | "ADMIN";
-  department?: string;
-  position?: string;
-  is_active: boolean;
-  avatar?: string;
-  createdAt: string;
+  national_id?: string;
+  role?: string;
+  is_active?: boolean;
+  created_at?: string;
   _count?: {
     managedEvents: number;
+    tickets?: number;
   };
 }
 
 export default function EmployeeList() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("ALL");
@@ -49,10 +50,19 @@ export default function EmployeeList() {
 
   const fetchEmployees = async () => {
     try {
+      setLoading(true);
       const data = await employeesAPI.getPublic();
-      setEmployees(data || []);
+      // ✅ تبدیل داده‌ها به فرمت مورد نظر
+      const formattedData = (data || []).map((item) => ({
+        ...item,
+        is_active: true, // مقدار پیش‌فرض
+        role: "EMPLOYEE", // مقدار پیش‌فرض
+        created_at: new Date().toISOString(),
+      }));
+      setEmployees(formattedData);
     } catch (err) {
       setError("خطا در دریافت لیست کارمندان");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -73,7 +83,7 @@ export default function EmployeeList() {
       await employeesAPI.update(id, { is_active: !currentStatus });
       setEmployees(
         employees.map((e) =>
-          e.id === id ? { ...e, isActive: !currentStatus } : e,
+          e.id === id ? { ...e, is_active: !currentStatus } : e,
         ),
       );
     } catch (err) {
@@ -81,19 +91,19 @@ export default function EmployeeList() {
     }
   };
 
-  const getRoleLabel = (role: string) => {
+  const getRoleLabel = (role?: string) => {
     const roles: Record<string, { label: string; color: string; icon: any }> = {
       EMPLOYEE: { label: "کارمند", color: "text-blue-400", icon: User },
       MANAGER: { label: "مدیر", color: "text-purple-400", icon: Shield },
       ADMIN: { label: "ادمین", color: "text-red-400", icon: Shield },
     };
-    return roles[role] || { label: role, color: "text-gray-400", icon: User };
+    return roles[role || "EMPLOYEE"] || { label: role || "کارمند", color: "text-gray-400", icon: User };
   };
 
   const filteredEmployees = employees.filter((employee) => {
     if (filter === "ALL") return true;
-    if (filter === "ACTIVE") return employee.is_active;
-    if (filter === "INACTIVE") return !employee.is_active;
+    if (filter === "ACTIVE") return employee.is_active !== false;
+    if (filter === "INACTIVE") return employee.is_active === false;
     return employee.role === filter;
   });
 
@@ -233,10 +243,12 @@ export default function EmployeeList() {
                           </span>
                         </h3>
                         <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {employee.phone}
-                          </span>
+                          {employee.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {employee.phone}
+                            </span>
+                          )}
                           {employee.email && (
                             <span className="flex items-center gap-1">
                               <Mail className="w-3 h-3" />
@@ -245,12 +257,14 @@ export default function EmployeeList() {
                           )}
                           {employee.position && (
                             <span className="flex items-center gap-1">
-                              📌 {employee.position}
+                              <Briefcase className="w-3 h-3" />
+                              {employee.position}
                             </span>
                           )}
                           {employee.department && (
                             <span className="flex items-center gap-1">
-                              🏢 {employee.department}
+                              <Building2 className="w-3 h-3" />
+                              {employee.department}
                             </span>
                           )}
                         </div>
@@ -258,12 +272,12 @@ export default function EmployeeList() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            employee.is_active
+                            employee.is_active !== false
                               ? "bg-green-500/20 text-green-400"
                               : "bg-red-500/20 text-red-400"
                           }`}
                         >
-                          {employee.is_active ? (
+                          {employee.is_active !== false ? (
                             <span className="flex items-center gap-1">
                               <Check className="w-3 h-3" /> فعال
                             </span>
@@ -277,13 +291,15 @@ export default function EmployeeList() {
                     </div>
 
                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        عضو از{" "}
-                        {new Date(employee.createdAt).toLocaleDateString(
-                          "fa-IR",
-                        )}
-                      </span>
+                      {employee.created_at && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          عضو از{" "}
+                          {new Date(employee.created_at).toLocaleDateString(
+                            "fa-IR",
+                          )}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         📊 {employee._count?.managedEvents || 0} رویداد مدیریت
                         شده
@@ -295,12 +311,12 @@ export default function EmployeeList() {
                   <div className="flex gap-2">
                     <button
                       onClick={() =>
-                        handleToggleStatus(employee.id, employee.is_active)
+                        handleToggleStatus(employee.id, employee.is_active !== false)
                       }
                       className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
-                      title={employee.is_active ? "غیرفعال کردن" : "فعال کردن"}
+                      title={employee.is_active !== false ? "غیرفعال کردن" : "فعال کردن"}
                     >
-                      {employee.is_active ? (
+                      {employee.is_active !== false ? (
                         <X size={18} />
                       ) : (
                         <Check size={18} />

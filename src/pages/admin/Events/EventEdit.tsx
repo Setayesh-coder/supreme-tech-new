@@ -21,14 +21,15 @@ export default function EventEdit() {
     title: "",
     description: "",
     content: "",
-    date: "",
+    start_date: "",
+    end_date: "",
     duration: "",
     capacity: "",
     price: "",
     location: "",
-    type: "WORKSHOP",
-    featured: false,
-    is_active: true,
+    category: "WORKSHOP", // ✅ تغییر از type به category
+    is_featured: false, // ✅ تغییر از featured به is_featured
+    is_active: true, // ✅ تغییر از is_active به is_active (همان)
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -39,31 +40,41 @@ export default function EventEdit() {
       if (!id) return;
       try {
         setLoading(true);
-        const response = await eventsAPI.getById(id);
-        console.log("📥 داده دریافت شد:", response);
-
-        const data = response.data || response;
+        const data = await eventsAPI.getById(id);
+        console.log("📥 داده دریافت شد:", data);
 
         setFormData({
           title: data.title || "",
           description: data.description || "",
           content: data.content || "",
-          date: data.date ? new Date(data.date).toISOString().slice(0, 16) : "",
+          // date: data.date ? new Date(data.date).toISOString().slice(0, 16) : "",
+          start_date: data.start_date,
+          end_date: data.end_date,
           duration: data.duration || "",
           capacity: data.capacity?.toString() || "",
-          price: data.price?.toString() || "0", // ✅ اگر null/undefined بود "0"
+          price: data.price?.toString() || "0",
           location: data.location || "",
-          type: data.type || "WORKSHOP",
-          featured: data.featured || false,
+          category: data.category || "WORKSHOP", // ✅ تغییر از type
+          is_featured: data.is_featured || false, // ✅ تغییر از featured
           is_active: data.is_active !== undefined ? data.is_active : true,
         });
-        if (data.image) {
-          setCurrentImage(data.image);
-          setImagePreview(data.image);
+        // ✅ تغییر از image به cover_image
+        if (data.cover_image) {
+          setCurrentImage(data.cover_image);
+          setImagePreview(data.cover_image);
         }
       } catch (err: any) {
         console.error("❌ خطا:", err);
-        setError(err.response?.data?.error || "خطا در دریافت اطلاعات رویداد");
+        const detail = err.response?.data?.detail;
+        if (Array.isArray(detail)) {
+          setError(detail.map((e: any) => e.msg).join(", "));
+        } else {
+          setError(
+            detail ||
+              err.response?.data?.error ||
+              "خطا در دریافت اطلاعات رویداد",
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -112,20 +123,23 @@ export default function EventEdit() {
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      const response = await uploadAPI.uploadImage(file, "events");
+      console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
-    } catch (error) {
-      throw new Error("خطا در آپلود عکس");
+    } catch (error: any) {
+      console.error("❌ خطا در آپلود:", error);
+      const detail = error.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        throw new Error(detail.map((e: any) => e.msg).join(", "));
+      }
+      throw new Error(detail || "خطا در آپلود تصویر");
     } finally {
       setUploading(false);
     }
   };
 
-  // 🔥 تابع ایمن برای تبدیل به عدد
   const safeNumber = (value: any): number => {
     if (value === null || value === undefined || value === "") return 0;
     const num = Number(value);
@@ -139,50 +153,86 @@ export default function EventEdit() {
     setSuccess("");
 
     try {
-      let imageUrl = currentImage;
+      let imageUrl = currentImage || "";
+
+      // ✅ اگر تصویر جدید آپلود شده
       if (image) {
-        imageUrl = await uploadImage(image);
+        try {
+          imageUrl = await uploadImage(image);
+        } catch (uploadError: any) {
+          setError(uploadError.message || "خطا در آپلود تصویر");
+          setSubmitting(false);
+          return;
+        }
       }
+
+      // ✅ اگر هیچ تصویری وجود ندارد (هم قدیم و هم جدید)
       if (!image && !currentImage) {
         imageUrl = "";
       }
 
-      if (!formData.date) {
-        setError("لطفاً تاریخ رویداد را انتخاب کنید");
+      if (!formData.start_date) {
+        setError("لطفاً تاریخ شروع رویداد را انتخاب کنید");
+        setSubmitting(false);
+        return;
+      }
+      if (!formData.end_date) {
+        setError("لطفاً تاریخ پایان رویداد را انتخاب کنید");
         setSubmitting(false);
         return;
       }
 
-      // 🔥 تبدیل ایمن به عدد
       const capacity = safeNumber(formData.capacity);
       const price = safeNumber(formData.price);
 
-      const eventData = {
-        title: formData.title,
-        description: formData.description,
-        content: formData.content || "",
-        date: new Date(formData.date).toISOString(),
-        duration: formData.duration,
+      // ✅ ساخت داده مطابق با Schema بک‌اند
+      const eventData: any = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        content: formData.content?.trim() || "",
+        // date: new Date(formData.date).toISOString(),
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        duration: formData.duration?.trim() || "",
         capacity: capacity,
-        price: price, // ✅ حتماً 0 یا بیشتر
-        location: formData.location,
-        type: formData.type,
-        featured: formData.featured,
-        isActive: formData.is_active,
-        image: imageUrl,
+        price: price,
+        location: formData.location?.trim() || "",
+        category: formData.category, // ✅ تغییر از type
+        is_featured: formData.is_featured, // ✅ تغییر از featured
+        is_active: formData.is_active,
+        cover_image: imageUrl, // ✅ تغییر از image
       };
+
+      // ✅ اگر عنوان تغییر کرده، اسلاگ رو هم به‌روز کن
+      // (فقط در صورتی که بخواهید اسلاگ هم تغییر کند)
+      // eventData.slug = generateSlug(formData.title);
 
       console.log("📤 ارسال داده برای ویرایش:", eventData);
 
       await eventsAPI.update(id!, eventData);
-      setSuccess("رویداد با موفقیت ویرایش شد!");
+      setSuccess("✅ رویداد با موفقیت ویرایش شد!");
 
       setTimeout(() => {
         navigate("/admin/events");
       }, 1500);
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ویرایش رویداد");
+
+      let errorMessage = "خطا در ویرایش رویداد";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => e.msg).join(", ");
+        } else {
+          errorMessage = detail;
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -218,8 +268,8 @@ export default function EventEdit() {
           glowIntensity="md"
         >
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 whitespace-pre-wrap">
+              ❌ {error}
             </div>
           )}
           {success && (
@@ -234,58 +284,69 @@ export default function EventEdit() {
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر رویداد
               </label>
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="پیش‌نمایش"
-                    className="w-full h-48 object-cover rounded-xl"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
-                  <div className="flex flex-col items-center justify-center py-4">
-                    {uploading ? (
-                      <>
-                        <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
-                        <p className="text-sm text-blue-400">در حال آپلود...</p>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-400">
-                          برای آپلود کلیک کنید
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          PNG, JPG, WEBP (حداکثر ۵MB)
-                        </p>
-                      </>
-                    )}
+              <div className="flex flex-col gap-2">
+                {imagePreview ? (
+                  <div className="relative w-full">
+                    <img
+                      src={imagePreview}
+                      alt="پیش‌نمایش"
+                      className="w-full h-48 object-cover rounded-xl border border-white/20"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/placeholder-image.jpg";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-white" />
+                    </button>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {image ? `🆕 تصویر جدید: ${image.name}` : "📸 تصویر فعلی"}
+                    </p>
                   </div>
-                  <input
-                    id="image-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
-              )}
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
+                    <div className="flex flex-col items-center justify-center py-4">
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                          <p className="text-sm text-blue-400">
+                            در حال آپلود...
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-400">
+                            برای آپلود کلیک کنید
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, WEBP (حداکثر ۵MB)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* اطلاعات پایه */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  عنوان رویداد
+                  عنوان رویداد <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -298,11 +359,11 @@ export default function EventEdit() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  نوع رویداد
+                  دسته‌بندی رویداد
                 </label>
                 <select
-                  name="type"
-                  value={formData.type}
+                  name="category"
+                  value={formData.category}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                 >
@@ -320,11 +381,27 @@ export default function EventEdit() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  تاریخ رویداد
+                  تاریخ شروع رویداد <span className="text-red-400">*</span>
                 </label>
                 <PersianDatePicker
-                  value={formData.date}
-                  onChange={(date) => setFormData({ ...formData, date })}
+                  value={formData.start_date}
+                  onChange={(start_date) =>
+                    setFormData({ ...formData, start_date })
+                  }
+                  placeholder="انتخاب تاریخ و زمان"
+                  includeTime={true}
+                  className="bg-white/10 border-white/20 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  تاریخ پایان رویداد <span className="text-red-400">*</span>
+                </label>
+                <PersianDatePicker
+                  value={formData.end_date}
+                  onChange={(end_date) =>
+                    setFormData({ ...formData, end_date })
+                  }
                   placeholder="انتخاب تاریخ و زمان"
                   includeTime={true}
                   className="bg-white/10 border-white/20 text-white"
@@ -347,9 +424,9 @@ export default function EventEdit() {
 
             {/* ظرفیت و قیمت */}
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  ظرفیت
+                  ظرفیت <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="number"
@@ -360,7 +437,7 @@ export default function EventEdit() {
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />
-              </div>
+              </div> */}
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   قیمت (تومان)
@@ -373,7 +450,6 @@ export default function EventEdit() {
                   min="0"
                   step="1000"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  required
                 />
               </div>
             </div>
@@ -395,7 +471,7 @@ export default function EventEdit() {
             {/* توضیحات */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                توضیحات کوتاه
+                توضیحات کوتاه <span className="text-red-400">*</span>
               </label>
               <textarea
                 name="description"
@@ -421,12 +497,12 @@ export default function EventEdit() {
             </div>
 
             {/* گزینه‌ها */}
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-6">
               <label className="flex items-center gap-2 text-white/80 cursor-pointer">
                 <input
                   type="checkbox"
-                  name="featured"
-                  checked={formData.featured}
+                  name="is_featured"
+                  checked={formData.is_featured}
                   onChange={handleChange}
                   className="w-4 h-4 accent-blue-500"
                 />
@@ -445,7 +521,7 @@ export default function EventEdit() {
             </div>
 
             {/* دکمه‌ها */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
                 variant="white"
@@ -462,6 +538,7 @@ export default function EventEdit() {
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={submitting || uploading}
+                className="flex-1"
               >
                 {uploading ? "در حال آپلود..." : "ذخیره تغییرات"}
               </GlassButton>

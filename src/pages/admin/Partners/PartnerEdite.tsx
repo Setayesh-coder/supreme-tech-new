@@ -1,9 +1,9 @@
+// src/pages/admin/partners/PartnerEdit.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-// import { OptimizedImage } from "../../../components/ui/OptimizedImage";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
@@ -84,22 +84,29 @@ export default function PartnerEdit() {
   const handleRemoveLogo = () => {
     setLogo(null);
     setLogoPreview("");
-    setCurrentLogo(""); // ✅ تنظیم به رشته خالی
+    // ✅ اگر لوگو جدیدی انتخاب نشده بود، currentLogo رو هم خالی کن
+    if (!logo) {
+      setCurrentLogo("");
+    }
     const input = document.getElementById("logo-input") as HTMLInputElement;
     if (input) input.value = "";
   };
 
+  // ✅ اصلاح: تابع آپلود با مدیریت خطا
   const uploadLogo = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      // ✅ استفاده از uploadImage به جای uploadImageWithFormData
+      // ✅ استفاده صحیح از uploadAPI.uploadImage
       const response = await uploadAPI.uploadImage(file, "partners");
+      console.log("✅ لوگو آپلود شد:", response.url);
       return response.url;
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
-      throw new Error("خطا در آپلود لوگو");
+      const detail = error.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        throw new Error(detail.map((e: any) => e.msg).join(", "));
+      }
+      throw new Error(detail || "خطا در آپلود لوگو");
     } finally {
       setUploading(false);
     }
@@ -111,31 +118,53 @@ export default function PartnerEdit() {
     setError("");
 
     try {
-      let logoUrl = currentLogo;
+      let logoUrl = currentLogo || "";
 
-      // اگر لوگوی جدید آپلود شده
+      // ✅ اگر لوگوی جدید آپلود شده
       if (logo) {
         logoUrl = await uploadLogo(logo);
       }
 
-      // اگر هیچ لوگویی وجود ندارد (هم قدیم و هم جدید)
+      // ✅ اگر هیچ لوگویی وجود ندارد (هم قدیم و هم جدید)
       if (!logo && !currentLogo) {
         logoUrl = "";
       }
 
       const partnerData = {
-        ...formData,
-        order: Number(formData.order),
+        name: formData.name.trim(),
+        description: formData.description?.trim() || "",
+        website: formData.website?.trim() || "",
+        order: Number(formData.order) || 0,
+        isActive: formData.isActive,
         logo: logoUrl,
       };
 
       console.log("📤 ارسال داده برای ویرایش همکار:", partnerData);
 
       await partnersAPI.update(id!, partnerData);
+
+      // ✅ نمایش پیام موفقیت
+      alert("✅ همکار با موفقیت ویرایش شد!");
       navigate("/admin/partners");
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ویرایش همکار");
+
+      // ✅ نمایش خطای دقیق
+      let errorMessage = "خطا در ویرایش همکار";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => e.msg).join(", ");
+        } else {
+          errorMessage = detail;
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -171,7 +200,7 @@ export default function PartnerEdit() {
           glowIntensity="md"
         >
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 whitespace-pre-wrap">
               ❌ {error}
             </div>
           )}
@@ -182,55 +211,62 @@ export default function PartnerEdit() {
               <label className="block text-sm font-medium text-white/80 mb-2">
                 لوگو
               </label>
-              {logoPreview ? (
-                <div className="relative w-32 h-32">
-                  <img
-                    src={logoPreview}
-                    alt="پیش‌نمایش لوگو"
-                    className="w-32 h-32 object-contain rounded-xl border border-white/20 bg-white/5"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "/placeholder-logo.png";
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRemoveLogo}
-                    className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {logo ? "لوگوی جدید" : "لوگوی فعلی"}
+              <div className="flex items-start gap-6">
+                {logoPreview ? (
+                  <div className="relative">
+                    <img
+                      src={logoPreview}
+                      alt="پیش‌نمایش لوگو"
+                      className="w-32 h-32 object-contain rounded-xl border border-white/20 bg-white/5"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/placeholder-logo.png";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-2 -right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                    <p className="text-xs text-gray-400 mt-1 text-center">
+                      {logo ? "لوگوی جدید" : "لوگوی فعلی"}
+                    </p>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
+                    <div className="flex flex-col items-center justify-center">
+                      {uploading ? (
+                        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                      ) : (
+                        <>
+                          <Building2 className="w-8 h-8 text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-400 text-center">
+                            آپلود لوگو
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="logo-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </label>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm text-gray-400">
+                    {logo ? `فایل: ${logo.name}` : "هیچ لوگویی انتخاب نشده"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    PNG, JPG, SVG (حداکثر ۲MB)
                   </p>
                 </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
-                  <div className="flex flex-col items-center justify-center">
-                    {uploading ? (
-                      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-                    ) : (
-                      <>
-                        <Building2 className="w-8 h-8 text-gray-400 mb-1" />
-                        <p className="text-xs text-gray-400 text-center">
-                          آپلود لوگو
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  <input
-                    id="logo-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                PNG, JPG, SVG (حداکثر ۲MB)
-              </p>
+              </div>
             </div>
 
             {/* نام */}
@@ -298,7 +334,7 @@ export default function PartnerEdit() {
             </div>
 
             {/* فعال */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-white/80 cursor-pointer">
                 <input
                   type="checkbox"
@@ -309,13 +345,13 @@ export default function PartnerEdit() {
                 />
                 فعال
               </label>
-              <span className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500">
                 همکاران غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
-              </span>
+              </p>
             </div>
 
             {/* دکمه‌ها */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
                 variant="white"
@@ -332,6 +368,7 @@ export default function PartnerEdit() {
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={submitting || uploading}
+                className="flex-1"
               >
                 {uploading ? "در حال آپلود..." : "ذخیره تغییرات"}
               </GlassButton>

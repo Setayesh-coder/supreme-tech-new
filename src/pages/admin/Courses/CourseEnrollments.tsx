@@ -1,10 +1,11 @@
+// src/pages/admin/Courses/CourseEnrollments.tsx
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { coursesAPI } from "../../../lib/api/courses";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { 
-  Users, 
+import {
+  Users,
   ChevronLeft,
   Download,
   Search,
@@ -12,29 +13,51 @@ import {
   Mail,
   Phone,
   Calendar,
+  User,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react";
 
+// ✅ تایپ کاربر
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+// ✅ تایپ ثبت‌نام
 interface Enrollment {
   id: string;
   userId: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-  };
+  user: User;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
   createdAt: string;
   paymentStatus?: "PAID" | "UNPAID" | "PENDING";
 }
 
+// ✅ تایپ دوره (با فیلدهای اضافی برای نمایش)
 interface Course {
   id: string;
   title: string;
   slug: string;
-  capacity: number;
-  enrolledCount: number;
+  description?: string;
+  cover_image?: string;
   price: number;
+  duration_hours?: number;
+  instructor_name?: string;
+  is_active: boolean;
+  event_id?: string;
+  event?: {
+    id: string;
+    title: string;
+  };
+  created_at: string;
+  updated_at: string;
+  // ⚠️ این فیلدها در بک‌اند وجود ندارند - برای نمایش استفاده می‌شوند
+  capacity?: number;
+  enrolledCount?: number;
 }
 
 export default function CourseEnrollments() {
@@ -47,35 +70,55 @@ export default function CourseEnrollments() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
-    fetchData();
+    // ✅ فقط اگر courseId وجود داشت، داده رو بگیر
+    if (courseId) {
+      fetchData();
+    } else {
+      setError("شناسه دوره نامعتبر است");
+      setLoading(false);
+    }
   }, [courseId]);
 
   const fetchData = async () => {
+    if (!courseId) return;
+
     try {
       setLoading(true);
-      // دریافت اطلاعات دوره
-      const courseData = await coursesAPI.getById(courseId!);
-      setCourse(courseData.data || courseData);
+      setError("");
 
-      // دریافت لیست ثبت‌نام‌ها - استفاده از API صحیح
+      // ۱. دریافت اطلاعات دوره
+      const courseData = await coursesAPI.getById(courseId);
+
+      // ✅ تبدیل به Course با فیلدهای optional
+      const courseWithFields: Course = {
+        ...courseData,
+        capacity: (courseData as any).capacity || 0,
+        enrolledCount: (courseData as any).enrolledCount || 0,
+      };
+      setCourse(courseWithFields);
+
+      // ۲. دریافت لیست ثبت‌نام‌ها
       try {
-        // اگر API خاصی برای دریافت ثبت‌نام‌های دوره وجود ندارد، از getAll استفاده می‌کنیم
-        const allData = await coursesAPI.getAll({ limit: 100 });
-        const allCourses = allData.data || allData || [];
-        const foundCourse = allCourses.find((c: any) => c.id === courseId);
-        if (foundCourse && foundCourse.enrollments) {
-          setEnrollments(foundCourse.enrollments);
+        // اگر دوره دارای enrollments باشد
+        const extendedCourse = courseData as any;
+        if (
+          extendedCourse.enrollments &&
+          Array.isArray(extendedCourse.enrollments)
+        ) {
+          setEnrollments(extendedCourse.enrollments);
         } else {
-          // اگر enrollments در پاسخ نبود، یک آرایه خالی می‌گذاریم
           setEnrollments([]);
+          console.warn("⚠️ هیچ ثبت‌نامی برای این دوره یافت نشد");
         }
       } catch (err) {
-        console.error("خطا در دریافت ثبت‌نام‌ها:", err);
+        console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
         setEnrollments([]);
       }
-    } catch (err) {
-      setError("خطا در دریافت اطلاعات");
-      console.error(err);
+    } catch (err: any) {
+      console.error("❌ خطا:", err);
+      setError(
+        err.response?.data?.detail || err.message || "خطا در دریافت اطلاعات",
+      );
     } finally {
       setLoading(false);
     }
@@ -84,15 +127,30 @@ export default function CourseEnrollments() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return "text-green-400 bg-green-500/20";
+        return "text-green-400 bg-green-500/20 border-green-500/30";
       case "PENDING":
-        return "text-yellow-400 bg-yellow-500/20";
+        return "text-yellow-400 bg-yellow-500/20 border-yellow-500/30";
       case "CANCELLED":
-        return "text-red-400 bg-red-500/20";
+        return "text-red-400 bg-red-500/20 border-red-500/30";
       case "COMPLETED":
-        return "text-blue-400 bg-blue-500/20";
+        return "text-blue-400 bg-blue-500/20 border-blue-500/30";
       default:
-        return "text-gray-400 bg-gray-500/20";
+        return "text-gray-400 bg-gray-500/20 border-gray-500/30";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "CONFIRMED":
+        return <CheckCircle className="w-4 h-4" />;
+      case "PENDING":
+        return <Clock className="w-4 h-4" />;
+      case "CANCELLED":
+        return <XCircle className="w-4 h-4" />;
+      case "COMPLETED":
+        return <CheckCircle className="w-4 h-4" />;
+      default:
+        return <Users className="w-4 h-4" />;
     }
   };
 
@@ -125,11 +183,12 @@ export default function CourseEnrollments() {
   };
 
   const filteredEnrollments = enrollments
-    .filter(enrollment => 
-      enrollment.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      enrollment.user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    .filter(
+      (enrollment) =>
+        enrollment.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        enrollment.user.email.toLowerCase().includes(searchTerm.toLowerCase()),
     )
-    .filter(enrollment => {
+    .filter((enrollment) => {
       if (statusFilter === "all") return true;
       return enrollment.status === statusFilter;
     });
@@ -147,9 +206,11 @@ export default function CourseEnrollments() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-        <span className="text-gray-400 mr-3">در حال بارگذاری...</span>
+      <div className="p-4 md:p-6">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+          <span className="text-gray-400 mr-3">در حال بارگذاری...</span>
+        </div>
       </div>
     );
   }
@@ -157,11 +218,17 @@ export default function CourseEnrollments() {
   if (error || !course) {
     return (
       <div className="p-4 md:p-6">
-        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg">
-          ❌ {error || "دوره یافت نشد"}
+        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl mb-4">
+          <h3 className="font-bold mb-1">❌ خطا</h3>
+          <p>{error || "دوره یافت نشد"}</p>
         </div>
-        <Link to="/admin/courses" className="mt-4 inline-block">
-          <GlassButton variant="secondary" size="sm">
+        <Link to="/admin/courses">
+          <GlassButton
+            variant="secondary"
+            size="sm"
+            icon={<ChevronLeft className="w-4 h-4" />}
+            iconPosition="left"
+          >
             بازگشت به لیست دوره‌ها
           </GlassButton>
         </Link>
@@ -169,21 +236,31 @@ export default function CourseEnrollments() {
     );
   }
 
+  const enrolledCount = enrollments.length;
+  const capacity = course.capacity || "نامحدود";
+
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
       {/* هدر */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
             <Link to="/admin/courses">
-              <ChevronLeft className="w-5 h-5 text-gray-400 hover:text-white transition-colors" />
+              <GlassButton
+                variant="secondary"
+                size="sm"
+                icon={<ChevronLeft className="w-4 h-4" />}
+                iconPosition="left"
+              >
+                بازگشت
+              </GlassButton>
             </Link>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
-              ثبت‌نام‌های دوره
-            </h1>
           </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mt-3">
+            📋 ثبت‌نام‌های دوره
+          </h1>
           <p className="text-gray-400 text-sm mt-1">
-            {course.title} - {course.enrolledCount} / {course.capacity} نفر
+            {course.title} - {enrolledCount} / {capacity} نفر ثبت‌نام کرده‌اند
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -193,13 +270,49 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              alert("در حال توسعه...");
+              alert("📥 قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
-            خروجی
+            خروجی Excel
           </GlassButton>
         </div>
       </div>
+
+      {/* اطلاعات دوره */}
+      <LiquidGlassCard
+        className="p-4 mb-6"
+        borderRadius="12px"
+        blurIntensity="sm"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-gray-400 text-sm">عنوان دوره</p>
+            <p className="text-white font-medium">{course.title}</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-sm">مدرس</p>
+            <p className="text-white font-medium">
+              {course.instructor_name || "-"}
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-sm">تعداد ثبت‌نام‌ها</p>
+            <p className="text-white font-medium">{enrolledCount} نفر</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-sm">وضعیت</p>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full ${
+                course.is_active
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"
+              }`}
+            >
+              {course.is_active ? "✅ فعال" : "❌ غیرفعال"}
+            </span>
+          </div>
+        </div>
+      </LiquidGlassCard>
 
       {/* فیلترها */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -207,31 +320,41 @@ export default function CourseEnrollments() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="جستجوی کاربران..."
+            placeholder="جستجوی کاربران بر اساس نام یا ایمیل..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pr-10 pl-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pr-10 pl-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          className="bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           <option value="all">همه وضعیت‌ها</option>
-          <option value="CONFIRMED">تایید شده</option>
-          <option value="PENDING">در انتظار</option>
-          <option value="CANCELLED">لغو شده</option>
-          <option value="COMPLETED">تکمیل شده</option>
+          <option value="CONFIRMED">✅ تایید شده</option>
+          <option value="PENDING">⏳ در انتظار</option>
+          <option value="CANCELLED">❌ لغو شده</option>
+          <option value="COMPLETED">📌 تکمیل شده</option>
         </select>
       </div>
 
       {/* لیست ثبت‌نام‌ها */}
       {filteredEnrollments.length === 0 ? (
-        <LiquidGlassCard className="p-12 text-center" borderRadius="16px" blurIntensity="sm">
+        <LiquidGlassCard
+          className="p-12 text-center"
+          borderRadius="16px"
+          blurIntensity="sm"
+        >
           <div className="text-6xl mb-4">👤</div>
-          <h3 className="text-xl font-bold text-white mb-2">ثبت‌نامی یافت نشد</h3>
-          <p className="text-gray-400">هنوز کاربری در این دوره ثبت‌نام نکرده است</p>
+          <h3 className="text-xl font-bold text-white mb-2">
+            ثبت‌نامی یافت نشد
+          </h3>
+          <p className="text-gray-400">
+            {searchTerm || statusFilter !== "all"
+              ? "با این فیلترها هیچ کاربری یافت نشد"
+              : "هنوز کاربری در این دوره ثبت‌نام نکرده است"}
+          </p>
         </LiquidGlassCard>
       ) : (
         <div className="space-y-3">
@@ -247,11 +370,13 @@ export default function CourseEnrollments() {
                 {/* اطلاعات کاربر */}
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-blue-400" />
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                      {enrollment.user.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="text-white font-medium">{enrollment.user.name}</h4>
+                      <h4 className="text-white font-medium">
+                        {enrollment.user.name}
+                      </h4>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
                         <span className="flex items-center gap-1">
                           <Mail className="w-3 h-3" />
@@ -269,19 +394,24 @@ export default function CourseEnrollments() {
                 </div>
 
                 {/* وضعیت و تاریخ */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(enrollment.status)}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 border ${getStatusColor(enrollment.status)}`}
+                  >
+                    {getStatusIcon(enrollment.status)}
                     {getStatusLabel(enrollment.status)}
                   </span>
                   {enrollment.paymentStatus && (
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      enrollment.paymentStatus === "PAID" 
-                        ? "text-green-400 bg-green-500/20"
-                        : enrollment.paymentStatus === "UNPAID"
-                          ? "text-red-400 bg-red-500/20"
-                          : "text-yellow-400 bg-yellow-500/20"
-                    }`}>
-                      {getPaymentStatusLabel(enrollment.paymentStatus)}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                        enrollment.paymentStatus === "PAID"
+                          ? "text-green-400 bg-green-500/20 border-green-500/30"
+                          : enrollment.paymentStatus === "UNPAID"
+                            ? "text-red-400 bg-red-500/20 border-red-500/30"
+                            : "text-yellow-400 bg-yellow-500/20 border-yellow-500/30"
+                      }`}
+                    >
+                      💳 {getPaymentStatusLabel(enrollment.paymentStatus)}
                     </span>
                   )}
                   <span className="text-gray-500 text-xs flex items-center gap-1">
@@ -293,7 +423,12 @@ export default function CourseEnrollments() {
                 {/* دکمه‌های اقدام */}
                 <div className="flex items-center gap-2">
                   <Link to={`/admin/users/${enrollment.userId}`}>
-                    <GlassButton variant="secondary" size="sm">
+                    <GlassButton
+                      variant="secondary"
+                      size="sm"
+                      icon={<User className="w-3.5 h-3.5" />}
+                      iconPosition="left"
+                    >
                       مشاهده کاربر
                     </GlassButton>
                   </Link>

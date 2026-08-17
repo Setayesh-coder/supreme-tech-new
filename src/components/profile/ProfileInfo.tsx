@@ -1,6 +1,6 @@
+// src/components/profile/ProfileInfo.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
-import { PersianDatePicker } from "../ui/PersianDatePicker";
 import {
   Edit2,
   Save,
@@ -12,6 +12,9 @@ import {
   Calendar,
   Users,
 } from "lucide-react";
+import GlassBirthdayPicker from "../ui/GlassBirthdayPicker";
+import { useState, useEffect } from "react";
+import moment from "moment-jalaali";
 
 interface ProfileInfoProps {
   user: any;
@@ -29,6 +32,39 @@ interface ProfileInfoProps {
   onLogout: () => void;
 }
 
+// تبدیل تاریخ میلادی به شمسی (فرمت YYYY-MM-DD)
+const gregorianToJalali = (gy: number, gm: number, gd: number): string => {
+  try {
+    const date = new Date(gy, gm - 1, gd);
+    const persianDate = moment(date);
+    return persianDate.format("jYYYY-jMM-jDD");
+  } catch (error) {
+    console.error("خطا در تبدیل تاریخ میلادی به شمسی:", error);
+    return "";
+  }
+};
+
+// تبدیل تاریخ شمسی به میلادی (فرمت YYYY-MM-DD)
+const jalaliToGregorian = (jy: number, jm: number, jd: number): string => {
+  try {
+    // ایجاد تاریخ شمسی
+    const persianDate = moment(`${jy}/${jm}/${jd}`, "jYYYY/jM/jD");
+    if (!persianDate.isValid()) {
+      console.error("تاریخ شمسی نامعتبر است");
+      return "";
+    }
+    // تبدیل به میلادی
+    const gregorianDate = persianDate.toDate();
+    const year = gregorianDate.getFullYear();
+    const month = String(gregorianDate.getMonth() + 1).padStart(2, "0");
+    const day = String(gregorianDate.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error("خطا در تبدیل تاریخ شمسی به میلادی:", error);
+    return "";
+  }
+};
+
 export default function ProfileInfo({
   user,
   formData,
@@ -42,17 +78,73 @@ export default function ProfileInfo({
   onChange,
   onLogout,
 }: ProfileInfoProps) {
-  // ✅ تبدیل تاریخ به فرمت بک‌اند
-  const handleDateChange = (date: string) => {
-    console.log("📅 تاریخ انتخاب شده:", date);
-    // ایجاد یک event مصنوعی برای onChange
-    const event = {
-      target: {
-        name: "birthDate",
-        value: date || "",
-      },
-    } as React.ChangeEvent<HTMLInputElement>;
-    onChange(event);
+  // State برای نگهداری تاریخ شمسی
+  const [persianBirthDate, setPersianBirthDate] = useState<string>("");
+
+  // تبدیل تاریخ میلادی به شمسی برای نمایش
+  useEffect(() => {
+    if (formData.birthDate) {
+      const parts = formData.birthDate.split("-");
+      if (parts.length === 3) {
+        const gy = parseInt(parts[0]);
+        const gm = parseInt(parts[1]);
+        const gd = parseInt(parts[2]);
+
+        if (gy && gm && gd) {
+          const persianDate = gregorianToJalali(gy, gm, gd);
+          if (persianDate) {
+            // تبدیل از فرمت jYYYY-jMM-jDD به YYYY-MM-DD
+            const persianParts = persianDate.split("-");
+            if (persianParts.length === 3) {
+              const formattedDate = `${persianParts[0]}-${String(parseInt(persianParts[1])).padStart(2, "0")}-${String(parseInt(persianParts[2])).padStart(2, "0")}`;
+              setPersianBirthDate(formattedDate);
+            }
+          }
+        }
+      }
+    } else {
+      setPersianBirthDate("");
+    }
+  }, [formData.birthDate]);
+
+  // تبدیل تاریخ شمسی به میلادی برای ذخیره
+  const handleDateChange = (persianDate: string) => {
+    console.log("📅 تاریخ شمسی انتخاب شده:", persianDate);
+
+    if (persianDate) {
+      const parts = persianDate.split("-");
+      if (parts.length === 3) {
+        const jy = parseInt(parts[0]);
+        const jm = parseInt(parts[1]);
+        const jd = parseInt(parts[2]);
+
+        if (jy && jm && jd) {
+          const gregorianDate = jalaliToGregorian(jy, jm, jd);
+
+          if (gregorianDate) {
+            console.log("📅 تاریخ میلادی برای ذخیره:", gregorianDate);
+
+            const event = {
+              target: {
+                name: "birthDate",
+                value: gregorianDate,
+              },
+            } as React.ChangeEvent<HTMLInputElement>;
+            onChange(event);
+          } else {
+            console.error("❌ تبدیل تاریخ ناموفق بود");
+          }
+        }
+      }
+    } else {
+      const event = {
+        target: {
+          name: "birthDate",
+          value: "",
+        },
+      } as React.ChangeEvent<HTMLInputElement>;
+      onChange(event);
+    }
   };
 
   return (
@@ -211,7 +303,7 @@ export default function ProfileInfo({
           </div>
         </div>
 
-        {/* تاریخ تولد - با PersianDatePicker */}
+        {/* تاریخ تولد */}
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1">
             <span className="flex items-center gap-1">
@@ -219,18 +311,21 @@ export default function ProfileInfo({
               تاریخ تولد
             </span>
           </label>
-          <PersianDatePicker
-            value={formData.birthDate || ""}
+          <GlassBirthdayPicker
+            value={persianBirthDate}
             onChange={handleDateChange}
             placeholder="انتخاب تاریخ تولد"
             className="w-full"
             disabled={!editing}
           />
-          {!editing && (
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.birthDate
-                ? "تاریخ وارد شده است"
-                : "تاریخی وارد نشده است"}
+          {!editing && formData.birthDate && (
+            <p className="text-xs text-white/50 mt-1">
+              تاریخ ثبت شده: {persianBirthDate}
+            </p>
+          )}
+          {!editing && !formData.birthDate && (
+            <p className="text-xs text-white/30 mt-1">
+              تاریخ تولدی ثبت نشده است
             </p>
           )}
         </div>

@@ -15,6 +15,7 @@ import {
   X,
   ImageOff,
   Users,
+  Search,
 } from "lucide-react";
 
 interface Event {
@@ -22,14 +23,17 @@ interface Event {
   title: string;
   slug: string;
   description: string;
-  image?: string;
-  date: string;
+  cover_image?: string; // ✅ تغییر از image به cover_image
+  image?: string; // برای نمایش
+  start_date: string;
+  end_date: string;
   capacity: number;
   price: number;
   location?: string;
-  type: string;
+  category?: string; // ✅ تغییر از type به category
+  type: string; // برای نمایش
   featured: boolean;
-  isActive: boolean;
+  is_active: boolean; // ✅ تغییر از isActive به is_active
   employeeId?: string;
   _count?: {
     enrollments: number;
@@ -38,50 +42,95 @@ interface Event {
 
 const BASE_URL = import.meta.env.VITE_BASE_URL || "https://supremetech.ir";
 
+const getImageUrl = (imagePath?: string) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith("http")) return imagePath;
+  if (imagePath.startsWith("/")) {
+    return `${BASE_URL}${imagePath}`;
+  }
+  return `${BASE_URL}/${imagePath}`;
+};
+
+// ✅ تابع formatDate
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function EventList() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
-  // 🔥 تشخیص نوع کاربر
+  // ✅ اضافه کردن state های مورد نیاز
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [totalCount, setTotalCount] = useState(0);
+
+  // ✅ تشخیص ادمین بر اساس توکن
+  const token = localStorage.getItem("token");
   const userStr = localStorage.getItem("user");
-  const user = userStr ? JSON.parse(userStr) : null;
-  const isAdmin = user?.role === "ADMIN" || user?.type === "admin";
-  const isEmployee = user?.type === "employee" || user?.role === "EMPLOYEE";
+  let user = null;
+
+  try {
+    user = userStr ? JSON.parse(userStr) : null;
+  } catch (e) {
+    console.error("❌ خطا در parse user:", e);
+  }
+
+  const isAdmin = !!token;
+  const isEmployee =
+    user?.type === "employee" ||
+    user?.role === "EMPLOYEE" ||
+    user?.role === "employee";
+
+  console.log("🔐 isAdmin:", isAdmin);
+  console.log("🔐 isEmployee:", isEmployee);
+  console.log("👤 user:", user);
+  console.log("🔑 token:", token ? "وجود دارد" : "ندارد");
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [currentPage, searchTerm, filterCategory, filterStatus]);
 
   const fetchEvents = async () => {
     try {
+      setLoading(true);
       const data = await eventsAPI.getAll({
-        limit: 50,
+        page: currentPage,
+        size: 50,
+        search: searchTerm || undefined,
+        category: filterCategory || undefined,
+        is_active:
+          filterStatus !== "all" ? filterStatus === "active" : undefined,
       });
-      let eventsData = data.events || [];
 
-      // 🔥 اگر کارمند هست، فقط رویدادهای خودش رو ببینه
-      if (isEmployee && user?.id) {
-        eventsData = eventsData.filter((e: Event) => e.employeeId === user.id);
-      }
+      // ✅ تغییر از data.events به data.items
+      const eventsData = (data.items || []).map((event: any) => ({
+        ...event,
+        image: event.cover_image,
+        type: event.category || "WORKSHOP",
+        featured: event.is_featured || false,
+        is_active: event.is_active !== undefined ? event.is_active : true,
+      }));
 
       setEvents(eventsData);
+      setTotalCount(data.total || 0);
     } catch (err) {
+      console.error("❌ خطا:", err);
       setError("خطا در دریافت رویدادها");
-      console.error(err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
   };
 
   const handleDelete = async (id: string) => {
@@ -92,12 +141,6 @@ export default function EventList() {
     } catch (err) {
       alert("خطا در حذف رویداد");
     }
-  };
-
-  const getImageUrl = (imagePath?: string) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return imagePath;
-    return `${BASE_URL}${imagePath}`;
   };
 
   const handleImageError = (eventId: string) => {
@@ -129,6 +172,7 @@ export default function EventList() {
                 : `لیست تمام رویدادها (${events.length})`}
             </p>
           </div>
+
           {isAdmin && (
             <Link to="/admin/events/create">
               <GlassButton
@@ -143,15 +187,51 @@ export default function EventList() {
           )}
         </div>
 
+        {/* ✅ جستجو و فیلتر */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input
+              type="text"
+              placeholder="جستجوی رویدادها..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pr-10 pl-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-400/40 transition-colors"
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:outline-none focus:border-blue-400/40 transition-colors"
+          >
+            <option value="all">همه وضعیت‌ها</option>
+            <option value="active">فعال</option>
+            <option value="inactive">غیرفعال</option>
+          </select>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:outline-none focus:border-blue-400/40 transition-colors"
+          >
+            <option value="">همه دسته‌ها</option>
+            <option value="WORKSHOP">کارگاه</option>
+            <option value="COURSE">دوره</option>
+            <option value="WEBINAR">وبینار</option>
+            <option value="CONFERENCE">کنفرانس</option>
+            <option value="MEETUP">دیدار</option>
+            <option value="BOOTCAMP">بوت‌کمپ</option>
+          </select>
+        </div>
+
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl">
-            {error}
+            ❌ {error}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4">
           {events.map((event) => {
-            const imageUrl = getImageUrl(event.image);
+            const imageUrl = getImageUrl(event.image || event.cover_image);
             const hasError = imageErrors[event.id];
 
             return (
@@ -190,12 +270,12 @@ export default function EventList() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            event.isActive
+                            event.is_active
                               ? "bg-green-500/20 text-green-400"
                               : "bg-red-500/20 text-red-400"
                           }`}
                         >
-                          {event.isActive ? (
+                          {event.is_active ? (
                             <span className="flex items-center gap-1">
                               <Check className="w-3 h-3" /> فعال
                             </span>
@@ -216,7 +296,8 @@ export default function EventList() {
                     <div className="flex flex-wrap gap-4 mt-2 text-sm text-white/60">
                       <span className="flex items-center gap-1">
                         <Calendar size={14} />
-                        {formatDate(event.date)}
+                        {formatDate(event.start_date)} تا{" "}
+                        {formatDate(event.end_date)}
                       </span>
                       {event.location && (
                         <span className="flex items-center gap-1">
@@ -229,7 +310,9 @@ export default function EventList() {
                       </span>
                       <span className="flex items-center gap-1">
                         💰{" "}
-                        {event.price === 0 ? "رایگان" : `${event.price} تومان`}
+                        {event.price === 0
+                          ? "رایگان"
+                          : `${event.price.toLocaleString()} تومان`}
                       </span>
                     </div>
                   </div>
@@ -291,6 +374,29 @@ export default function EventList() {
                 </GlassButton>
               </Link>
             )}
+          </div>
+        )}
+
+        {/* ✅ صفحه‌بندی */}
+        {totalCount > 50 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-lg bg-white/5 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+            >
+              قبلی
+            </button>
+            <span className="text-white px-4 py-2">
+              صفحه {currentPage} از {Math.ceil(totalCount / 50)}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage >= Math.ceil(totalCount / 50)}
+              className="px-4 py-2 rounded-lg bg-white/5 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+            >
+              بعدی
+            </button>
           </div>
         )}
       </div>

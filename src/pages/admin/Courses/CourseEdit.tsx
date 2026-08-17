@@ -1,3 +1,4 @@
+// src/pages/admin/Courses/CourseEdit.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
@@ -6,11 +7,22 @@ import { GlassButton } from "../../../components/ui/GlassButton";
 import { coursesAPI } from "../../../lib/api/courses";
 import { eventsAPI } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, Upload, Loader2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  Upload,
+  X,
+  Calendar,
+  User,
+  Clock,
+  DollarSign,
+} from "lucide-react";
 
 interface Event {
   id: string;
   title: string;
+  slug: string;
 }
 
 export default function CourseEdit() {
@@ -22,81 +34,87 @@ export default function CourseEdit() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const [currentImage, setCurrentImage] = useState<string>("");
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  // ✅ ذخیره slug اصلی
+  const [originalSlug, setOriginalSlug] = useState<string>("");
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    content: "",
-    price: "",
-    duration: "",
-    level: "",
-    capacity: "",
-    eventId: "",
-    startDate: "",
-    endDate: "",
-    isFeatured: false,
-    order: 0,
-    status: "DRAFT",
+    instructor_name: "",
+    price: 0,
+    duration_hours: 0,
+    is_active: true,
+    event_id: "",
   });
 
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [, setCurrentImage] = useState<string>("");
+  // ✅ اضافه کردن state برای تشخیص حذف عکس
+  const [isImageRemoved, setIsImageRemoved] = useState(false);
+
+  // ✅ دریافت لیست رویدادها
   useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setEventsLoading(true);
+        const data = await eventsAPI.getAll({ size: 100, is_active: true });
+        setEvents(data.items || []);
+      } catch (err) {
+        console.error("❌ خطا در دریافت رویدادها:", err);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
     fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const data = await coursesAPI.getById(id);
+
+        // ✅ ذخیره slug اصلی
+        setOriginalSlug(data.slug || "");
+
+        setFormData({
+          title: data.title || "",
+          description: data.description || "",
+          instructor_name: data.instructor_name || "",
+          price: data.price || 0,
+          duration_hours: data.duration_hours || 0,
+          is_active: data.is_active !== undefined ? data.is_active : true,
+          event_id: data.event_id || "",
+        });
+
+        if (data.cover_image) {
+          setCurrentImage(data.cover_image);
+          setImagePreview(data.cover_image);
+          setIsImageRemoved(false);
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.detail || "خطا در دریافت اطلاعات دوره");
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchCourse();
   }, [id]);
 
-  const fetchEvents = async () => {
-    try {
-      const data = await eventsAPI.getAll();
-      setEvents(data.events || data || []);
-    } catch (err) {
-      console.error("❌ خطا در دریافت ایونت‌ها:", err);
-    }
-  };
-
-  const fetchCourse = async () => {
-    try {
-      setLoading(true);
-      const data = await coursesAPI.getById(id!);
-      const course = data.data || data;
-      
-      setFormData({
-        title: course.title || "",
-        description: course.description || "",
-        content: course.content || "",
-        price: course.price?.toString() || "",
-        duration: course.duration || "",
-        level: course.level || "",
-        capacity: course.capacity?.toString() || "",
-        eventId: course.eventId || "",
-        startDate: course.startDate || "",
-        endDate: course.endDate || "",
-        isFeatured: course.isFeatured || false,
-        order: course.order || 0,
-        status: course.status || "DRAFT",
-      });
-
-      if (course.image) {
-        setCurrentImage(course.image);
-        setImagePreview(course.image);
-      }
-    } catch (err) {
-      setError("خطا در دریافت اطلاعات دوره");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -111,29 +129,30 @@ export default function CourseEdit() {
         setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
         return;
       }
-      setImageFile(file);
+      setImage(file);
       setImagePreview(URL.createObjectURL(file));
+      setIsImageRemoved(false); // ✅ وقتی عکس جدید آپلود می‌شود، حذف را لغو کن
       setError("");
     }
   };
 
+  // ✅ اصلاح: حذف تصویر
   const handleRemoveImage = () => {
-    setImageFile(null);
+    setImage(null);
     setImagePreview("");
-setCurrentImage(""); 
+    setCurrentImage("");
+    setIsImageRemoved(true); // ✅ علامت بزن که عکس حذف شده
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
     try {
       setUploading(true);
-      const response = await uploadAPI.uploadImageWithFormData(formData);
+      const response = await uploadAPI.uploadImage(file, "courses");
       return response.url;
-    } catch (error) {
-      throw new Error("خطا در آپلود تصویر");
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || "خطا در آپلود تصویر");
     } finally {
       setUploading(false);
     }
@@ -146,40 +165,53 @@ setCurrentImage("");
     setSuccess("");
 
     try {
-      let imageUrl = currentImage;
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+      let imageUrl: string | undefined = undefined;
+
+      // ✅ اگر عکس جدید آپلود شده
+      if (image) {
+        try {
+          imageUrl = await uploadImage(image);
+        } catch (uploadError: any) {
+          setError(uploadError.message);
+          setSubmitting(false);
+          return;
+        }
       }
 
-    if (!imageFile && !currentImage) {
-      imageUrl = "";
-    }
+      // ✅ اگر کاربر عکس را حذف کرده است
+      if (isImageRemoved) {
+        imageUrl = null as any; // ارسال null برای حذف عکس
+      }
+
+      // ✅ داده‌های مطابق با CourseUpdateSchema
       const courseData = {
-        title: formData.title,
-        description: formData.description,
-        content: formData.content || "",
-        price: parseFloat(formData.price) || 0,
-        duration: formData.duration,
-        level: formData.level,
-        capacity: parseInt(formData.capacity) || 0,
-        eventId: formData.eventId || null,
-        startDate: formData.startDate || null,
-        endDate: formData.endDate || null,
-        isFeatured: formData.isFeatured,
-        order: parseInt(String(formData.order)) || 0,
-        status: formData.status,
-        image: imageUrl,
+        title: formData.title.trim(),
+        slug: originalSlug,
+        description: formData.description?.trim() || undefined,
+        cover_image: imageUrl, // ✅ می‌تواند undefined یا null باشد
+        price: Number(formData.price) || 0,
+        duration_hours: Number(formData.duration_hours) || undefined,
+        instructor_name: formData.instructor_name?.trim() || undefined,
+        is_active: formData.is_active,
+        event_id: formData.event_id || undefined,
       };
+
+      console.log("📤 ارسال داده برای ویرایش:", courseData);
 
       await coursesAPI.update(id!, courseData);
       setSuccess("✅ دوره با موفقیت ویرایش شد!");
+
+      // ✅ بعد از ذخیره، حذف عکس را ریست کن
+      setIsImageRemoved(false);
 
       setTimeout(() => {
         navigate("/admin/courses");
       }, 1500);
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ویرایش دوره");
+      setError(
+        err.response?.data?.detail || err.message || "خطا در ویرایش دوره",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -198,6 +230,7 @@ setCurrentImage("");
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
+        {/* هدر */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate("/admin/courses")}
@@ -226,10 +259,10 @@ setCurrentImage("");
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* تصویر */}
+            {/* ===== تصویر ===== */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                تصویر دوره
+                تصویر کاور
               </label>
               {imagePreview ? (
                 <div className="relative">
@@ -246,19 +279,32 @@ setCurrentImage("");
                     <X className="w-5 h-5 text-white" />
                   </button>
                   <p className="text-xs text-gray-400 mt-1">
-                    {imageFile ? "تصویر جدید" : "تصویر فعلی"}
+                    {isImageRemoved
+                      ? "🗑️ تصویر حذف خواهد شد"
+                      : image
+                        ? "🆕 تصویر جدید"
+                        : "📸 تصویر فعلی"}
                   </p>
                 </div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
                   <div className="flex flex-col items-center justify-center py-4">
                     {uploading ? (
-                      <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                      <>
+                        <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                        <p className="text-sm text-blue-400">در حال آپلود...</p>
+                      </>
                     ) : (
                       <>
                         <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-400">برای آپلود کلیک کنید</p>
-                        <p className="text-xs text-gray-500">PNG, JPG, WEBP (حداکثر ۵MB)</p>
+                        <p className="text-sm text-gray-400">
+                          {isImageRemoved
+                            ? "تصویر حذف شد - برای آپلود کلیک کنید"
+                            : "برای آپلود کلیک کنید"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, WEBP (حداکثر ۵MB)
+                        </p>
                       </>
                     )}
                   </div>
@@ -274,22 +320,25 @@ setCurrentImage("");
               )}
             </div>
 
-            {/* عنوان */}
+            {/* ===== عنوان ===== */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان دوره *
+                عنوان <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                ⚡ اسلاگ دوره هنگام ویرایش تغییر نمی‌کند
+              </p>
             </div>
 
-            {/* توضیحات */}
+            {/* ===== توضیحات ===== */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 توضیحات
@@ -300,80 +349,31 @@ setCurrentImage("");
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                placeholder="توضیحات کامل دوره را وارد کنید..."
               />
             </div>
 
-            {/* محتوا */}
+            {/* ===== مدرس ===== */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                محتوای کامل
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <User className="w-4 h-4 text-blue-400" />
+                نام مدرس
               </label>
-              <textarea
-                name="content"
-                value={formData.content}
+              <input
+                type="text"
+                name="instructor_name"
+                value={formData.instructor_name}
                 onChange={handleChange}
-                rows={5}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="نام مدرس را وارد کنید"
               />
             </div>
 
-            {/* ایونت مرتبط */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                ایونت مرتبط
-              </label>
-              <select
-                name="eventId"
-                value={formData.eventId}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-              >
-                <option value="">بدون ایونت</option>
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* مدت زمان و سطح */}
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* ===== قیمت و مدت ===== */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  مدت زمان
-                </label>
-                <input
-                  type="text"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleChange}
-                  placeholder="مثلاً: ۴ هفته"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  سطح
-                </label>
-                <select
-                  name="level"
-                  value={formData.level}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                >
-                  <option value="">انتخاب سطح</option>
-                  <option value="مبتدی">مبتدی</option>
-                  <option value="متوسط">متوسط</option>
-                  <option value="پیشرفته">پیشرفته</option>
-                </select>
-              </div>
-            </div>
-
-            {/* قیمت و ظرفیت */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-blue-400" />
                   قیمت (تومان)
                 </label>
                 <input
@@ -382,102 +382,75 @@ setCurrentImage("");
                   value={formData.price}
                   onChange={handleChange}
                   min="0"
-                  step="1000"
-                  placeholder="۰ = رایگان"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  ظرفیت
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                  مدت زمان (ساعت)
                 </label>
                 <input
                   type="number"
-                  name="capacity"
-                  value={formData.capacity}
+                  name="duration_hours"
+                  value={formData.duration_hours}
                   onChange={handleChange}
                   min="0"
-                  placeholder="۰ = نامحدود"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
             </div>
 
-            {/* تاریخ شروع و پایان */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  تاریخ شروع
-                </label>
-                <input
-                  type="datetime-local"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  تاریخ پایان
-                </label>
-                <input
-                  type="datetime-local"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
+            {/* ===== رویداد مرتبط ===== */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-400" />
+                رویداد مرتبط
+              </label>
+              <select
+                name="event_id"
+                value={formData.event_id}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+              >
+                <option value="">بدون رویداد</option>
+                {eventsLoading ? (
+                  <option value="" disabled>
+                    در حال بارگذاری...
+                  </option>
+                ) : (
+                  events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.title}
+                    </option>
+                  ))
+                )}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                انتخاب رویداد مرتبط با این دوره
+              </p>
             </div>
 
-            {/* وضعیت و ترتیب */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  وضعیت
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                >
-                  <option value="DRAFT">پیش‌نویس</option>
-                  <option value="PUBLISHED">منتشر شده</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  ترتیب نمایش
-                </label>
-                <input
-                  type="number"
-                  name="order"
-                  value={formData.order}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* گزینه‌ها */}
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2 text-white/80 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="isFeatured"
-                  checked={formData.isFeatured}
-                  onChange={handleChange}
-                  className="w-4 h-4 accent-blue-500"
-                />
-                دوره ویژه
+            {/* ===== وضعیت ===== */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                name="is_active"
+                checked={formData.is_active}
+                onChange={handleChange}
+                className="w-4 h-4 accent-blue-500"
+                id="is_active"
+              />
+              <label
+                htmlFor="is_active"
+                className="text-sm text-white/80 cursor-pointer"
+              >
+                دوره فعال باشد
               </label>
             </div>
 
-            {/* دکمه‌ها */}
-            <div className="flex gap-3 pt-4">
+            {/* ===== دکمه‌ها ===== */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
                 variant="white"
@@ -494,6 +467,7 @@ setCurrentImage("");
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={submitting || uploading}
+                className="flex-1"
               >
                 {uploading ? "در حال آپلود..." : "ذخیره تغییرات"}
               </GlassButton>

@@ -1,3 +1,4 @@
+// src/pages/public/Events.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { eventsAPI } from "../../lib/api/events";
@@ -24,12 +25,15 @@ interface Event {
   title: string;
   slug: string;
   description: string;
+  cover_image?: string;
   image?: string;
-  date: string;
+  start_date: string;
+  end_date?: string;
   capacity: number;
+  category?: string;
   type: string;
   featured: boolean;
-  isActive: boolean;
+  is_active: boolean;
   _count?: {
     enrollments: number;
   };
@@ -40,10 +44,15 @@ const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5001";
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
-  return `${BASE_URL}${imagePath}`;
+  if (imagePath.startsWith("/")) {
+    return `${BASE_URL}${imagePath}`;
+  }
+  return `${BASE_URL}/${imagePath}`;
 };
 
+// ✅ تابع فرمت تاریخ به فارسی
 const formatDate = (dateString: string) => {
+  if (!dateString) return "نامشخص";
   const date = new Date(dateString);
   return date.toLocaleDateString("fa-IR", {
     year: "numeric",
@@ -61,36 +70,51 @@ export default function Events() {
   const [searchTerm, setSearchTerm] = useState("");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const data = await eventsAPI.getAll({ limit: 50 });
-        
-        const activeEvents = (data.events || [])
-          .filter((event: Event) => event.isActive === true);
-        
+        setLoading(true);
+        const data = await eventsAPI.getAll({
+          page: currentPage,
+          size: 50,
+          is_active: true,
+        });
+
+        const activeEvents = (data.items || []).map((event: any) => ({
+          ...event,
+          image: event.cover_image,
+          type: event.category || "WORKSHOP",
+          featured: event.is_featured || false,
+        }));
+
         setEvents(activeEvents);
+        setTotalPages(Math.ceil((data.total || 0) / 50));
       } catch (err) {
+        console.error("❌ خطا:", err);
         setError("خطا در دریافت رویدادها");
-        console.error(err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchEvents();
-  }, []);
+  }, [currentPage]);
 
   const filteredEvents = events
     .filter((event) => {
       if (filter === "featured") return event.featured;
-      if (filter === "upcoming") return new Date(event.date) > new Date();
+      if (filter === "upcoming") return new Date(event.start_date) > new Date();
       return true;
     })
     .filter((event) => {
       if (!searchTerm) return true;
-      return event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             event.description.toLowerCase().includes(searchTerm.toLowerCase());
+      return (
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     });
 
   const handleImageError = (eventId: string) => {
@@ -138,7 +162,7 @@ export default function Events() {
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
       <div className="container mx-auto relative z-10 max-w-7xl">
-        <div className="mb-8">
+        <div className="mb-8 mt-10">
           <SectionHeader
             badge="دوره‌ها و رویدادهای Supreme Tech"
             badgeIcon={<Sparkles className="w-4 h-4 text-blue-400" />}
@@ -166,7 +190,7 @@ export default function Events() {
                 </button>
               )}
             </div>
-            
+
             <GlassButton
               variant="secondary"
               size="md"
@@ -175,7 +199,12 @@ export default function Events() {
               iconPosition="left"
               className="sm:!w-auto !w-full"
             >
-              فیلترها {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              فیلترها{" "}
+              {showFilters ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
             </GlassButton>
           </div>
 
@@ -188,7 +217,12 @@ export default function Events() {
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden mt-4"
               >
-                <LiquidGlassCard className="p-4 md:p-6" borderRadius="16px" blurIntensity="sm" glowIntensity="sm">
+                <LiquidGlassCard
+                  className="p-4 md:p-6"
+                  borderRadius="16px"
+                  blurIntensity="sm"
+                  glowIntensity="sm"
+                >
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setFilter("all")}
@@ -249,7 +283,7 @@ export default function Events() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredEvents.map((event) => {
-              const imageUrl = getImageUrl(event.image);
+              const imageUrl = getImageUrl(event.image || event.cover_image);
               const hasError = imageErrors[event.id];
 
               return (
@@ -295,16 +329,39 @@ export default function Events() {
                         {event.description}
                       </p>
 
-                      {/* تاریخ */}
+                      {/* ✅ تاریخ به فارسی */}
                       <div className="flex items-center text-xs text-gray-400">
                         <Calendar size={14} className="ml-1" />
-                        {formatDate(event.date)}
+                        {formatDate(event.start_date)}
                       </div>
                     </div>
                   </div>
                 </motion.div>
               );
             })}
+          </div>
+        )}
+
+        {/* صفحه‌بندی */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-8">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-lg bg-white/5 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+            >
+              قبلی
+            </button>
+            <span className="text-white px-4 py-2">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 rounded-lg bg-white/5 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+            >
+              بعدی
+            </button>
           </div>
         )}
 

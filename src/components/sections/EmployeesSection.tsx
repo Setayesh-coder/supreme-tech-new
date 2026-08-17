@@ -1,19 +1,17 @@
-// src/components/sections/EmployeesSection.tsx
+
 import { useEffect, useState } from "react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import type { Employee } from "../../lib/api/employees";
 import { employeesAPI } from "../../lib/api/employees";
+import type { EmployeePublic } from "../../lib/api/employees";
 import {
   Users,
-  Briefcase,
+
   Building2,
-  //   Mail,
-  //   Phone,
   Loader2,
 } from "lucide-react";
 
 export default function EmployeesSection() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeePublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -23,7 +21,7 @@ export default function EmployeesSection() {
         const data = await employeesAPI.getPublic();
         // فقط کارمندان فعال رو نمایش بده
         const activeEmployees = Array.isArray(data)
-          ? data.filter((emp) => emp.isActive === true)
+          ? data.filter((emp) => emp.is_active !== false)
           : [];
         setEmployees(activeEmployees);
       } catch (err) {
@@ -35,15 +33,6 @@ export default function EmployeesSection() {
     };
     fetchEmployees();
   }, []);
-
-  // const getRoleLabel = (role: string) => {
-  //   const roles: Record<string, string> = {
-  //     EMPLOYEE: "کارمند",
-  //     MANAGER: "مدیر",
-  //     ADMIN: "ادمین",
-  //   };
-  //   return roles[role] || role;
-  // };
 
   if (loading) {
     return (
@@ -119,7 +108,6 @@ export default function EmployeesSection() {
           </div>
           <div className="text-center py-12">
             <Users className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            {/* <p className="text-gray-400">هنوز کارمندی ثبت نشده است</p> */}
             <p className="text-gray-500 text-sm mt-1">
               به زودی تیم ما تکمیل خواهد شد
             </p>
@@ -201,36 +189,13 @@ export default function EmployeesSection() {
                 </div>
               )}
 
-              {/* Role Badge */}
-              {/* <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-white/5 text-gray-300 border border-white/10 mb-3">
-                {getRoleLabel(employee.role)}
+              {/* Events Count - فقط اگر موجود باشد */}
+              {/* <div className="mt-3 pt-3 border-t border-white/10 text-xs text-gray-500">
+                <span className="flex items-center justify-center gap-1">
+                  <Briefcase className="w-3 h-3" />
+                  {employee._count?.managedEvents || 0} رویداد مدیریت شده
+                </span>
               </div> */}
-
-              {/* Contact */}
-              {/* <div className="space-y-1 text-xs text-gray-500">
-                {employee.email && (
-                  <div className="flex items-center justify-center gap-1">
-                    <Mail className="w-3 h-3" />
-                    <span className="truncate max-w-[150px]">
-                      {employee.email}
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center justify-center gap-1">
-                  <Phone className="w-3 h-3" />
-                  <span>{employee.phone}</span>
-                </div>
-              </div> */}
-
-              {/* Events Count */}
-              {employee._count?.managedEvents !== undefined && (
-                <div className="mt-3 pt-3 border-t border-white/10 text-xs text-gray-500">
-                  <span className="flex items-center justify-center gap-1">
-                    <Briefcase className="w-3 h-3" />
-                    {employee._count.managedEvents} رویداد مدیریت شده
-                  </span>
-                </div>
-              )}
             </LiquidGlassCard>
           ))}
         </div>

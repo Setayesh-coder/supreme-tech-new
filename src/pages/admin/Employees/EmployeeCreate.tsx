@@ -1,16 +1,13 @@
-// src/pages/admin/Employees/EmployeeCreate.tsx
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { employeesAPI } from "../../../lib/api/employees";
-import type { Employee } from "../../../lib/api/employees";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import {
   ArrowLeft,
-  User,
   Phone,
-  Mail,
-  Lock,
+  CreditCard,
   Briefcase,
   Building,
   Shield,
@@ -18,48 +15,16 @@ import {
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 
 export default function EmployeeCreate() {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState<
-    Partial<Employee> & { password?: string }
-  >({
-    name: "",
+  const [formData, setFormData] = useState({
     phone: "",
-    email: "",
-    password: "",
-    role: "EMPLOYEE",
+    national_id: "",
     department: "",
     position: "",
+    role: "EMPLOYEE" as "EMPLOYEE" | "MANAGER" | "ADMIN",
   });
-
-  useEffect(() => {
-    const fetchEmployee = async () => {
-      if (!id) return;
-
-      try {
-        setLoading(true);
-        const data = await employeesAPI.getById(id);
-        console.log(" داده های کارمند از پروفایل:", data);
-        setFormData({
-          name: data.name || "",
-          phone: data.phone || "",
-          email: data.email || "",
-          // password:data "",
-          role: data.role || "",
-          department: data.department || "",
-          position: data.position || "",
-        });
-      } catch (err: any) {
-        console.error("❌ خطا:", err);
-        setError(err.response?.data?.error || "خطا در دریافت اطلاعات کارمند");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEmployee();
-  }, [id]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -74,8 +39,13 @@ export default function EmployeeCreate() {
     setError("");
 
     try {
-      const { password, ...dataToSend } = formData;
-      await employeesAPI.create(dataToSend);
+      await employeesAPI.create({
+        phone: formData.phone,
+        national_id: formData.national_id,
+        department: formData.department || undefined,
+        position: formData.position || undefined,
+        role: formData.role,
+      });
       navigate("/admin/employees");
     } catch (err: any) {
       console.error("❌ خطا:", err);
@@ -116,87 +86,40 @@ export default function EmployeeCreate() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">
-                  نام کامل
-                </label>
-                <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name || ""}
-                    onChange={handleChange}
-                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
-                  شماره تلفن
+                  شماره تلفن <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="tel"
                     name="phone"
-                    value={formData.phone || ""}
+                    value={formData.phone}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="09123456789"
                     required
                   />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  شماره تماس کاربری که قبلاً در سیستم ثبت‌نام کرده است
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">
-                  ایمیل
+                  کد ملی <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
-                    type="email"
-                    name="email"
-                    value={formData.email || ""}
+                    type="text"
+                    name="national_id"
+                    value={formData.national_id}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
-                  رمز عبور
-                </label>
-                <div className="relative">
-                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password || ""}
-                    onChange={handleChange}
-                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="0012345678"
                     required
                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
-                  نقش
-                </label>
-                <div className="relative">
-                  <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <select
-                    name="role"
-                    value={formData.role || "EMPLOYEE"}
-                    onChange={handleChange}
-                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
-                  >
-                    <option value="EMPLOYEE">کارمند</option>
-                    <option value="MANAGER">مدیر</option>
-                    <option value="ADMIN">ادمین</option>
-                  </select>
                 </div>
               </div>
 
@@ -209,14 +132,15 @@ export default function EmployeeCreate() {
                   <input
                     type="text"
                     name="department"
-                    value={formData.department || ""}
+                    value={formData.department}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="مثلاً: فنی و توسعه"
                   />
                 </div>
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm text-gray-400 mb-1.5">
                   سمت
                 </label>
@@ -225,10 +149,30 @@ export default function EmployeeCreate() {
                   <input
                     type="text"
                     name="position"
-                    value={formData.position || ""}
+                    value={formData.position}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="مثلاً: توسعه‌دهنده Senior"
                   />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-400 mb-1.5">
+                  نقش
+                </label>
+                <div className="relative">
+                  <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                  >
+                    <option value="EMPLOYEE">کارمند</option>
+                    <option value="MANAGER">مدیر</option>
+                    <option value="ADMIN">ادمین</option>
+                  </select>
                 </div>
               </div>
             </div>

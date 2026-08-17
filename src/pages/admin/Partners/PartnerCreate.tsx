@@ -1,3 +1,4 @@
+// src/pages/admin/partners/PartnerCreate.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
@@ -59,16 +60,22 @@ export default function PartnerCreate() {
     if (input) input.value = "";
   };
 
+  // ✅ اصلاح: تابع آپلود با مدیریت خطای دقیق
   const uploadLogo = async (file: File): Promise<string> => {
     try {
       setUploading(true);
-      // ✅ استفاده از uploadImage به جای uploadImageWithFormData
       const response = await uploadAPI.uploadImage(file, "partners");
       console.log("✅ لوگو آپلود شد:", response.url);
       return response.url;
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
-      throw new Error("خطا در آپلود لوگو");
+
+      // ✅ نمایش خطای دقیق از بک‌اند
+      const detail = error.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        throw new Error(detail.map((e: any) => e.msg).join(", "));
+      }
+      throw new Error(detail || "خطا در آپلود لوگو");
     } finally {
       setUploading(false);
     }
@@ -80,24 +87,54 @@ export default function PartnerCreate() {
     setError("");
 
     try {
+      // ✅ آپلود لوگو
       let logoUrl = "";
       if (logo) {
-        logoUrl = await uploadLogo(logo);
+        try {
+          logoUrl = await uploadLogo(logo);
+        } catch (uploadError: any) {
+          setError(uploadError.message || "خطا در آپلود لوگو");
+          setLoading(false);
+          return;
+        }
       }
 
+      // ✅ ساخت داده
       const partnerData = {
-        ...formData,
-        order: Number(formData.order),
+        name: formData.name.trim(),
+        description: formData.description?.trim() || "",
+        website: formData.website?.trim() || "",
+        order: Number(formData.order) || 0,
+        isActive: formData.isActive,
         logo: logoUrl,
       };
 
       console.log("📤 ارسال داده برای ایجاد همکار:", partnerData);
 
       await partnersAPI.create(partnerData);
+
+      // ✅ پیام موفقیت
+      alert("✅ همکار با موفقیت ایجاد شد!");
       navigate("/admin/partners");
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ایجاد همکار");
+
+      // ✅ نمایش خطای دقیق از بک‌اند
+      let errorMessage = "خطا در ایجاد همکار";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => e.msg).join(", ");
+        } else {
+          errorMessage = detail;
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -123,7 +160,7 @@ export default function PartnerCreate() {
           glowIntensity="md"
         >
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 whitespace-pre-wrap">
               ❌ {error}
             </div>
           )}
@@ -134,52 +171,67 @@ export default function PartnerCreate() {
               <label className="block text-sm font-medium text-white/80 mb-2">
                 لوگو
               </label>
-              {logoPreview ? (
-                <div className="relative w-32 h-32">
-                  <img
-                    src={logoPreview}
-                    alt="پیش‌نمایش لوگو"
-                    className="w-32 h-32 object-contain rounded-xl border border-white/20 bg-white/5"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "/placeholder-logo.png";
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRemoveLogo}
-                    className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
-                  <div className="flex flex-col items-center justify-center">
-                    {uploading ? (
-                      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-                    ) : (
-                      <>
-                        <Building2 className="w-8 h-8 text-gray-400 mb-1" />
-                        <p className="text-xs text-gray-400 text-center">
-                          آپلود لوگو
-                        </p>
-                      </>
-                    )}
+              <div className="flex items-start gap-6">
+                {logoPreview ? (
+                  <div className="relative">
+                    <img
+                      src={logoPreview}
+                      alt="پیش‌نمایش لوگو"
+                      className="w-32 h-32 object-contain rounded-xl border border-white/20 bg-white/5"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/placeholder-logo.png";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-2 -right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                    <p className="text-xs text-gray-400 mt-1 text-center">
+                      {logo ? `فایل: ${logo.name}` : "لوگو"}
+                    </p>
                   </div>
-                  <input
-                    id="logo-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                PNG, JPG, SVG (حداکثر ۲MB)
-              </p>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
+                    <div className="flex flex-col items-center justify-center">
+                      {uploading ? (
+                        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                      ) : (
+                        <>
+                          <Building2 className="w-8 h-8 text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-400 text-center">
+                            آپلود لوگو
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="logo-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </label>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm text-gray-400">
+                    {logo ? `فایل: ${logo.name}` : "هیچ لوگویی انتخاب نشده"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    PNG, JPG, SVG (حداکثر ۲MB)
+                  </p>
+                  {!logoPreview && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      برای آپلود کلیک کنید
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* نام */}
@@ -247,7 +299,7 @@ export default function PartnerCreate() {
             </div>
 
             {/* فعال */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-white/80 cursor-pointer">
                 <input
                   type="checkbox"
@@ -258,13 +310,13 @@ export default function PartnerCreate() {
                 />
                 فعال
               </label>
-              <span className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500">
                 همکاران غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
-              </span>
+              </p>
             </div>
 
             {/* دکمه‌ها */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
                 variant="white"
@@ -281,6 +333,7 @@ export default function PartnerCreate() {
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={loading || uploading}
+                className="flex-1"
               >
                 {uploading ? "در حال آپلود..." : "ایجاد همکار"}
               </GlassButton>

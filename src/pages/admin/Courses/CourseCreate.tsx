@@ -1,56 +1,64 @@
+// src/pages/admin/Courses/CourseCreate.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { coursesAPI } from "../../../lib/api/courses";
+import { coursesAPI, generateSlug } from "../../../lib/api/courses";
 import { eventsAPI } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
-import { ArrowLeft, Save, Upload, Loader2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Upload,
+  Loader2,
+  X,
+  Calendar,
+  User,
+  Clock,
+  DollarSign,
+} from "lucide-react";
 
 interface Event {
   id: string;
   title: string;
+  slug: string;
 }
 
 export default function CourseCreate() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
-
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    content: "",
-    price: "",
-    duration: "",
-    level: "",
-    capacity: "",
-    eventId: "",
-    startDate: "",
-    endDate: "",
-    isFeatured: false,
-    order: 0,
-    status: "DRAFT",
+    instructor_name: "",
+    price: 0,
+    duration_hours: 0,
+    is_active: true,
+    event_id: "", // ✅ اضافه شد
   });
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
+  // ✅ دریافت لیست رویدادها برای انتخاب
   useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setEventsLoading(true);
+        const data = await eventsAPI.getAll({ size: 100, is_active: true });
+        setEvents(data.items || []);
+      } catch (err) {
+        console.error("❌ خطا در دریافت رویدادها:", err);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
     fetchEvents();
   }, []);
-
-  const fetchEvents = async () => {
-    try {
-      const data = await eventsAPI.getAll();
-      setEvents(data.events || data || []);
-    } catch (err) {
-      console.error("❌ خطا در دریافت ایونت‌ها:", err);
-    }
-  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -76,14 +84,14 @@ export default function CourseCreate() {
         setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
         return;
       }
-      setImageFile(file);
+      setImage(file);
       setImagePreview(URL.createObjectURL(file));
       setError("");
     }
   };
 
   const handleRemoveImage = () => {
-    setImageFile(null);
+    setImage(null);
     setImagePreview("");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
@@ -92,60 +100,65 @@ export default function CourseCreate() {
   const uploadImage = async (file: File): Promise<string> => {
     try {
       setUploading(true);
-      // ✅ آپلود در پوشه events (یا هر پوشه دلخواه)
-      const response = await uploadAPI.uploadImage(file, "events");
+      const response = await uploadAPI.uploadImage(file, "courses");
       return response.url;
-    } catch (error) {
-      throw new Error("خطا در آپلود تصویر رویداد");
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || "خطا در آپلود تصویر");
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    setLoading(true);
     setError("");
-    setSuccess("");
 
     try {
+      // ✅ آپلود تصویر
       let imageUrl = "";
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+      if (image) {
+        try {
+          imageUrl = await uploadImage(image);
+        } catch (uploadError: any) {
+          setError(uploadError.message);
+          setLoading(false);
+          return;
+        }
       }
 
+      // ✅ ساخت داده مطابق با CourseCreateSchema بک‌اند
       const courseData = {
-        title: formData.title,
-        description: formData.description,
-        content: formData.content || "",
-        price: parseFloat(formData.price) || 0,
-        duration: formData.duration,
-        level: formData.level,
-        capacity: parseInt(formData.capacity) || 0,
-        eventId: formData.eventId || null,
-        startDate: formData.startDate || null,
-        endDate: formData.endDate || null,
-        isFeatured: formData.isFeatured,
-        order: parseInt(String(formData.order)) || 0,
-        status: formData.status,
-        image: imageUrl,
+        title: formData.title.trim(),
+        slug: generateSlug(formData.title.trim()),
+        description: formData.description?.trim() || undefined,
+        cover_image: imageUrl || undefined,
+        price: Number(formData.price) || 0,
+        duration_hours: Number(formData.duration_hours) || undefined,
+        instructor_name: formData.instructor_name?.trim() || undefined,
+        is_active: formData.is_active,
+        event_id: formData.event_id || undefined, // ✅ رویداد مرتبط
       };
 
-      await coursesAPI.create(courseData);
-      setSuccess("✅ دوره با موفقیت ایجاد شد!");
+      console.log("📤 ارسال داده:", courseData);
 
-      setTimeout(() => {
-        navigate("/admin/courses");
-      }, 1500);
+      await coursesAPI.create(courseData);
+      alert("✅ دوره با موفقیت ایجاد شد!");
+      navigate("/admin/courses");
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err.response?.data?.error || "خطا در ایجاد دوره");
+      setError(
+        err.response?.data?.detail || err.message || "خطا در ایجاد دوره",
+      );
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
+        {/* هدر */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate("/admin/courses")}
@@ -153,7 +166,7 @@ export default function CourseCreate() {
           >
             <ArrowLeft size={24} className="text-white" />
           </button>
-          <h1 className="text-2xl font-bold text-white">➕ دوره جدید</h1>
+          <h1 className="text-2xl font-bold text-white">➕ ایجاد دوره جدید</h1>
         </div>
 
         <LiquidGlassCard
@@ -167,17 +180,12 @@ export default function CourseCreate() {
               ❌ {error}
             </div>
           )}
-          {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
-              ✅ {success}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* تصویر */}
+            {/* ===== تصویر ===== */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                تصویر دوره
+                تصویر کاور
               </label>
               {imagePreview ? (
                 <div className="relative">
@@ -198,7 +206,10 @@ export default function CourseCreate() {
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
                   <div className="flex flex-col items-center justify-center py-4">
                     {uploading ? (
-                      <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                      <>
+                        <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                        <p className="text-sm text-blue-400">در حال آپلود...</p>
+                      </>
                     ) : (
                       <>
                         <Upload className="w-10 h-10 text-gray-400 mb-2" />
@@ -223,22 +234,26 @@ export default function CourseCreate() {
               )}
             </div>
 
-            {/* عنوان */}
+            {/* ===== عنوان ===== */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان دوره *
+                عنوان دوره <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="عنوان دوره را وارد کنید"
+                required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                ⚡ اسلاگ به صورت خودکار از عنوان تولید می‌شود
+              </p>
             </div>
 
-            {/* توضیحات */}
+            {/* ===== توضیحات ===== */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 توضیحات
@@ -249,80 +264,31 @@ export default function CourseCreate() {
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                placeholder="توضیحات کامل دوره را وارد کنید..."
               />
             </div>
 
-            {/* محتوا */}
+            {/* ===== مدرس ===== */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                محتوای کامل
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <User className="w-4 h-4 text-blue-400" />
+                نام مدرس
               </label>
-              <textarea
-                name="content"
-                value={formData.content}
+              <input
+                type="text"
+                name="instructor_name"
+                value={formData.instructor_name}
                 onChange={handleChange}
-                rows={5}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="نام مدرس را وارد کنید"
               />
             </div>
 
-            {/* ایونت مرتبط */}
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                ایونت مرتبط
-              </label>
-              <select
-                name="eventId"
-                value={formData.eventId}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-              >
-                <option value="">بدون ایونت</option>
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* مدت زمان و سطح */}
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* ===== قیمت و مدت ===== */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  مدت زمان
-                </label>
-                <input
-                  type="text"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleChange}
-                  placeholder="مثلاً: ۴ هفته"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  سطح
-                </label>
-                <select
-                  name="level"
-                  value={formData.level}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                >
-                  <option value="">انتخاب سطح</option>
-                  <option value="مبتدی">مبتدی</option>
-                  <option value="متوسط">متوسط</option>
-                  <option value="پیشرفته">پیشرفته</option>
-                </select>
-              </div>
-            </div>
-
-            {/* قیمت و ظرفیت */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-blue-400" />
                   قیمت (تومان)
                 </label>
                 <input
@@ -331,102 +297,77 @@ export default function CourseCreate() {
                   value={formData.price}
                   onChange={handleChange}
                   min="0"
-                  step="1000"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="۰ = رایگان"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  ظرفیت
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                  مدت زمان (ساعت)
                 </label>
                 <input
                   type="number"
-                  name="capacity"
-                  value={formData.capacity}
+                  name="duration_hours"
+                  value={formData.duration_hours}
                   onChange={handleChange}
                   min="0"
-                  placeholder="۰ = نامحدود"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="مثلاً: ۴۰"
                 />
               </div>
             </div>
 
-            {/* تاریخ شروع و پایان */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  تاریخ شروع
-                </label>
-                <input
-                  type="datetime-local"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  تاریخ پایان
-                </label>
-                <input
-                  type="datetime-local"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
+            {/* ===== رویداد مرتبط ===== */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-400" />
+                رویداد مرتبط
+              </label>
+              <select
+                name="event_id"
+                value={formData.event_id}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+              >
+                <option value="">بدون رویداد</option>
+                {eventsLoading ? (
+                  <option value="" disabled>
+                    در حال بارگذاری...
+                  </option>
+                ) : (
+                  events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.title}
+                    </option>
+                  ))
+                )}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                انتخاب رویداد مرتبط با این دوره
+              </p>
             </div>
 
-            {/* وضعیت و ترتیب */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  وضعیت
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                >
-                  <option value="DRAFT">پیش‌نویس</option>
-                  <option value="PUBLISHED">منتشر شده</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  ترتیب نمایش
-                </label>
-                <input
-                  type="number"
-                  name="order"
-                  value={formData.order}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* گزینه‌ها */}
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2 text-white/80 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="isFeatured"
-                  checked={formData.isFeatured}
-                  onChange={handleChange}
-                  className="w-4 h-4 accent-blue-500"
-                />
-                دوره ویژه
+            {/* ===== وضعیت فعال ===== */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                name="is_active"
+                checked={formData.is_active}
+                onChange={handleChange}
+                className="w-4 h-4 accent-blue-500"
+                id="is_active"
+              />
+              <label
+                htmlFor="is_active"
+                className="text-sm text-white/80 cursor-pointer"
+              >
+                دوره فعال باشد
               </label>
             </div>
 
-            {/* دکمه‌ها */}
-            <div className="flex gap-3 pt-4">
+            {/* ===== دکمه‌ها ===== */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
                 variant="white"
@@ -439,10 +380,11 @@ export default function CourseCreate() {
                 type="submit"
                 variant="primary"
                 size="md"
-                loading={submitting || uploading}
+                loading={loading || uploading}
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
-                disabled={submitting || uploading}
+                disabled={loading || uploading}
+                className="flex-1"
               >
                 {uploading ? "در حال آپلود..." : "ایجاد دوره"}
               </GlassButton>

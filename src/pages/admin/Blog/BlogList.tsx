@@ -2,25 +2,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { blogAPI } from "../../../lib/api/blog";
+
+import type { BlogPost } from "../../../lib/api/blog";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { Plus, Edit, Trash2, Loader2, Search, Calendar } from "lucide-react";
-
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  coverImage?: string;
-  published: boolean;
-  views: number;
-  likes: number;
-  createdAt: string;
-  author?: {
-    name: string;
-  };
-}
 
 export default function BlogListAdmin() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -35,8 +22,9 @@ export default function BlogListAdmin() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
+      // ✅ تغییر: استفاده از items به جای posts
       const data = await blogAPI.getAll({ limit: 100, page: 1 });
-      setPosts(data.items || data.posts || data.data || []);
+      setPosts(data.items || []);
     } catch (err) {
       console.error("❌ خطا:", err);
       setError("خطا در دریافت پست‌ها");
@@ -49,18 +37,21 @@ export default function BlogListAdmin() {
     if (!confirm("آیا از حذف این پست مطمئن هستید؟")) return;
     try {
       await blogAPI.delete(id);
-      setPosts(posts.filter(p => p.id !== id));
+      setPosts(posts.filter((p) => p.id !== id));
     } catch (err) {
       alert("خطا در حذف پست");
     }
   };
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    post.excerpt?.toLowerCase().includes(searchTerm.toLowerCase())
+  // ✅ تغییر: استفاده از summary به جای excerpt
+  const filteredPosts = posts.filter(
+    (post) =>
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.summary?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const formatDate = (date: string) => {
+  const formatDate = (date: string | null) => {
+    if (!date) return "نامشخص";
     return new Date(date).toLocaleDateString("fa-IR", {
       year: "numeric",
       month: "long",
@@ -84,11 +75,17 @@ export default function BlogListAdmin() {
       <div className="p-4 md:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">مدیریت وبلاگ</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              مدیریت وبلاگ
+            </h1>
             <p className="text-gray-400 text-sm mt-1">مدیریت پست‌های وبلاگ</p>
           </div>
           <Link to="/admin/blog/create">
-            <GlassButton variant="primary" icon={<Plus className="w-4 h-4" />} iconPosition="left">
+            <GlassButton
+              variant="primary"
+              icon={<Plus className="w-4 h-4" />}
+              iconPosition="left"
+            >
               پست جدید
             </GlassButton>
           </Link>
@@ -114,7 +111,11 @@ export default function BlogListAdmin() {
         )}
 
         {filteredPosts.length === 0 ? (
-          <LiquidGlassCard className="p-12 text-center" borderRadius="16px" blurIntensity="sm">
+          <LiquidGlassCard
+            className="p-12 text-center"
+            borderRadius="16px"
+            blurIntensity="sm"
+          >
             <div className="text-6xl mb-4">📝</div>
             <h3 className="text-xl font-bold text-white mb-2">پستی یافت نشد</h3>
             <p className="text-gray-400">هنوز پستی ایجاد نشده است</p>
@@ -122,33 +123,60 @@ export default function BlogListAdmin() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredPosts.map((post) => (
-              <LiquidGlassCard key={post.id} className="p-4" borderRadius="16px" blurIntensity="sm" glowIntensity="sm">
-                {post.coverImage && (
+              <LiquidGlassCard
+                key={post.id}
+                className="p-4"
+                borderRadius="16px"
+                blurIntensity="sm"
+                glowIntensity="sm"
+              >
+                {post.cover_image && (
                   <img
-                    src={post.coverImage}
+                    src={post.cover_image}
                     alt={post.title}
                     className="w-full h-40 object-cover rounded-lg mb-3"
-                    onError={(e) => (e.target as HTMLImageElement).style.display = "none"}
+                    onError={(e) =>
+                      ((e.target as HTMLImageElement).style.display = "none")
+                    }
                   />
                 )}
-                <h3 className="text-lg font-bold text-white line-clamp-2">{post.title}</h3>
-                <p className="text-gray-400 text-sm line-clamp-2 mt-1">{post.excerpt}</p>
+                <h3 className="text-lg font-bold text-white line-clamp-2">
+                  {post.title}
+                </h3>
+                {/* ✅ تغییر: summary به جای excerpt */}
+                <p className="text-gray-400 text-sm line-clamp-2 mt-1">
+                  {post.summary}
+                </p>
                 <div className="flex items-center gap-3 text-xs text-gray-500 mt-2">
                   <span className="flex items-center gap-1">
                     <Calendar size={12} />
-                    {formatDate(post.createdAt)}
+                    {formatDate(post.created_at)}
                   </span>
-                  <span className={post.published ? "text-green-400" : "text-yellow-400"}>
+                  <span
+                    className={
+                      post.published ? "text-green-400" : "text-yellow-400"
+                    }
+                  >
                     {post.published ? "✅ منتشر شده" : "⏳ پیش‌نویس"}
                   </span>
+                  <span className="text-gray-500">👁️ {post.views_count}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
                   <Link to={`/admin/blog/edit/${post.id}`} className="flex-1">
-                    <GlassButton variant="secondary" size="sm" fullWidth icon={<Edit className="w-4 h-4" />} iconPosition="left">
+                    <GlassButton
+                      variant="secondary"
+                      size="sm"
+                      fullWidth
+                      icon={<Edit className="w-4 h-4" />}
+                      iconPosition="left"
+                    >
                       ویرایش
                     </GlassButton>
                   </Link>
-                  <button onClick={() => handleDelete(post.id)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg">
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

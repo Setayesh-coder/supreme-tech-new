@@ -27,7 +27,7 @@ export default function HeroCreate() {
     description: "",
     buttonText: "",
     buttonLink: "",
-    color: "#3b82f6",
+    // ❌ رنگ در بک‌اند وجود نداره، حذف شد
     order: 0,
     isActive: true,
     tagline: "",
@@ -72,14 +72,22 @@ export default function HeroCreate() {
     if (input) input.value = "";
   };
 
+  // ✅ اصلاح: تابع آپلود با مدیریت خطای دقیق
   const uploadImage = async (file: File): Promise<string> => {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "hero");
-      return response.url || response.url || "";
-    } catch (error) {
+      console.log("✅ تصویر آپلود شد:", response.url);
+      return response.url;
+    } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
-      throw new Error("خطا در آپلود تصویر");
+
+      // ✅ نمایش خطای دقیق از بک‌اند
+      const detail = error.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        throw new Error(detail.map((e: any) => e.msg).join(", "));
+      }
+      throw new Error(detail || "خطا در آپلود تصویر");
     } finally {
       setUploading(false);
     }
@@ -91,17 +99,26 @@ export default function HeroCreate() {
     setError("");
 
     try {
+      // ✅ آپلود تصویر
       let imageUrl = "";
       if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+        try {
+          imageUrl = await uploadImage(imageFile);
+        } catch (uploadError: any) {
+          setError(uploadError.message || "خطا در آپلود تصویر");
+          setLoading(false);
+          return;
+        }
       }
 
+      // ✅ چک کردن وجود تصویر
       if (!imageUrl) {
         setError("لطفاً یک تصویر انتخاب کنید");
         setLoading(false);
         return;
       }
 
+      // ✅ ساخت داده مطابق با Schema بک‌اند
       const slideData = {
         title: formData.title.trim(),
         subtitle: formData.subtitle?.trim() || undefined,
@@ -109,6 +126,7 @@ export default function HeroCreate() {
         image_url: imageUrl,
         button_text: formData.buttonText?.trim() || undefined,
         button_link: formData.buttonLink?.trim() || undefined,
+        tagLine: formData.tagline?.trim() || undefined, // ✅ اضافه شد
         order: Number(formData.order) || 0,
         is_active: formData.isActive !== undefined ? formData.isActive : true,
       };
@@ -116,15 +134,30 @@ export default function HeroCreate() {
       console.log("📤 ارسال اسلاید:", slideData);
 
       await heroAPI.create(slideData);
+
+      // ✅ پیام موفقیت
+      alert("✅ اسلاید با موفقیت ایجاد شد!");
       navigate("/admin/hero");
     } catch (err: any) {
       console.error("❌ خطا:", err);
       console.error("📄 پاسخ خطا:", err.response?.data);
-      setError(
-        err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "خطا در ایجاد اسلاید",
-      );
+
+      // ✅ نمایش خطای دقیق
+      let errorMessage = "خطا در ایجاد اسلاید";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => e.msg).join(", ");
+        } else {
+          errorMessage = detail;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,7 +186,7 @@ export default function HeroCreate() {
           glowIntensity="md"
         >
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 whitespace-pre-wrap">
               ❌ {error}
             </div>
           )}
@@ -164,48 +197,62 @@ export default function HeroCreate() {
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر اسلاید <span className="text-red-400">*</span>
               </label>
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="پیش‌نمایش"
-                    className="w-full h-48 object-cover rounded-xl"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
-                  <div className="flex flex-col items-center justify-center py-4">
-                    {uploading ? (
-                      <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
-                    ) : (
-                      <>
-                        <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-400">
-                          برای آپلود کلیک کنید
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          PNG, JPG, WEBP (حداکثر ۵MB)
-                        </p>
-                      </>
-                    )}
+              <div className="flex flex-col gap-2">
+                {imagePreview ? (
+                  <div className="relative w-full">
+                    <img
+                      src={imagePreview}
+                      alt="پیش‌نمایش"
+                      className="w-full h-48 object-cover rounded-xl border border-white/20"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/placeholder-image.jpg";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-white" />
+                    </button>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {imageFile ? `🆕 ${imageFile.name}` : "تصویر"}
+                    </p>
                   </div>
-                  <input
-                    id="image-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
-              )}
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
+                    <div className="flex flex-col items-center justify-center py-4">
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-2" />
+                          <p className="text-sm text-blue-400">
+                            در حال آپلود...
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-400">
+                            برای آپلود کلیک کنید
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, WEBP (حداکثر ۵MB)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* عنوان */}
@@ -239,7 +286,7 @@ export default function HeroCreate() {
               />
             </div>
 
-            {/* heroTagline */}
+            {/* تگلاین */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تگ بالای اسلاید (Hero Tagline)
@@ -249,7 +296,7 @@ export default function HeroCreate() {
                 name="tagline"
                 value={formData.tagline}
                 onChange={handleChange}
-                placeholder="مثال: مرکز توسعه فناوری‌های برتر تهران"
+                placeholder="مثال: 🚀 مرکز توسعه فناوری‌های برتر تهران"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -302,33 +349,8 @@ export default function HeroCreate() {
               </div>
             </div>
 
-            {/* رنگ و ترتیب */}
+            {/* ترتیب و وضعیت */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  رنگ گرادیانت
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    name="color"
-                    value={formData.color}
-                    onChange={handleChange}
-                    className="w-12 h-12 rounded-xl border border-white/20 cursor-pointer bg-transparent"
-                  />
-                  <input
-                    type="text"
-                    name="color"
-                    value={formData.color}
-                    onChange={handleChange}
-                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                    placeholder="#3b82f6"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  کد رنگ برای گرادیانت متن در اسلاید
-                </p>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   ترتیب نمایش
@@ -345,28 +367,23 @@ export default function HeroCreate() {
                   عدد کوچکتر = نمایش زودتر
                 </p>
               </div>
-            </div>
-
-            {/* فعال */}
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-white/80 cursor-pointer">
+              <div className="flex items-center gap-3 pt-6">
                 <input
                   type="checkbox"
                   name="isActive"
                   checked={formData.isActive}
                   onChange={handleChange}
-                  className="w-4 h-4 accent-blue-500"
+                  className="w-5 h-5 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
                 />
-                <span>فعال</span>
+                <label className="text-sm text-gray-400 cursor-pointer">
+                  فعال
+                </label>
                 <HelpCircle className="w-3.5 h-3.5 text-gray-500" />
-              </label>
-              <span className="text-xs text-gray-500">
-                اسلایدهای غیرفعال در صفحه اصلی نمایش داده نمی‌شوند
-              </span>
+              </div>
             </div>
 
             {/* دکمه‌ها */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
                 variant="white"
@@ -383,6 +400,7 @@ export default function HeroCreate() {
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={loading || uploading}
+                className="flex-1"
               >
                 {uploading ? "در حال آپلود..." : "ایجاد اسلاید"}
               </GlassButton>

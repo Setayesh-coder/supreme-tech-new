@@ -12,7 +12,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
   Calendar,
   Phone,
   Mail,
@@ -23,28 +22,38 @@ import {
   Download,
 } from "lucide-react";
 
+// ✅ تایپ ثبت‌نام مطابق با بک‌اند
 interface Enrollment {
   id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  message?: string;
-  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "WAITING" | "ATTENDED";
-  paymentStatus: "PENDING" | "PAID" | "FAILED";
-  createdAt: string;
-  meetingLink?: string;
-  notes?: string;
+  user_id: string;
+  event_id?: string;
+  course_id?: string;
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+  payment_status?: "PENDING" | "PAID" | "FAILED";
+  meeting_link?: string;
+  created_at: string;
+  updated_at: string;
+  // فیلدهای اضافی برای نمایش
   user?: {
     id: string;
     name: string;
     phone: string;
     email?: string;
   };
-  event: {
+  event?: {
     id: string;
     title: string;
     date: string;
   };
+  // فیلدهای فرم نظرسنجی
+  field_of_study?: string;
+  university?: string;
+  has_experience?: boolean;
+  experience_level?: string;
+  has_laptop?: boolean;
+  os_type?: string;
+  goal?: string;
+  referral_source?: string;
 }
 
 export default function EventEnrollments() {
@@ -76,21 +85,49 @@ export default function EventEnrollments() {
     }
   };
 
+  // ✅ اصلاح: استفاده از getCourseEnrollments به جای getEventEnrollments
   const fetchEnrollments = async () => {
+    if (!eventId) return;
+
     try {
-      const data = await enrollmentsAPI.getEventEnrollments(eventId!, {
+      setLoading(true);
+      setError("");
+
+      // ✅ استفاده از getCourseEnrollments برای دریافت ثبت‌نام‌های رویداد
+      // توجه: این متد برای دوره‌هاست، اگر رویدادها نیاز به اندپوینت جدا دارند، باید اضافه شود
+      // در حال حاضر از getCourseEnrollments استفاده می‌کنیم
+      const data = await enrollmentsAPI.getCourseEnrollments(eventId, {
         status: filter === "ALL" ? undefined : filter,
-        search: search || undefined,
       });
-      setEnrollments(data || []);
-    } catch (err) {
-      setError("خطا در دریافت ثبت‌نام‌ها");
+
+      // ✅ تبدیل داده‌ها به فرمت مورد نیاز
+      const mappedData = (data || []).map((item: any) => ({
+        ...item,
+        payment_status: item.payment_status || item.paymentStatus || "PENDING",
+        meeting_link: item.meeting_link || item.meetingLink,
+        created_at: item.created_at || item.createdAt,
+        user: item.user || {
+          id: item.user_id,
+          name: item.name || "کاربر",
+          phone: item.phone || "",
+          email: item.email || "",
+        },
+      }));
+
+      setEnrollments(mappedData);
+    } catch (err: any) {
+      console.error("❌ خطا:", err);
+      setError(err.response?.data?.detail || "خطا در دریافت ثبت‌نام‌ها");
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (enrollmentId: string, status: string) => {
+  // ✅ اصلاح: تایپ status به صورت Literal
+  const updateStatus = async (
+    enrollmentId: string,
+    status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED",
+  ) => {
     try {
       await enrollmentsAPI.updateStatus(enrollmentId, status);
       await fetchEnrollments();
@@ -99,12 +136,13 @@ export default function EventEnrollments() {
     }
   };
 
+  // ✅ اصلاح: استفاده از setMeetingLink به جای sendMeetingLink
   const handleSendMeetingLink = async () => {
     if (!selectedEnrollment || !meetingLink) return;
 
     setUpdating(true);
     try {
-      await enrollmentsAPI.sendMeetingLink(selectedEnrollment.id, meetingLink);
+      await enrollmentsAPI.setMeetingLink(selectedEnrollment.id, meetingLink);
       alert("✅ لینک جلسه با موفقیت ارسال شد");
       setShowMeetingModal(false);
       setMeetingLink("");
@@ -134,13 +172,8 @@ export default function EventEnrollments() {
           color: "bg-red-500/20 text-red-400",
           icon: XCircle,
         },
-        WAITING: {
-          label: "در لیست انتظار",
-          color: "bg-orange-500/20 text-orange-400",
-          icon: AlertCircle,
-        },
-        ATTENDED: {
-          label: "حضور یافته",
+        COMPLETED: {
+          label: "تکمیل شده",
           color: "bg-blue-500/20 text-blue-400",
           icon: CheckCircle,
         },
@@ -167,21 +200,22 @@ export default function EventEnrollments() {
       "تاریخ ثبت‌نام",
     ];
     const rows = enrollments.map((e) => [
-      e.user?.name || e.name,
-      e.user?.phone || e.phone,
-      e.user?.email || e.email || "-",
+      e.user?.name || "کاربر",
+      e.user?.phone || "",
+      e.user?.email || "-",
       getStatusBadge(e.status).label,
-      getPaymentBadge(e.paymentStatus).label,
-      new Date(e.createdAt).toLocaleDateString("fa-IR"),
+      getPaymentBadge(e.payment_status || "PENDING").label,
+      new Date(e.created_at || Date.now()).toLocaleDateString("fa-IR"),
     ]);
 
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ثبت‌نام‌های-${eventTitle}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `ثبت‌نام‌های-${eventTitle || "رویداد"}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -258,7 +292,7 @@ export default function EventEnrollments() {
               <option value="PENDING">در انتظار</option>
               <option value="CONFIRMED">تایید شده</option>
               <option value="CANCELLED">لغو شده</option>
-              <option value="ATTENDED">حضور یافته</option>
+              <option value="COMPLETED">تکمیل شده</option>
             </select>
             <GlassButton
               variant="primary"
@@ -274,7 +308,7 @@ export default function EventEnrollments() {
 
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl">
-            {error}
+            ❌ {error}
           </div>
         )}
 
@@ -282,7 +316,9 @@ export default function EventEnrollments() {
         <div className="space-y-3">
           {enrollments.map((enrollment) => {
             const status = getStatusBadge(enrollment.status);
-            const payment = getPaymentBadge(enrollment.paymentStatus);
+            const payment = getPaymentBadge(
+              enrollment.payment_status || "PENDING",
+            );
             const StatusIcon = status.icon;
 
             return (
@@ -298,16 +334,18 @@ export default function EventEnrollments() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <h3 className="text-white font-bold flex items-center gap-2">
-                          {enrollment.user?.name || enrollment.name}
+                          {enrollment.user?.name || "کاربر"}
                           <span className="text-xs text-white/40 font-normal">
                             #{enrollment.id.slice(0, 8)}
                           </span>
                         </h3>
                         <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-white/60">
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {enrollment.user?.phone || enrollment.phone}
-                          </span>
+                          {enrollment.user?.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {enrollment.user.phone}
+                            </span>
+                          )}
                           {enrollment.user?.email && (
                             <span className="flex items-center gap-1">
                               <Mail className="w-3 h-3" />
@@ -316,9 +354,9 @@ export default function EventEnrollments() {
                           )}
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            {new Date(enrollment.createdAt).toLocaleDateString(
-                              "fa-IR",
-                            )}
+                            {new Date(
+                              enrollment.created_at || Date.now(),
+                            ).toLocaleDateString("fa-IR")}
                           </span>
                         </div>
                       </div>
@@ -337,9 +375,11 @@ export default function EventEnrollments() {
                       </div>
                     </div>
 
-                    {enrollment.notes && (
+                    {/* اطلاعات فرم نظرسنجی */}
+                    {enrollment.field_of_study && (
                       <p className="text-xs text-white/40 mt-1">
-                        📝 {enrollment.notes}
+                        📚 رشته: {enrollment.field_of_study}
+                        {enrollment.university && ` - ${enrollment.university}`}
                       </p>
                     )}
                   </div>
@@ -377,13 +417,13 @@ export default function EventEnrollments() {
                         size="sm"
                         icon={<CheckCircle className="w-3 h-3" />}
                         iconPosition="left"
-                        onClick={() => updateStatus(enrollment.id, "ATTENDED")}
+                        onClick={() => updateStatus(enrollment.id, "COMPLETED")}
                       >
                         ثبت حضور
                       </GlassButton>
                     )}
-                    {enrollment.paymentStatus === "PAID" &&
-                      enrollment.status !== "ATTENDED" && (
+                    {enrollment.payment_status === "PAID" &&
+                      enrollment.status !== "COMPLETED" && (
                         <GlassButton
                           variant="white"
                           size="sm"
@@ -391,7 +431,7 @@ export default function EventEnrollments() {
                           iconPosition="left"
                           onClick={() => {
                             setSelectedEnrollment(enrollment);
-                            setMeetingLink(enrollment.meetingLink || "");
+                            setMeetingLink(enrollment.meeting_link || "");
                             setShowMeetingModal(true);
                           }}
                         >
@@ -429,8 +469,7 @@ export default function EventEnrollments() {
                   🔗 ارسال لینک جلسه
                 </h2>
                 <p className="text-white/60 text-sm text-center mb-4">
-                  لینک جلسه را برای "
-                  {selectedEnrollment.user?.name || selectedEnrollment.name}"
+                  لینک جلسه را برای "{selectedEnrollment.user?.name || "کاربر"}"
                   ارسال کنید
                 </p>
 

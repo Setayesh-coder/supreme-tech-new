@@ -1,7 +1,9 @@
 // src/pages/public/BlogPost.tsx
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { blogAPI } from "../../lib/api/blog";
+import type { BlogPost } from "../../lib/api/blog";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import ReactMarkdown from "react-markdown";
@@ -9,9 +11,9 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
-// @ts-ignore - react-syntax-highlighter types issue
+// @ts-ignore
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// @ts-ignore - react-syntax-highlighter styles types issue
+// @ts-ignore
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   Calendar,
@@ -29,7 +31,7 @@ import {
 import { BlogPostSkeleton } from "../../components/skeletons/BlogPostSkeleton";
 import { getImageUrl } from "../../lib/constants";
 
-// آیکون‌های ساده برای شبکه‌های اجتماعی
+// آیکون‌ها
 const TwitterIcon = () => (
   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -41,19 +43,6 @@ const LinkedinIcon = () => (
     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
   </svg>
 );
-
-interface BlogPost {
-  id: string;
-  title: string;
-  content: string;
-  excerpt: string;
-  coverImage?: string;
-  views: number;
-  likes: number;
-  createdAt: string;
-  author?: { name: string };
-  tags: { name: string }[];
-}
 
 interface Heading {
   level: number;
@@ -69,15 +58,6 @@ const slugify = (text: string) =>
     .replace(/\s+/g, "-")
     .replace(/[^\u0600-\u06FFa-z0-9-]/g, "");
 
-function getNodeText(node: unknown): string {
-  if (typeof node === "string" || typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(getNodeText).join("");
-  if (node && typeof node === "object" && "props" in (node as any)) {
-    return getNodeText((node as any).props?.children);
-  }
-  return "";
-}
-
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -92,13 +72,24 @@ export default function BlogPost() {
   const [likeLoading, setLikeLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // ✅ تابع getNodeText به عنوان یک تابع کمکی داخل کامپوننت
+  const getNodeText = (node: unknown): string => {
+    if (typeof node === "string" || typeof node === "number")
+      return String(node);
+    if (Array.isArray(node)) return node.map(getNodeText).join("");
+    if (node && typeof node === "object" && "props" in (node as any)) {
+      return getNodeText((node as any).props?.children);
+    }
+    return "";
+  };
+
   useEffect(() => {
     const fetchPost = async () => {
       if (!slug) return;
       try {
         const data = await blogAPI.getBySlug(slug);
         setPost(data);
-        setLikesCount(data.likes || 0);
+        setLikesCount(data.likes_count || 0);
         await checkLikeStatus(data.id);
       } catch (err) {
         setError("پست مورد نظر پیدا نشد");
@@ -115,9 +106,8 @@ export default function BlogPost() {
 
     try {
       const response = await blogAPI.getLikeStatus(postId);
-      if (response.success) {
-        setLiked(response.liked);
-      }
+      setLiked(response.is_liked);
+      setLikesCount(response.likes_count);
     } catch (error) {
       console.error("❌ خطا در بررسی وضعیت لایک:", error);
     }
@@ -165,10 +155,8 @@ export default function BlogPost() {
 
     try {
       const response = await blogAPI.toggleLike(post.id);
-      if (response.success) {
-        setLiked(response.liked);
-        setLikesCount(response.likes);
-      }
+      setLiked(response.is_liked);
+      setLikesCount(response.likes_count);
     } catch (error) {
       console.error("❌ خطا در لایک کردن:", error);
     } finally {
@@ -224,7 +212,7 @@ export default function BlogPost() {
       try {
         await navigator.share({
           title: post?.title,
-          text: post?.excerpt || post?.title,
+          text: post?.summary || post?.title,
           url: window.location.href,
         });
       } catch (err) {
@@ -241,7 +229,7 @@ export default function BlogPost() {
 
   if (error || !post) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh] px-4">
+      <div className="flex justify-center items-center min-h-[60vh] px-4 mt-4">
         <LiquidGlassCard
           className="p-8 text-center max-w-md"
           borderRadius="24px"
@@ -357,6 +345,7 @@ export default function BlogPost() {
       return <p className="text-gray-300 leading-relaxed mb-4">{children}</p>;
     },
 
+    // ✅ استفاده از getNodeText در h1
     h1({ children }) {
       const id = slugify(getNodeText(children));
       return (
@@ -368,6 +357,7 @@ export default function BlogPost() {
         </h1>
       );
     },
+    // ✅ استفاده از getNodeText در h2
     h2({ children }) {
       const id = slugify(getNodeText(children));
       return (
@@ -379,6 +369,7 @@ export default function BlogPost() {
         </h2>
       );
     },
+    // ✅ استفاده از getNodeText در h3
     h3({ children }) {
       const id = slugify(getNodeText(children));
       return (
@@ -481,6 +472,7 @@ export default function BlogPost() {
 
   return (
     <section className="py-12 px-4 md:px-6 relative overflow-hidden min-h-screen">
+      {/* Progress Bar */}
       <div className="fixed top-0 right-0 left-0 h-1 bg-white/5 z-50">
         <div
           className="h-full bg-gradient-to-l from-blue-400 to-cyan-400 transition-[width] duration-150"
@@ -488,12 +480,14 @@ export default function BlogPost() {
         />
       </div>
 
+      {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/10 to-transparent" />
       <div className="absolute top-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
       <div className="container mx-auto max-w-6xl relative z-10">
-        <Link to="/blog" className="inline-block mb-6">
+        {/* Back Button */}
+        <Link to="/blog" className="inline-block mb-6 mt-10">
           <LiquidGlassCard
             className="px-4 py-2"
             borderRadius="100px"
@@ -511,17 +505,18 @@ export default function BlogPost() {
           </LiquidGlassCard>
         </Link>
 
+        {/* Cover Image */}
         <LiquidGlassCard
-          className="overflow-hidden mb-6"
+          className="overflow-hidden mb-6 "
           borderRadius="24px"
           blurIntensity="lg"
           glowIntensity="md"
           shadowIntensity="lg"
         >
-          {post.coverImage && (
+          {post.cover_image && (
             <div className="relative overflow-hidden h-64 md:h-96">
               <OptimizedImage
-                src={getImageUrl(post.coverImage) || post.coverImage}
+                src={getImageUrl(post.cover_image) || post.cover_image}
                 alt={post.title}
                 className="w-full h-full"
                 objectFit="cover"
@@ -538,21 +533,19 @@ export default function BlogPost() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-6 pb-6 border-b border-white/10">
               <span className="flex items-center gap-1.5">
                 <Calendar size={16} />
-                {new Date(post.createdAt).toLocaleDateString("fa-IR")}
+                {post.created_at
+                  ? new Date(post.created_at).toLocaleDateString("fa-IR")
+                  : "نامشخص"}
               </span>
               <span className="flex items-center gap-1.5">
                 <Eye size={16} />
-                {(post.views || 0).toLocaleString()} بازدید
+                {(post.views_count || 0).toLocaleString()} بازدید
               </span>
-              {post.author && (
-                <>
-                  <span className="hidden sm:inline">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <User size={16} />
-                    {post.author.name}
-                  </span>
-                </>
-              )}
+              <span className="hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5">
+                <User size={16} />
+                {post.author_name}
+              </span>
               <span className="hidden sm:inline">•</span>
               <span className="flex items-center gap-1.5">
                 <Clock size={16} />
@@ -564,14 +557,14 @@ export default function BlogPost() {
               {post.title}
             </h1>
 
-            {post.tags.length > 0 && (
+            {post.tags && post.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
                   <span
-                    key={tag.name}
+                    key={tag}
                     className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300"
                   >
-                    #{tag.name}
+                    #{tag}
                   </span>
                 ))}
               </div>
@@ -579,6 +572,7 @@ export default function BlogPost() {
           </div>
         </LiquidGlassCard>
 
+        {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2" ref={contentRef}>
             <LiquidGlassCard
@@ -599,7 +593,9 @@ export default function BlogPost() {
             </LiquidGlassCard>
           </div>
 
+          {/* Sidebar */}
           <div className="lg:sticky lg:top-6 space-y-6">
+            {/* Table of Contents */}
             {headings.length > 0 && (
               <LiquidGlassCard
                 className="p-5"
@@ -627,6 +623,7 @@ export default function BlogPost() {
               </LiquidGlassCard>
             )}
 
+            {/* Like & Share */}
             <LiquidGlassCard
               className="p-5"
               borderRadius="20px"

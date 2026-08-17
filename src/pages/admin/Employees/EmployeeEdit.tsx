@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { employeesAPI } from "../../../lib/api/employees";
@@ -6,17 +7,12 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import {
   ArrowLeft,
-  User,
-  Phone,
-  Mail,
   Briefcase,
   Building,
   Shield,
+  CreditCard,
 } from "lucide-react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
-
-// تایپ پاسخ از API
-type ApiResponse<T> = T | { data: T };
 
 export default function EmployeeEdit() {
   const { id } = useParams<{ id: string }>();
@@ -24,15 +20,20 @@ export default function EmployeeEdit() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState<Partial<Employee>>({
-    name: "",
-    phone: "",
-    email: "",
+  const [formData, setFormData] = useState<{
+    national_id: string;
+    role: "EMPLOYEE" | "MANAGER" | "ADMIN";
+    department: string;
+    position: string;
+    is_active: boolean;
+  }>({
+    national_id: "",
     role: "EMPLOYEE",
     department: "",
     position: "",
     is_active: true,
   });
+  const [employeeData, setEmployeeData] = useState<Employee | null>(null);
 
   useEffect(() => {
     fetchEmployee();
@@ -41,20 +42,10 @@ export default function EmployeeEdit() {
   const fetchEmployee = async () => {
     try {
       setFetching(true);
-      const response = (await employeesAPI.getById(
-        id!,
-      )) as ApiResponse<Employee>;
-
-      // ✅ استخراج داده از پاسخ
-      const data: Employee =
-        response && typeof response === "object" && "data" in response
-          ? response.data
-          : (response as Employee);
-
+      const data = await employeesAPI.getById(id!);
+      setEmployeeData(data);
       setFormData({
-        name: data?.name || "",
-        phone: data?.phone || "",
-        email: data?.email || "",
+        national_id: data?.national_id || "",
         role: data?.role || "EMPLOYEE",
         department: data?.department || "",
         position: data?.position || "",
@@ -85,7 +76,13 @@ export default function EmployeeEdit() {
     setError("");
 
     try {
-      await employeesAPI.update(id!, formData);
+      await employeesAPI.update(id!, {
+        national_id: formData.national_id || undefined,
+        role: formData.role,
+        department: formData.department || undefined,
+        position: formData.position || undefined,
+        is_active: formData.is_active,
+      });
       navigate("/admin/employees");
     } catch (err: any) {
       console.error("❌ خطا:", err);
@@ -133,54 +130,39 @@ export default function EmployeeEdit() {
             </div>
           )}
 
+          {/* اطلاعات غیرقابل ویرایش */}
+          {employeeData && (
+            <div className="mb-6 p-4 bg-white/5 rounded-xl space-y-2">
+              <p className="text-sm text-gray-400">
+                <span className="font-medium text-white">نام:</span> {employeeData.name}
+              </p>
+              <p className="text-sm text-gray-400">
+                <span className="font-medium text-white">شماره تلفن:</span> {employeeData.phone}
+              </p>
+              {employeeData.email && (
+                <p className="text-sm text-gray-400">
+                  <span className="font-medium text-white">ایمیل:</span> {employeeData.email}
+                </p>
+              )}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">
-                  نام کامل
+                  کد ملی <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name || ""}
+                    name="national_id"
+                    value={formData.national_id}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="0012345678"
                     required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
-                  شماره تلفن
-                </label>
-                <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone || ""}
-                    onChange={handleChange}
-                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
-                  ایمیل
-                </label>
-                <div className="relative">
-                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email || ""}
-                    onChange={handleChange}
-                    className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
@@ -193,7 +175,7 @@ export default function EmployeeEdit() {
                   <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <select
                     name="role"
-                    value={formData.role || "EMPLOYEE"}
+                    value={formData.role}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
                   >
@@ -213,9 +195,10 @@ export default function EmployeeEdit() {
                   <input
                     type="text"
                     name="department"
-                    value={formData.department || ""}
+                    value={formData.department}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="فنی و توسعه"
                   />
                 </div>
               </div>
@@ -229,9 +212,10 @@ export default function EmployeeEdit() {
                   <input
                     type="text"
                     name="position"
-                    value={formData.position || ""}
+                    value={formData.position}
                     onChange={handleChange}
                     className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="توسعه‌دهنده Senior"
                   />
                 </div>
               </div>
@@ -240,8 +224,8 @@ export default function EmployeeEdit() {
                 <label className="flex items-center gap-3 text-sm text-gray-400">
                   <input
                     type="checkbox"
-                    name="isActive"
-                    checked={formData.is_active !== false}
+                    name="is_active"
+                    checked={formData.is_active}
                     onChange={handleChange}
                     className="w-5 h-5 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
                   />

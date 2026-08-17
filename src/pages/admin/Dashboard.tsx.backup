@@ -1,0 +1,190 @@
+// src/pages/admin/Dashboard.tsx
+import { useState, useEffect } from "react";
+import { AdminLayout } from "../../components/admin/AdminLayout";
+import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
+import { statsAPI } from "../../lib/api/stats";
+import { Users, Calendar, Eye, Mail, MessageSquare } from "lucide-react";
+import Stats from "./Stats";
+
+interface StatsOverview {
+  total_views: number;
+  unique_visitors: number;
+  total_events: number;
+  total_messages: number;
+  unread_messages: number;
+}
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<StatsOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await statsAPI.getOverview();
+      console.log("📊 آمار دریافت شده:", data);
+      setStats(data);
+    } catch (error: any) {
+      console.error("❌ خطا در دریافت آمار:", error);
+      setError("خطا در دریافت آمار");
+      // ✅ داده‌های پیش‌فرض با ساختار جدید
+      setStats({
+        total_views: 0,
+        unique_visitors: 0,
+        total_events: 0,
+        total_messages: 0,
+        unread_messages: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ کارت‌های آمار با فیلدهای جدید
+  const statCards = [
+    {
+      title: "بازدید کل",
+      value: stats?.total_views || 0,
+      icon: <Eye size={24} className="text-blue-400" />,
+      color: "from-blue-500/20",
+      border: "border-blue-500/30",
+    },
+    {
+      title: "بازدیدکنندگان یکتا",
+      value: stats?.unique_visitors || 0,
+      icon: <Users size={24} className="text-purple-400" />,
+      color: "from-purple-500/20",
+      border: "border-purple-500/30",
+    },
+    {
+      title: "رویدادها",
+      value: stats?.total_events || 0,
+      icon: <Calendar size={24} className="text-green-400" />,
+      color: "from-green-500/20",
+      border: "border-green-500/30",
+    },
+    {
+      title: "پیام‌ها",
+      value: stats?.total_messages || 0,
+      icon: <MessageSquare size={24} className="text-yellow-400" />,
+      color: "from-yellow-500/20",
+      border: "border-yellow-500/30",
+    },
+    {
+      title: "پیام‌های خوانده نشده",
+      value: stats?.unread_messages || 0,
+      icon: <Mail size={24} className="text-red-400" />,
+      color: "from-red-500/20",
+      border: "border-red-500/30",
+    },
+  ];
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="p-4 md:p-6">
+          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl">
+            ❌ {error}
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout>
+      <div className="p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              📊 داشبورد
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">خلاصه وضعیت سامانه</p>
+          </div>
+          <div className="flex items-center gap-2 mt-2 sm:mt-0">
+            <span className="text-sm text-gray-400">
+              {new Date().toLocaleDateString("fa-IR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
+          </div>
+        </div>
+
+        <Stats />
+        {loading ? (
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-400">در حال بارگذاری آمار...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+              {statCards.map((card, index) => (
+                <LiquidGlassCard
+                  key={index}
+                  className={`p-5 bg-gradient-to-br ${card.color} border ${card.border}`}
+                  borderRadius="16px"
+                  blurIntensity="sm"
+                  glowIntensity="sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-xs">{card.title}</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        {card.value.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                      {card.icon}
+                    </div>
+                  </div>
+                </LiquidGlassCard>
+              ))}
+            </div>
+
+            {/* بخش خوش‌آمدگویی */}
+            <LiquidGlassCard
+              className="p-6"
+              borderRadius="16px"
+              blurIntensity="lg"
+              glowIntensity="md"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {localStorage.getItem("admin")
+                    ? JSON.parse(
+                        localStorage.getItem("admin") || "{}",
+                      ).name?.charAt(0) || "A"
+                    : "A"}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    خوش آمدید،{" "}
+                    {localStorage.getItem("admin")
+                      ? JSON.parse(localStorage.getItem("admin") || "{}")
+                          .name || "ادمین"
+                      : "ادمین"}
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    به پنل مدیریت Supreme Tech خوش آمدید. از اینجا می‌توانید
+                    تمام بخش‌های سایت را مدیریت کنید.
+                  </p>
+                </div>
+              </div>
+            </LiquidGlassCard>
+          </>
+        )}
+      </div>
+    </AdminLayout>
+  );
+}

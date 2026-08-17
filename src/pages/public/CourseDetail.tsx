@@ -1,4 +1,4 @@
-
+// src/pages/public/CourseDetail.tsx
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { coursesAPI } from "../../lib/api/courses";
@@ -24,22 +24,26 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
+import { enrollmentsAPI } from "../../lib/api/enrollments";
 
+// ✅ تایپ Course
 interface Course {
   id: string;
   title: string;
   slug: string;
   description: string;
   content?: string;
+  cover_image?: string;
   image?: string;
   price: number;
+  duration_hours?: number;
   duration?: string;
   level?: string;
   capacity: number;
   enrolledCount: number;
   startDate?: string;
   endDate?: string;
-  isActive: boolean;
+  is_active: boolean;
   isFeatured: boolean;
   prerequisites?: string[];
   sessions?: Session[];
@@ -77,7 +81,10 @@ const BASE_URL = import.meta.env.VITE_BASE_URL || "https://supremetech.ir";
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
-  return `${BASE_URL}${imagePath}`;
+  if (imagePath.startsWith("/")) {
+    return `${BASE_URL}${imagePath}`;
+  }
+  return `${BASE_URL}/${imagePath}`;
 };
 
 const formatDate = (dateString: string) => {
@@ -116,6 +123,12 @@ export default function CourseDetail() {
   const [enrolling, setEnrolling] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState(true);
 
+  // ✅ تابع بررسی ثبت‌نام
+  const checkUserEnrollment = (courseId: string): boolean => {
+    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
+    return enrollments.includes(courseId);
+  };
+
   useEffect(() => {
     const fetchCourse = async () => {
       if (!slug) {
@@ -125,22 +138,38 @@ export default function CourseDetail() {
       }
 
       try {
-        // استفاده از getAll و فیلتر کردن برای پیدا کردن دوره مورد نظر
-        const response = await coursesAPI.getAll({ limit: 100 });
-        const courses = response.data || response || [];
-        const foundCourse = courses.find((c: any) => c.slug === slug);
-        
+        const foundCourse = await coursesAPI.getBySlug(slug);
+
         if (foundCourse) {
-          // بررسی ثبت‌نام کاربر
-          const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
-          foundCourse.userEnrolled = enrollments.includes(foundCourse.id);
-          setCourse(foundCourse);
+          // ✅ نگاشت داده‌ها به تایپ Course
+          const mappedCourse: Course = {
+            ...foundCourse,
+            description: foundCourse.description || "",
+            image: foundCourse.cover_image,
+            duration: foundCourse.duration_hours
+              ? `${foundCourse.duration_hours} ساعت`
+              : undefined,
+            capacity: (foundCourse as any).capacity || 0,
+            enrolledCount: (foundCourse as any).enrolledCount || 0,
+            isFeatured: (foundCourse as any).isFeatured || false,
+            level: (foundCourse as any).level || undefined,
+            userEnrolled: checkUserEnrollment(foundCourse.id),
+            sessions: (foundCourse as any).sessions || [],
+            event: (foundCourse as any).event
+              ? {
+                  id: (foundCourse as any).event.id,
+                  title: (foundCourse as any).event.title,
+                  slug: (foundCourse as any).event.slug || "",
+                }
+              : undefined,
+          };
+          setCourse(mappedCourse);
         } else {
           setError("دوره یافت نشد");
         }
       } catch (err) {
+        console.error("❌ خطا:", err);
         setError("دوره مورد نظر یافت نشد");
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -161,18 +190,22 @@ export default function CourseDetail() {
     setEnrolling(true);
 
     try {
-      await coursesAPI.enroll(course.id);
-      
-      const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
-      enrollments.push(course.id);
-      localStorage.setItem("enrollments", JSON.stringify(enrollments));
-      
+      await enrollmentsAPI.create({ courseId: course.id });
+
+      const enrollments = JSON.parse(
+        localStorage.getItem("enrollments") || "[]",
+      );
+      if (!enrollments.includes(course.id)) {
+        enrollments.push(course.id);
+        localStorage.setItem("enrollments", JSON.stringify(enrollments));
+      }
+
       setCourse({
         ...course,
         userEnrolled: true,
-        enrolledCount: course.enrolledCount + 1,
+        enrolledCount: (course.enrolledCount || 0) + 1,
       });
-      
+
       alert("✅ ثبت‌نام با موفقیت انجام شد!");
     } catch (err: any) {
       alert(err.response?.data?.error || "خطا در ثبت‌نام");
@@ -209,10 +242,12 @@ export default function CourseDetail() {
     );
   }
 
-  const imageUrl = getImageUrl(course.image);
-  const isFull = course.enrolledCount >= course.capacity && course.capacity > 0;
+  const imageUrl = getImageUrl(course.image || course.cover_image);
+  const isFull =
+    (course.enrolledCount || 0) >= (course.capacity || 0) &&
+    course.capacity > 0;
   const isPast = course.endDate && new Date(course.endDate) < new Date();
-  const isActive = course.isActive && !isPast;
+  const isActive = course.is_active && !isPast;
 
   return (
     <section className="py-6 px-3 md:py-12 md:px-6 relative overflow-hidden min-h-screen">
@@ -226,7 +261,10 @@ export default function CourseDetail() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Link to={course.event ? `/events/${course.event.slug}` : "/events"} className="inline-block mb-4 md:mb-6">
+          <Link
+            to={course.event ? `/events/${course.event.slug}` : "/events"}
+            className="inline-block mb-4 md:mb-6 mt-10"
+          >
             <LiquidGlassCard
               className="px-3 py-1.5 md:px-4 md:py-2"
               borderRadius="9999px"
@@ -239,7 +277,9 @@ export default function CourseDetail() {
                   size={14}
                   className="group-hover:-translate-x-1 transition-transform"
                 />
-                {course.event ? `بازگشت به ${course.event.title}` : "بازگشت به رویدادها"}
+                {course.event
+                  ? `بازگشت به ${course.event.title}`
+                  : "بازگشت به رویدادها"}
               </span>
             </LiquidGlassCard>
           </Link>
@@ -275,7 +315,9 @@ export default function CourseDetail() {
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center gap-3">
                   <ImageOff className="w-12 h-12 md:w-16 md:h-16 text-white/20" />
-                  <span className="text-white/30 text-sm md:text-lg">بدون تصویر</span>
+                  <span className="text-white/30 text-sm md:text-lg">
+                    بدون تصویر
+                  </span>
                 </div>
               )}
 
@@ -293,7 +335,7 @@ export default function CourseDetail() {
               </div>
 
               <div className="absolute bottom-0 right-0 left-0 p-4 md:p-6 lg:p-8">
-                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-2 md:mb-3 line-clamp-3 drop-shadow-lg">
+                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-2 md:mb-3 line-clamp-3 drop-shadow-lg p-2">
                   {course.title}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-200">
@@ -311,7 +353,7 @@ export default function CourseDetail() {
                   )}
                   <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                     <Users size={14} className="md:w-4 md:h-4" />
-                    {course.enrolledCount} / {course.capacity} نفر
+                    {course.enrolledCount || 0} / {course.capacity || 0} نفر
                   </span>
                 </div>
               </div>
@@ -334,7 +376,9 @@ export default function CourseDetail() {
               >
                 <div className="flex items-center gap-2 mb-4">
                   <BookOpen className="w-5 h-5 text-blue-400" />
-                  <h2 className="text-lg md:text-xl font-bold text-white">درباره دوره</h2>
+                  <h2 className="text-lg md:text-xl font-bold text-white">
+                    درباره دوره
+                  </h2>
                 </div>
                 <div className="prose prose-invert max-w-none">
                   <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4">
@@ -350,10 +394,15 @@ export default function CourseDetail() {
 
                 {course.prerequisites && course.prerequisites.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-white/10">
-                    <h3 className="text-sm font-medium text-gray-300 mb-2">پیش‌نیازها:</h3>
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">
+                      پیش‌نیازها:
+                    </h3>
                     <ul className="flex flex-wrap gap-2">
                       {course.prerequisites.map((prereq, index) => (
-                        <li key={index} className="text-xs px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full">
+                        <li
+                          key={index}
+                          className="text-xs px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full"
+                        >
                           {prereq}
                         </li>
                       ))}
@@ -378,7 +427,9 @@ export default function CourseDetail() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Video className="w-5 h-5 text-blue-400" />
-                      <h2 className="text-lg md:text-xl font-bold text-white">جلسات دوره</h2>
+                      <h2 className="text-lg md:text-xl font-bold text-white">
+                        جلسات دوره
+                      </h2>
                     </div>
                     <button
                       onClick={() => setExpandedSessions(!expandedSessions)}
@@ -391,19 +442,31 @@ export default function CourseDetail() {
                   {course.sessions && course.sessions.length > 0 ? (
                     <div className="space-y-3">
                       {course.sessions.map((session, index) => {
-                        const isSessionPast = new Date(session.date) < new Date();
-                        const isSessionToday = new Date(session.date).toDateString() === new Date().toDateString();
-                        
+                        const isSessionPast =
+                          new Date(session.date) < new Date();
+                        const isSessionToday =
+                          new Date(session.date).toDateString() ===
+                          new Date().toDateString();
+
                         return (
-                          <div key={session.id} className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                          <div
+                            key={session.id}
+                            className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors"
+                          >
                             <div className="flex justify-between items-start">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500">جلسه {index + 1}</span>
-                                  <h4 className="text-sm font-medium text-white">{session.title}</h4>
+                                  <span className="text-xs text-gray-500">
+                                    جلسه {index + 1}
+                                  </span>
+                                  <h4 className="text-sm font-medium text-white">
+                                    {session.title}
+                                  </h4>
                                 </div>
                                 {session.description && (
-                                  <p className="text-xs text-gray-400 mt-1">{session.description}</p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {session.description}
+                                  </p>
                                 )}
                               </div>
                               {session.isCompleted ? (
@@ -429,9 +492,7 @@ export default function CourseDetail() {
                                 <Calendar size={12} />
                                 {formatDate(session.date)}
                               </span>
-                              {session.time && (
-                                <span>⏰ {session.time}</span>
-                              )}
+                              {session.time && <span>⏰ {session.time}</span>}
                             </div>
 
                             <div className="flex flex-wrap gap-2 mt-3">
@@ -441,6 +502,7 @@ export default function CourseDetail() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1 rounded-full transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <PlayCircle size={12} />
                                   ورود به جلسه
@@ -453,6 +515,7 @@ export default function CourseDetail() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1 rounded-full transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <FileArchive size={12} />
                                   آرشیو جلسه
@@ -476,6 +539,7 @@ export default function CourseDetail() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     <Download size={12} />
                                     {file.name}
@@ -548,14 +612,16 @@ export default function CourseDetail() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">ظرفیت</span>
                   <span className="text-white">
-                    {course.enrolledCount} / {course.capacity} نفر
+                    {course.enrolledCount || 0} / {course.capacity || 0} نفر
                   </span>
                 </div>
 
                 {course.level && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">سطح</span>
-                    <span className="text-white">{getLevelLabel(course.level)}</span>
+                    <span className="text-white">
+                      {getLevelLabel(course.level)}
+                    </span>
                   </div>
                 )}
 
@@ -575,7 +641,13 @@ export default function CourseDetail() {
                     fullWidth
                     loading={enrolling}
                     onClick={handleEnroll}
-                    icon={enrolling ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle size={20} />}
+                    icon={
+                      enrolling ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <CheckCircle size={20} />
+                      )
+                    }
                     iconPosition="left"
                   >
                     {enrolling ? "در حال ثبت‌نام..." : "ثبت‌نام در دوره"}
@@ -603,7 +675,9 @@ export default function CourseDetail() {
                 glowIntensity="md"
                 shadowIntensity="lg"
               >
-                <h3 className="text-sm font-medium text-gray-300 mb-3">رویداد مرتبط</h3>
+                <h3 className="text-sm font-medium text-gray-300 mb-3">
+                  رویداد مرتبط
+                </h3>
                 <Link
                   to={`/events/${course.event.slug}`}
                   className="block text-blue-400 hover:text-blue-300 transition-colors"

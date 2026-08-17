@@ -10,6 +10,7 @@ export interface User {
   isActive: boolean;
   province?: string;
   birthDate?: string;
+  birth_date?: string;
   gender?: string;
   avatar?: string;
   createdAt: string;

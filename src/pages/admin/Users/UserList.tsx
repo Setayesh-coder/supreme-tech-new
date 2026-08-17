@@ -35,7 +35,7 @@ interface User {
   isActive: boolean;
   province?: string;
   birthDate?: string;
-  birth_date?: string;
+  // birth_date?: string;
   gender?: string;
   avatar?: string;
   createdAt: string;
@@ -112,7 +112,7 @@ export default function UserList() {
         setUsers(response.items);
         const mappedUsers = response.items.map((user: any) => ({
           ...user,
-          birthDate: user.birth_date || fromData.birthDate || "",
+          birthDate: user.birthDate || fromData.birthDate || "",
         }));
         setUsers(mappedUsers);
 
@@ -337,6 +337,14 @@ export default function UserList() {
                           <Clock size={12} />
                           {getMemberSince(user.createdAt)}
                         </span>
+                        {user.birthDate ? (
+                          <div className="flex items-center gap-1">
+                            <Calendar size={14} className="text-gray-500" />
+                            {formatDate(user.birthDate)}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">-</span>
+                        )}
                       </div>
 
                       {/* دکمه‌های عملیات */}

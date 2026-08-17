@@ -6,7 +6,7 @@ export interface HeroSlide {
   title: string;
   subtitle?: string;
   description?: string;
-  tagLine?: string;
+  tagline?: string;
   image_url?: string;
   button_text?: string;
   button_link?: string;
@@ -25,7 +25,7 @@ export const heroAPI = {
       title: item.title,
       subtitle: item.subtitle,
       description: item.description,
-      tagLine: item.tagLine,
+      tagline: item.tagline,
       image_url: item.image_url || "",
       button_text: item.button_text,
       button_link: item.button_link,
@@ -44,7 +44,7 @@ export const heroAPI = {
       title: item.title,
       subtitle: item.subtitle,
       description: item.description,
-      tagLine: item.tagLine,
+      tagline: item.tagline,
       image_url: item.image_url || "",
       button_text: item.button_text,
       button_link: item.button_link,
@@ -61,7 +61,7 @@ export const heroAPI = {
       title: data.title,
       subtitle: data.subtitle || null,
       description: data.description || null,
-      tagLine: data.tagLine || null,
+      tagline: data.tagline || null,
       image_url: data.image_url || null,
       button_text: data.button_text || null,
       button_link: data.button_link || null,
@@ -80,7 +80,7 @@ export const heroAPI = {
       title: data.title,
       subtitle: data.subtitle || null,
       description: data.description || null,
-      tagLine: data.tagLine || null,
+      tagline: data.tagline || null,
       image_url: data.image_url || null,
       button_text: data.button_text || null,
       button_link: data.button_link || null,

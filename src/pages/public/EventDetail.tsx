@@ -10,7 +10,7 @@ import ShareButton from "../../components/ui/ShareButton";
 import {
   Calendar,
   MapPin,
-  Users,
+  // Users,
   Clock,
   ChevronLeft,
   ImageOff,
@@ -29,12 +29,15 @@ interface Event {
   slug: string;
   description: string;
   content?: string;
+  cover_image?: string;
   image?: string;
-  date: string;
+  start_date: string; // ✅ تغییر از date به start_date
+  end_date: string; // ✅ اضافه شد
   duration?: string;
   capacity: number;
   price: number;
   location?: string;
+  category?: string;
   type: string;
   featured: boolean;
   is_active: boolean;
@@ -49,7 +52,10 @@ const BASE_URL = import.meta.env.VITE_BASE_URL || "https://supremetech.ir";
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
-  return `${BASE_URL}${imagePath}`;
+  if (imagePath.startsWith("/")) {
+    return `${BASE_URL}${imagePath}`;
+  }
+  return `${BASE_URL}/${imagePath}`;
 };
 
 const getEventTypeLabel = (type: string) => {
@@ -85,16 +91,22 @@ export default function EventDetail() {
       }
 
       try {
-        const response = await eventsAPI.getBySlug(slug);
+        setLoading(true);
+        const data = await eventsAPI.getBySlug(slug);
 
-        if (response && response.data) {
-          setEvent(response.data);
-        } else if (response) {
-          setEvent(response);
-        } else {
-          setError("رویداد یافت نشد");
-        }
+        // ✅ نگاشت داده‌ها به تایپ Event
+        const mappedEvent: Event = {
+          ...data,
+          description: data.description || "",
+          image: data.cover_image,
+          start_date: data.start_date || new Date().toISOString(), // ✅ fallback
+          end_date: data.end_date || new Date().toISOString(), // ✅ fallback
+          type: (data as any).category || "WORKSHOP",
+          featured: (data as any).is_featured || false,
+        };
+        setEvent(mappedEvent);
       } catch (err) {
+        console.error("❌ خطا:", err);
         setError("رویداد مورد نظر یافت نشد");
       } finally {
         setLoading(false);
@@ -104,6 +116,7 @@ export default function EventDetail() {
   }, [slug]);
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "نامشخص";
     const date = new Date(dateString);
     return date.toLocaleDateString("fa-IR", {
       year: "numeric",
@@ -142,11 +155,12 @@ export default function EventDetail() {
     );
   }
 
-  const imageUrl = getImageUrl(event.image);
-  const totalEnrolled = event._count?.enrollments || 0;
-  const daysLeft = getDaysLeft(event.date);
-  const isPast = new Date(event.date) < new Date();
-  const eventDate = new Date(event.date);
+  const imageUrl = getImageUrl(event.image || event.cover_image);
+  // const totalEnrolled = event._count?.enrollments || 0;
+  // ✅ استفاده از start_date برای محاسبه روزهای باقی‌مانده
+  const daysLeft = getDaysLeft(event.start_date);
+  const isPast = new Date(event.end_date) < new Date();
+  const eventDate = new Date(event.start_date);
 
   return (
     <section className="py-6 px-3 md:py-12 md:px-6 relative overflow-hidden min-h-screen">
@@ -160,7 +174,7 @@ export default function EventDetail() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Link to="/events" className="inline-block mb-4 md:mb-6">
+          <Link to="/events" className="inline-block mb-4 md:mb-6 mt-10">
             <LiquidGlassCard
               className="px-3 py-1.5 md:px-4 md:py-2"
               borderRadius="9999px"
@@ -226,14 +240,14 @@ export default function EventDetail() {
                 )}
               </div>
 
-              <div className="absolute bottom-0 right-0 left-0 p-4 md:p-6 lg:p-8">
-                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-2 md:mb-3 line-clamp-3 drop-shadow-lg">
+              <div className="absolute bottom-0 right-0 left-0 p-4 md:p-8 lg:p-10">
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-bold text-white leading-tight mb-2 md:mb-3 line-clamp-3 drop-shadow-lg p-2">
                   {event.title}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-200">
                   <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                     <Calendar size={14} className="md:w-4 md:h-4" />
-                    {formatDate(event.date)}
+                    {formatDate(event.start_date)}
                   </span>
                   {event.duration && (
                     <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
@@ -345,9 +359,19 @@ export default function EventDetail() {
                 <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                   <Calendar className="w-4 h-4 text-blue-400" />
                   <div className="flex-1">
-                    <p className="text-xs text-gray-500">تاریخ برگزاری</p>
+                    <p className="text-xs text-gray-500">تاریخ شروع</p>
                     <p className="text-sm text-white">
-                      {formatDate(event.date)}
+                      {formatDate(event.start_date)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">تاریخ پایان</p>
+                    <p className="text-sm text-white">
+                      {formatDate(event.end_date)}
                     </p>
                   </div>
                 </div>
@@ -382,7 +406,7 @@ export default function EventDetail() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                {/* <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                   <Users className="w-4 h-4 text-blue-400" />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">شرکت‌کنندگان</p>
@@ -390,7 +414,7 @@ export default function EventDetail() {
                       {totalEnrolled} نفر از {event.capacity} نفر
                     </p>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">

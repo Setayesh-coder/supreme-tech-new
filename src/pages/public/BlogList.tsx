@@ -1,6 +1,9 @@
+// src/pages/public/BlogList.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { blogAPI } from "../../lib/api/blog";
+
+import type { BlogPost } from "../../lib/api/blog";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
@@ -17,39 +20,7 @@ import { BlogListSkeleton } from "../../components/skeletons/BlogListSkeleton";
 import SectionHeader from "../../components/ui/SectionHeader";
 import { getImageUrl } from "../../lib/constants";
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  coverImage?: string;
-  published: boolean;
-  views: number;
-  createdAt: string;
-  author?: { name: string };
-  tags: { name: string }[];
-}
-
 const PAGE_SIZE = 10;
-
-function BlogCardSkeleton() {
-  return (
-    <LiquidGlassCard
-      className="overflow-hidden h-full"
-      borderRadius="16px"
-      blurIntensity="sm"
-      glowIntensity="sm"
-    >
-      <div className="h-48 bg-white/5 animate-pulse" />
-      <div className="p-6 space-y-3">
-        <div className="h-3 w-1/2 bg-white/10 rounded animate-pulse" />
-        <div className="h-5 w-3/4 bg-white/10 rounded animate-pulse" />
-        <div className="h-3 w-full bg-white/10 rounded animate-pulse" />
-        <div className="h-3 w-2/3 bg-white/10 rounded animate-pulse" />
-      </div>
-    </LiquidGlassCard>
-  );
-}
 
 export default function BlogList() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -64,8 +35,9 @@ export default function BlogList() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
+        // ✅ تغییر: استفاده از items به جای posts
         const data = await blogAPI.getAll({ page: 1, limit: PAGE_SIZE });
-        const fetched = data.posts || [];
+        const fetched = data.items || [];
         setPosts(fetched);
         setHasMore(fetched.length === PAGE_SIZE);
       } catch (err) {
@@ -81,8 +53,9 @@ export default function BlogList() {
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
+      // ✅ تغییر: استفاده از items به جای posts
       const data = await blogAPI.getAll({ page: nextPage, limit: PAGE_SIZE });
-      const fetched = data.posts || [];
+      const fetched = data.items || [];
       setPosts((prev) => [...prev, ...fetched]);
       setHasMore(fetched.length === PAGE_SIZE);
       setPage(nextPage);
@@ -93,19 +66,21 @@ export default function BlogList() {
     }
   };
 
+  // ✅ تغییر: استفاده از tags (آرایه‌ای از string)
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    posts.forEach((post) => post.tags.forEach((tag) => set.add(tag.name)));
+    posts.forEach((post) => post.tags?.forEach((tag) => set.add(tag)));
     return Array.from(set).slice(0, 10);
   }, [posts]);
 
+  // ✅ تغییر: استفاده از summary به جای excerpt
   const filteredPosts = posts.filter((post) => {
     const matchesSearch =
       !search ||
       post.title.toLowerCase().includes(search.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(search.toLowerCase());
+      post.summary?.toLowerCase().includes(search.toLowerCase());
     const matchesTag =
-      !activeTag || post.tags.some((tag) => tag.name === activeTag);
+      !activeTag || post.tags?.some((tag) => tag === activeTag);
     return matchesSearch && matchesTag;
   });
 
@@ -183,13 +158,7 @@ export default function BlogList() {
           )}
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <BlogCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : filteredPosts.length === 0 ? (
+        {filteredPosts.length === 0 ? (
           <div className="flex justify-center items-center py-20">
             <LiquidGlassCard
               className="p-12 text-center max-w-md"
@@ -222,9 +191,9 @@ export default function BlogList() {
                   hoverScale={1.03}
                 >
                   <div className="overflow-hidden h-48 relative">
-                    {post.coverImage ? (
+                    {post.cover_image ? (
                       <OptimizedImage
-                        src={getImageUrl(post.coverImage) || post.coverImage}
+                        src={getImageUrl(post.cover_image) || post.cover_image}
                         alt={post.title}
                         className="w-full h-full transition-transform duration-500 group-hover:scale-110"
                         objectFit="cover"
@@ -241,7 +210,6 @@ export default function BlogList() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    {/* برچسب پیش‌نویس - فقط اگر پست منتشر نشده باشد */}
                     {!post.published && (
                       <span className="absolute top-3 right-3 px-3 py-1 bg-yellow-500/80 text-white text-xs rounded-full backdrop-blur-sm">
                         پیش‌نویس
@@ -253,11 +221,15 @@ export default function BlogList() {
                     <div className="flex items-center gap-4 text-sm text-gray-400">
                       <span className="flex items-center gap-1">
                         <Calendar size={14} />
-                        {new Date(post.createdAt).toLocaleDateString("fa-IR")}
+                        {post.created_at
+                          ? new Date(post.created_at).toLocaleDateString(
+                              "fa-IR",
+                            )
+                          : "نامشخص"}
                       </span>
                       <span className="flex items-center gap-1">
                         <Eye size={14} />
-                        {(post.views || 0).toLocaleString()}
+                        {(post.views_count || 0).toLocaleString()}
                       </span>
                     </div>
 
@@ -266,17 +238,17 @@ export default function BlogList() {
                     </h2>
 
                     <p className="text-gray-400 text-sm line-clamp-2">
-                      {post.excerpt}
+                      {post.summary}
                     </p>
 
-                    {post.tags.length > 0 && (
+                    {post.tags && post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2 pt-2">
                         {post.tags.slice(0, 3).map((tag) => (
                           <span
-                            key={tag.name}
+                            key={tag}
                             className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-400"
                           >
-                            #{tag.name}
+                            #{tag}
                           </span>
                         ))}
                         {post.tags.length > 3 && (
@@ -295,11 +267,9 @@ export default function BlogList() {
                           className="group-hover:-translate-x-1 transition-transform"
                         />
                       </span>
-                      {post.author && (
-                        <span className="text-sm text-gray-500">
-                          {post.author.name}
-                        </span>
-                      )}
+                      <span className="text-sm text-gray-500">
+                        {post.author_name}
+                      </span>
                     </div>
                   </div>
                 </LiquidGlassCard>

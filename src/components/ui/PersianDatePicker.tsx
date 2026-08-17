@@ -70,8 +70,23 @@ const gregorianToPersian = (gregorianDate: string): string => {
   }
 };
 
-const getCurrentPersianDate = (): string => {
-  return gregorianToPersian(new Date().toISOString());
+const getCurrentPersianDate = (): {
+  year: number;
+  month: number;
+  day: number;
+} => {
+  const now = new Date();
+  const { jy, jm, jd } = toJalaali(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    now.getDate(),
+  );
+  return { year: jy, month: jm, day: jd };
+};
+
+const getCurrentPersianDateString = (): string => {
+  const { year, month, day } = getCurrentPersianDate();
+  return `${year}/${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}`;
 };
 
 const getDaysInMonth = (year: number, month: number) => {
@@ -107,14 +122,22 @@ export const PersianDatePicker = ({
 }: PersianDatePickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentYear, setCurrentYear] = useState(1405);
-  const [currentMonth, setCurrentMonth] = useState(4);
+  const [currentMonth, setCurrentMonth] = useState(1);
   const [days, setDays] = useState<number[]>([]);
   const [firstDayOffset, setFirstDayOffset] = useState(0);
   const [selectedTime, setSelectedTime] = useState("00:00");
   const pickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const displayValue = value ? gregorianToPersian(value) : "";
   const timeValue = value ? extractTime(value) : "00:00";
+
+  // تنظیم تاریخ فعلی برای نمایش در تقویم
+  useEffect(() => {
+    const current = getCurrentPersianDate();
+    setCurrentYear(current.year);
+    setCurrentMonth(current.month);
+  }, []);
 
   useEffect(() => {
     if (value && value.includes("T")) {
@@ -165,6 +188,18 @@ export const PersianDatePicker = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // جلوگیری از اسکرول صفحه هنگام باز بودن تقویم
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = e.target.value;
     setSelectedTime(newTime);
@@ -189,8 +224,17 @@ export const PersianDatePicker = ({
     setIsOpen(false);
   };
 
+  // انتخاب سریع سال‌های نزدیک به امروز
+  // const handleQuickYearSelect = (yearOffset: number) => {
+  //   const current = getCurrentPersianDate();
+  //   const targetYear = current.year + yearOffset;
+  //   if (targetYear >= 1300 && targetYear <= 1500) {
+  //     setCurrentYear(targetYear);
+  //   }
+  // };
+
   const handleTodayClick = () => {
-    const today = getCurrentPersianDate();
+    const today = getCurrentPersianDateString();
     let gregorianDate = persianToGregorian(today);
 
     if (includeTime && selectedTime) {
@@ -225,13 +269,22 @@ export const PersianDatePicker = ({
     }
   };
 
-  const prevYear = () => setCurrentYear(currentYear - 1);
-  const nextYear = () => setCurrentYear(currentYear + 1);
+  // اضافه کردن توابع prevYear و nextYear
+  const prevYear = () => {
+    setCurrentYear(currentYear - 1);
+  };
+
+  const nextYear = () => {
+    setCurrentYear(currentYear + 1);
+  };
 
   const isToday = (day: number) => {
     const today = getCurrentPersianDate();
-    const selected = `${currentYear}/${String(currentMonth).padStart(2, "0")}/${String(day).padStart(2, "0")}`;
-    return today === selected;
+    return (
+      today.year === currentYear &&
+      today.month === currentMonth &&
+      today.day === day
+    );
   };
 
   const isSelected = (day: number) => {
@@ -239,12 +292,48 @@ export const PersianDatePicker = ({
     return displayValue === selected;
   };
 
+  // دکمه‌های سریع برای سال‌های نزدیک
+  // const QuickYearButtons = () => {
+  // const current = getCurrentPersianDate();
+  // const years = [
+  //   { label: "امسال", offset: 0 },
+  //   { label: "سال قبل", offset: -1 },
+  //   { label: "۲ سال قبل", offset: -2 },
+  //   { label: "۵ سال قبل", offset: -5 },
+  //   { label: "۱۰ سال قبل", offset: -10 },
+  // ];
+
+  //   return (
+  //     <div className="flex flex-wrap gap-1 mt-2 mb-3">
+  //       {years.map(({ label, offset }) => {
+  //         const targetYear = current.year + offset;
+  //         const isActive = currentYear === targetYear;
+  //         return (
+  //           <button
+  //             key={offset}
+  //             type="button"
+  //             onClick={() => handleQuickYearSelect(offset)}
+  //             className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 ${
+  //               isActive
+  //                 ? "bg-blue-500/30 text-blue-400 border border-blue-400/30"
+  //                 : "bg-white/5 hover:bg-white/10 text-white/60 hover:text-white"
+  //             }`}
+  //           >
+  //             {label} ({targetYear})
+  //           </button>
+  //         );
+  //       })}
+  //     </div>
+  //   );
+  // };
+
   return (
     <div className="relative w-full" ref={pickerRef}>
       <div className="relative">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
+              ref={inputRef}
               type="text"
               value={displayValue}
               readOnly
@@ -288,30 +377,23 @@ export const PersianDatePicker = ({
         </div>
       </div>
 
-      {/* 🔥 تقویم با z-index بسیار بالا و موقعیت بهبود یافته */}
+      {/* تقویم با موقعیت بهبود یافته - بدون تکان خوردن صفحه */}
       {isOpen && !disabled && (
-        <div 
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999] bg-gradient-to-br from-gray-900/95 to-blue-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-5 w-80 max-h-[90vh] overflow-y-auto"
-          style={{ 
+        <div
+          className="absolute top-full left-0 right-0 mt-2 z-[99999] bg-gradient-to-br from-gray-900/95 to-blue-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-5 w-full max-w-sm overflow-y-auto max-h-[80vh]"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: "0",
+            right: "0",
             zIndex: 99999,
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-white font-bold text-lg">انتخاب تاریخ</span>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 hover:bg-white/10 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5 text-white/60 hover:text-white" />
-            </button>
-          </div>
+          {/* دکمه‌های سریع برای سال‌های نزدیک */}
+          {/* <QuickYearButtons /> */}
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex gap-1">
               <button
                 type="button"
@@ -352,7 +434,7 @@ export const PersianDatePicker = ({
           </div>
 
           {/* Week days */}
-          <div className="grid grid-cols-7 gap-1 mb-3 border-b border-white/5 pb-2">
+          <div className="grid grid-cols-7 gap-1 mb-2 border-b border-white/5 pb-2">
             {persianWeekDays.map((d, i) => (
               <div
                 key={i}
@@ -378,7 +460,7 @@ export const PersianDatePicker = ({
                     isSelected(day)
                       ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/25 scale-105"
                       : isToday(day)
-                        ? "bg-white/10 text-white border border-blue-400/30"
+                        ? "bg-blue-500/20 text-blue-400 border border-blue-400/30 font-bold"
                         : "text-white/70 hover:bg-white/10 hover:text-white hover:scale-105"
                   }`}
               >
@@ -394,7 +476,7 @@ export const PersianDatePicker = ({
               onClick={handleTodayClick}
               className="flex-1 px-3 py-1.5 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl transition-colors font-medium"
             >
-              امروز
+              📅 امروز
             </button>
             <button
               type="button"

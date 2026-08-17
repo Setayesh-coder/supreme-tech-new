@@ -1,39 +1,109 @@
-import api from './axios';
+// src/lib/api/courses.ts
+import api from "./axios";
+
+export interface Course {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  cover_image?: string;
+  price: number;
+  duration_hours?: number;
+  instructor_name?: string;
+  is_active: boolean;
+  event_id?: string;
+  event?: {
+    id: string;
+    title: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseCreate {
+  title: string;
+  slug: string;
+  description?: string;
+  cover_image?: string;
+  price?: number;
+  duration_hours?: number;
+  instructor_name?: string;
+  is_active?: boolean;
+  event_id?: string;
+}
+
+export interface CourseUpdate {
+  title?: string;
+  slug?: string;
+  description?: string;
+  cover_image?: string;
+  price?: number;
+  duration_hours?: number;
+  instructor_name?: string;
+  is_active?: boolean;
+  event_id?: string;
+}
+
+export interface CoursePaginatedResponse {
+  items: Course[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export const generateSlug = (text: string): string => {
+  if (!text || text.trim() === "") return "بدون-عنوان";
+
+  return (
+    text
+      .trim()
+      .toLowerCase()
+      // ✅ حذف کاراکترهای خاص (فقط حروف فارسی، انگلیسی، اعداد و خط تیره باقی می‌مانند)
+      .replace(/[^\u0600-\u06FFa-zA-Z0-9\s-]/g, "")
+      // ✅ تبدیل فاصله به خط تیره
+      .replace(/\s+/g, "-")
+      // ✅ حذف خط تیره‌های تکراری
+      .replace(/-+/g, "-")
+      // ✅ حذف خط تیره از ابتدا و انتها
+      .replace(/^-+|-+$/g, "") ||
+    // ✅ اگر خالی شد، مقدار پیش‌فرض
+    "بدون-عنوان"
+  );
+};
 
 export const coursesAPI = {
-  // دریافت همه دوره‌ها
-  getAll: (params?: { eventId?: string; limit?: number; page?: number; isActive?: boolean }) =>
-    api.get('/courses', { params }),
+  getAll: async (params?: {
+    eventId?: string;
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+  }): Promise<CoursePaginatedResponse> => {
+    const response = await api.get("/courses", { params });
+    return response.data;
+  },
 
-  // دریافت دوره با slug
-  getBySlug: (slug: string) =>
-    api.get(`/courses/slug/${slug}`),
+  getBySlug: async (slug: string): Promise<Course> => {
+    const response = await api.get(`/courses/slug/${slug}`);
+    return response.data;
+  },
 
-  // دریافت دوره با ID
-  getById: (id: string) =>
-    api.get(`/courses/${id}`),
+  getById: async (id: string): Promise<Course> => {
+    const response = await api.get(`/courses/${id}`);
+    return response.data;
+  },
 
-  // دریافت دوره‌های یک رویداد
-  getByEvent: (eventId: string) =>
-    api.get('/courses', { params: { eventId } }),
+  create: async (data: CourseCreate): Promise<Course> => {
+    const response = await api.post("/courses", data);
+    return response.data;
+  },
 
-  // ایجاد دوره جدید (ادمین)
-  create: (data: any) =>
-    api.post('/courses', data),
+  update: async (id: string, data: CourseUpdate): Promise<Course> => {
+    const response = await api.put(`/courses/${id}`, data);
+    return response.data;
+  },
 
-  // بروزرسانی دوره (ادمین)
-  update: (id: string, data: any) =>
-    api.put(`/courses/${id}`, data),
-
-  // حذف دوره (ادمین)
-  delete: (id: string) =>
-    api.delete(`/courses/${id}`),
-
-  // ثبت‌نام در دوره
-  enroll: (courseId: string) =>
-    api.post(`/courses/${courseId}/enroll`),
-
-  // دریافت ثبت‌نام‌های دوره (ادمین)
-  getEnrollments: (courseId: string) =>
-    api.get(`/courses/${courseId}/enrollments`),
+  delete: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/courses/${id}`);
+    return response.data;
+  },
 };

@@ -56,15 +56,11 @@ export default function Settings() {
         contact_phone: settings.contact_phone || settings.contactPhone || "",
         address: settings.address || settings.contactAddress || "",
         workingHours: settings.workingHours || "",
+        // ✅ شبکه‌های اجتماعی - با نام‌های صحیح
+        instagram_url: settings.instagram_url || "",
         telegram_url: settings.telegram_url || "",
         telegram_support_url: settings.telegram_support_url || "",
-        instagram_url: settings.instagram_url || "",
         address_link: settings.address_link || "",
-        // socialLinks: {
-        //   instagram: settings.telegram_url || "",
-        //   telegram: settings.socialLinks?.telegram || "",
-        //   support: settings.socialLinks?.support || "",
-        // },
         seo: {
           title: settings.seo?.title || "",
           description: settings.seo?.description || "",
@@ -90,7 +86,6 @@ export default function Settings() {
         [name]: checked,
       }));
     } else if (name.includes(".")) {
-      // برای فیلدهای تو در تو مثل socialLinks.instagram
       const [parent, child] = name.split(".");
       setLocalSettings((prev: any) => ({
         ...prev,
@@ -110,7 +105,7 @@ export default function Settings() {
     setSuccess("");
 
     try {
-      // تبدیل به فرمت مورد انتظار بک‌اند
+      // ✅ تبدیل به فرمت مورد انتظار بک‌اند
       const payload = {
         site_title: localSettings.site_title,
         site_description: localSettings.site_description,
@@ -118,13 +113,15 @@ export default function Settings() {
         contact_phone: localSettings.contact_phone,
         address_link: localSettings.address_link,
         workingHours: localSettings.workingHours,
-        instagam_url: localSettings.instagam_url,
-        telegram_url: localSettings.telegram_url,
-        telegram_support_url: localSettings.telegram_support_url,
+        // ✅ نام فیلدهای صحیح
+        instagram_url: localSettings.instagram_url || "",
+        telegram_url: localSettings.telegram_url || "",
+        telegram_support_url: localSettings.telegram_support_url || "",
         seo: localSettings.seo,
         maintenance_mode: localSettings.maintenance || false,
       };
 
+      console.log("📤 ارسال به سرور:", payload);
       await updateSettings(payload);
 
       setSuccess("✅ تنظیمات با موفقیت ذخیره شد");
@@ -274,7 +271,7 @@ export default function Settings() {
                 <div className="relative">
                   <MapPin className="absolute left-4 top-4 w-5 h-5 text-white/40" />
                   <textarea
-                    name="address"
+                    name="address_link"
                     value={localSettings?.address_link || ""}
                     onChange={handleChange}
                     rows={2}

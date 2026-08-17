@@ -1,14 +1,18 @@
-import { useState, useEffect } from 'react';
-import { Heart } from 'lucide-react';
-import { blogAPI } from '../../lib/api/blog';
+import { useState, useEffect } from "react";
+import { Heart } from "lucide-react";
+import { blogAPI } from "../../lib/api/blog";
 
 interface LikeButtonProps {
   postId: string;
   initialLikes?: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 }
 
-export default function LikeButton({ postId, initialLikes = 0, size = 'md' }: LikeButtonProps) {
+export default function LikeButton({
+  postId,
+  initialLikes = 0,
+  size = "md",
+}: LikeButtonProps) {
   const [likes, setLikes] = useState(initialLikes);
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,12 +24,12 @@ export default function LikeButton({ postId, initialLikes = 0, size = 'md' }: Li
   const checkLikeStatus = async () => {
     try {
       const response = await blogAPI.getLikeStatus(postId);
-      setIsLiked(response.isLiked || false);
-      if (response.likes !== undefined) {
-        setLikes(response.likes);
+      setIsLiked(response.is_liked || false);
+      if (response.likes_count !== undefined) {
+        setLikes(response.likes_count);
       }
     } catch (error) {
-      console.error('خطا در بررسی وضعیت لایک:', error);
+      console.error("خطا در بررسی وضعیت لایک:", error);
     }
   };
 
@@ -35,19 +39,19 @@ export default function LikeButton({ postId, initialLikes = 0, size = 'md' }: Li
 
     try {
       const response = await blogAPI.toggleLike(postId);
-      setIsLiked(response.isLiked || !isLiked);
-      setLikes(response.likes || likes + (isLiked ? -1 : 1));
+      setIsLiked(response.is_liked || !isLiked);
+      setLikes(response.likes_count || likes + (isLiked ? -1 : 1));
     } catch (error) {
-      console.error('خطا در لایک:', error);
+      console.error("خطا در لایک:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6',
+    sm: "w-4 h-4",
+    md: "w-5 h-5",
+    lg: "w-6 h-6",
   };
 
   return (
@@ -57,9 +61,9 @@ export default function LikeButton({ postId, initialLikes = 0, size = 'md' }: Li
       className="flex items-center gap-1.5 transition-colors hover:text-red-500 group"
     >
       <Heart
-        className={`${sizeClasses[size]} transition-all ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400 group-hover:text-red-400'}`}
+        className={`${sizeClasses[size]} transition-all ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400 group-hover:text-red-400"}`}
       />
-      <span className={`text-sm ${isLiked ? 'text-red-500' : 'text-gray-400'}`}>
+      <span className={`text-sm ${isLiked ? "text-red-500" : "text-gray-400"}`}>
         {likes}
       </span>
     </button>

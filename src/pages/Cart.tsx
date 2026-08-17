@@ -42,6 +42,7 @@ export default function Cart() {
     }
   };
 
+  // ✅ اصلاح: استفاده از paymentUrl به جای success
   const handlePayment = async (enrollmentId: string) => {
     setProcessingId(enrollmentId);
     setProcessing(true);
@@ -50,17 +51,23 @@ export default function Cart() {
 
     try {
       const result = await enrollmentsAPI.processPayment(enrollmentId);
-      if (result.success) {
-        setSuccess("✅ پرداخت با موفقیت انجام شد!");
+      if (result.paymentUrl) {
+        window.open(result.paymentUrl, "_blank");
+        setSuccess("✅ لینک پرداخت باز شد");
         setTimeout(() => {
           fetchCart();
           setSuccess("");
         }, 1500);
       } else {
-        setError(result.error || "خطا در پرداخت");
+        // ✅ اگر paymentUrl نبود، پرداخت موفق بوده
+        setSuccess("✅ پرداخت با موفقیت انجام شد!");
+        setTimeout(() => {
+          fetchCart();
+          setSuccess("");
+        }, 1500);
       }
-    } catch (err) {
-      setError("خطا در پردازش پرداخت");
+    } catch (err: any) {
+      setError(err.response?.data?.error || "خطا در پردازش پرداخت");
     } finally {
       setProcessing(false);
       setProcessingId(null);
@@ -78,6 +85,7 @@ export default function Cart() {
     }
   };
 
+  // ✅ اصلاح: استفاده از paymentUrl به جای success
   const handlePayAll = async () => {
     if (cart.length === 0) return;
 
@@ -97,11 +105,13 @@ export default function Cart() {
     try {
       for (const item of cart) {
         const result = await enrollmentsAPI.processPayment(item.id);
-        if (!result.success) {
-          setError(`خطا در پرداخت دوره "${item.event.title}"`);
-          setProcessing(false);
-          return;
+        // ✅ اگر paymentUrl وجود نداشت، پرداخت موفق بوده
+        if (!result.paymentUrl) {
+          // پرداخت موفق
+          continue;
         }
+        // اگر paymentUrl داشت، لینک پرداخت باز میشه
+        window.open(result.paymentUrl, "_blank");
       }
 
       setSuccess(`✅ پرداخت ${cart.length} دوره با موفقیت انجام شد!`);
@@ -171,7 +181,7 @@ export default function Cart() {
         {/* Messages */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-center text-sm">
-            {error}
+            ❌ {error}
           </div>
         )}
         {success && (
