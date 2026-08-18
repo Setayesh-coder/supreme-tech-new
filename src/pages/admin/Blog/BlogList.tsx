@@ -7,7 +7,16 @@ import type { BlogPost } from "../../../lib/api/blog";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { Plus, Edit, Trash2, Loader2, Search, Calendar } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  Search,
+  Calendar,
+  BookOpen,
+  X,
+} from "lucide-react";
 
 export default function BlogListAdmin() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -22,11 +31,11 @@ export default function BlogListAdmin() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      // ✅ تغییر: استفاده از items به جای posts
+
       const data = await blogAPI.getAll({ limit: 100, page: 1 });
       setPosts(data.items || []);
     } catch (err) {
-      console.error("❌ خطا:", err);
+      console.error(<X />, " خطا:", err);
       setError("خطا در دریافت پست‌ها");
     } finally {
       setLoading(false);
@@ -116,7 +125,10 @@ export default function BlogListAdmin() {
             borderRadius="16px"
             blurIntensity="sm"
           >
-            <div className="text-6xl mb-4">📝</div>
+            <div className="text-6xl mb-4">
+              {" "}
+              <BookOpen />
+            </div>
             <h3 className="text-xl font-bold text-white mb-2">پستی یافت نشد</h3>
             <p className="text-gray-400">هنوز پستی ایجاد نشده است</p>
           </LiquidGlassCard>
@@ -157,9 +169,9 @@ export default function BlogListAdmin() {
                       post.published ? "text-green-400" : "text-yellow-400"
                     }
                   >
-                    {post.published ? "✅ منتشر شده" : "⏳ پیش‌نویس"}
+                    {post.published ? " منتشر شده" : " پیش‌نویس"}
                   </span>
-                  <span className="text-gray-500">👁️ {post.views_count}</span>
+                  <span className="text-gray-500"> {post.views_count}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
                   <Link to={`/admin/blog/edit/${post.id}`} className="flex-1">

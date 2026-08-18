@@ -296,7 +296,7 @@ export default function HeroCreate() {
                 name="tagline"
                 value={formData.tagline}
                 onChange={handleChange}
-                placeholder="مثال: 🚀 مرکز توسعه فناوری‌های برتر تهران"
+                placeholder="مثال:  مرکز توسعه فناوری‌های برتر تهران"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
               />
               <p className="text-xs text-gray-500 mt-1">

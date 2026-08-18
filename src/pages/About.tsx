@@ -105,7 +105,7 @@ export default function About() {
                   alt="supreme tech"
                   className="w-8 h-8"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/favicon.ico';
+                    (e.target as HTMLImageElement).src = "/favicon.ico";
                   }}
                 />
               </div>
@@ -247,7 +247,7 @@ export default function About() {
               className="px-8 py-4 cursor-pointer hover:scale-105 transition-all duration-300 group"
             >
               <p className="text-lg text-blue-400 font-medium flex items-center gap-2">
-                🚀 آماده‌اید تا آینده کسب‌وکارتان را با Supreme Tech بسازید؟
+                آماده‌اید تا آینده کسب‌وکارتان را با Supreme Tech بسازید؟
                 <ArrowLeft />
               </p>
             </LiquidGlassCard>

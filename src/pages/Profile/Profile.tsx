@@ -13,7 +13,7 @@ import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import {
   ProfileHeader,
-  ProfileStats,
+  // ProfileStats,
   ProfileTabs,
   ProfileInfo,
   EnrollmentsTab,
@@ -912,10 +912,10 @@ export default function Profile() {
           onCartClick={() => setActiveTab("cart")}
         />
 
-        <ProfileStats
+        {/* <ProfileStats
           stats={stats}
           onStatClick={(tab) => setActiveTab(tab as any)}
-        />
+        /> */}
 
         <ProfileTabs
           activeTab={activeTab}

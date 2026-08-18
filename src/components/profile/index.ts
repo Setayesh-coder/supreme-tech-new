@@ -1,6 +1,6 @@
 // src/components/profile/index.ts
 export { default as ProfileHeader } from "./ProfileHeader";
-export { ProfileStats } from "./ProfileStats";
+// export { ProfileStats } from "./ProfileStats";
 export { ProfileTabs } from "./ProfileTabs";
 export { default as ProfileInfo } from "./ProfileInfo";
 export { EnrollmentsTab } from "./EnrollmentsTab";

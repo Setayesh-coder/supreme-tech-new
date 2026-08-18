@@ -1,11 +1,17 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../lib/api/admin";
 import { employeesAPI } from "../../lib/api/employees";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
-import { User, Lock, Shield, Briefcase } from "lucide-react";
+import {
+  User,
+  Lock,
+  Shield,
+  Briefcase,
+  UserRoundCog,
+  Users,
+} from "lucide-react";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -55,7 +61,11 @@ export default function AdminLogin() {
     } catch (err: any) {
       console.error("❌ خطا:", err);
       console.error("❌ پاسخ خطا:", err.response?.data);
-      setError(err.response?.data?.detail || err.response?.data?.error || "خطا در ورود");
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.error ||
+          "خطا در ورود",
+      );
     } finally {
       setLoading(false);
     }
@@ -71,7 +81,7 @@ export default function AdminLogin() {
       >
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">
-            {loginType === "admin" ? "🚀" : "👤"}
+            {loginType === "admin" ? <UserRoundCog /> : <Users />}
           </div>
           <h1 className="text-2xl font-bold text-white">
             {loginType === "admin" ? "ورود به پنل ادمین" : "ورود کارمندان"}

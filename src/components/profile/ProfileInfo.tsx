@@ -11,6 +11,7 @@ import {
   MapPin,
   Calendar,
   Users,
+  Check,
 } from "lucide-react";
 import GlassBirthdayPicker from "../ui/GlassBirthdayPicker";
 import { useState, useEffect } from "react";
@@ -122,7 +123,7 @@ export default function ProfileInfo({
           const gregorianDate = jalaliToGregorian(jy, jm, jd);
 
           if (gregorianDate) {
-            console.log("📅 تاریخ میلادی برای ذخیره:", gregorianDate);
+            console.log(" تاریخ میلادی برای ذخیره:", gregorianDate);
 
             const event = {
               target: {
@@ -173,7 +174,7 @@ export default function ProfileInfo({
       )}
       {success && (
         <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-2 rounded-lg mb-4 text-sm">
-          ✅ {success}
+          <Check/> {success}
         </div>
       )}
 

@@ -15,6 +15,7 @@ import {
   User,
   Phone,
   Calendar,
+  Send,
 } from "lucide-react";
 
 interface Message {
@@ -107,7 +108,6 @@ export default function MessageList() {
     }
   };
 
-  // 🔥 تابع پاسخ با ایمیل (باز کردن mailto)
   const handleReplyByEmail = (message: Message) => {
     const email = message.email || "info@supremetech.ir";
     const subject = `پاسخ به: ${message.subject}`;
@@ -119,7 +119,7 @@ export default function MessageList() {
     );
   };
 
-  // 🔥 تابع ارسال پاسخ (از طریق مودال)
+  //  تابع ارسال پاسخ (از طریق مودال)
   const handleSendReply = async () => {
     if (!selectedMessage || !replyText.trim()) return;
 
@@ -170,7 +170,7 @@ export default function MessageList() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-white">📬 پیام‌ها</h1>
+            <h1 className="text-2xl font-bold text-white"><Mail/> پیام‌ها</h1>
             <p className="text-white/60 text-sm">
               {unreadCount > 0
                 ? `${unreadCount} پیام خوانده نشده`
@@ -225,7 +225,7 @@ export default function MessageList() {
                         )}
                         {message.isReplied && (
                           <span className="text-xs text-green-400 shrink-0">
-                            ✅ پاسخ داده شده
+                            <Check/> پاسخ داده شده
                           </span>
                         )}
                       </div>
@@ -318,7 +318,7 @@ export default function MessageList() {
                   )}
                 </div>
 
-                {/* 🔥 دکمه‌ها */}
+                {/*  دکمه‌ها */}
                 <div className="flex flex-wrap gap-2">
                   {!selectedMessage.isRead && (
                     <GlassButton
@@ -332,7 +332,7 @@ export default function MessageList() {
                     </GlassButton>
                   )}
 
-                  {/* 🔥 دکمه پاسخ با ایمیل (mailto) */}
+                  {/*  دکمه پاسخ با ایمیل (mailto) */}
                   <GlassButton
                     variant="secondary"
                     size="sm"
@@ -343,7 +343,7 @@ export default function MessageList() {
                     پاسخ با ایمیل
                   </GlassButton>
 
-                  {/* 🔥 دکمه باز کردن مودال پاسخ */}
+                  {/*  دکمه باز کردن مودال پاسخ */}
                   <GlassButton
                     variant="success"
                     size="sm"
@@ -405,7 +405,7 @@ export default function MessageList() {
               glowIntensity="lg"
             >
               <h2 className="text-xl font-bold text-white mb-4 text-center">
-                ✉️ ارسال پاسخ
+                <Send/> ارسال پاسخ
               </h2>
               <p className="text-gray-400 text-sm text-center mb-4">
                 پاسخ خود را برای "{selectedMessage.name}" ارسال کنید

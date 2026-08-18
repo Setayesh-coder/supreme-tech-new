@@ -73,7 +73,7 @@ export default function Contact() {
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError(err.response?.data?.error || "خطا در ارسال پیام");
       setTimeout(() => setError(""), 3000);
     } finally {

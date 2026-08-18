@@ -4,21 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { coursesAPI } from "../../lib/api/courses";
-import { enrollmentsAPI } from "../../lib/api/enrollments";
 import CoursePreRegisterModal from "../course/CoursePreRegisterModal";
-
 import {
-  Clock,
-  Users,
-  Award,
-  Loader2,
+  ShoppingBag,
   CheckCircle,
-  ListSortAscending,
+  Loader2,
   User,
-  // Calendar,
-  // Video,
-  // FileArchive,
-  // FileText,
+  Users,
+  Clock,
+  Star,
+  Award,
+  ListSortAscending,
 } from "lucide-react";
 
 interface Course {
@@ -72,10 +68,12 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [enrolling] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+
+  // ✅ State برای مودال پیش‌ثبت‌نام
   const [showPreRegister, setShowPreRegister] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [selectedCourseTitle, setSelectedCourseTitle] = useState<string>("");
@@ -116,7 +114,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
 
       setCourses(coursesWithEnrollment);
     } catch (err) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError("خطا در دریافت دوره‌ها");
     } finally {
       setLoading(false);
@@ -128,76 +126,63 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     return enrollments.includes(courseId);
   };
 
-  const handleEnroll = async (courseId: string) => {
+  // ✅ باز کردن مودال پیش‌ثبت‌نام
+  const handleOpenPreRegister = (courseId: string, courseTitle: string) => {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
       navigate("/login");
       return;
     }
-    const handleEnroll = (courseId: string, courseTitle: string) => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
-        navigate("/login");
-        return;
-      }
 
-      // ✅ نمایش فرم پیش‌ثبت‌نام
-      setSelectedCourseId(courseId);
-      setSelectedCourseTitle(courseTitle);
-      setShowPreRegister(true);
-    };
+    setSelectedCourseId(courseId);
+    setSelectedCourseTitle(courseTitle);
+    setShowPreRegister(true);
+  };
 
-    // ✅ تابع بعد از ثبت موفق
-    const handlePreRegisterSuccess = () => {
-      // به‌روزرسانی لیست دوره‌ها
-      fetchCourses();
-      setSuccess("✅ پیش‌ثبت‌نام با موفقیت انجام شد!");
-      setTimeout(() => setSuccess(""), 3000);
-    };
-
-    setEnrolling(courseId);
-    setError("");
-    setSuccess("");
-
-    try {
-      await enrollmentsAPI.create({ courseId });
-
-      const enrollments = JSON.parse(
-        localStorage.getItem("enrollments") || "[]",
-      );
-      if (!enrollments.includes(courseId)) {
-        enrollments.push(courseId);
-        localStorage.setItem("enrollments", JSON.stringify(enrollments));
-      }
-
-      setSuccess("✅ ثبت‌نام با موفقیت انجام شد!");
-
-      setCourses(
-        courses.map((c) =>
-          c.id === courseId
-            ? {
-                ...c,
-                enrolledCount: (c.enrolledCount || 0) + 1,
-                userEnrolled: true,
-              }
-            : c,
-        ),
-      );
-
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.error("❌ خطا در ثبت‌نام:", err);
-      setError(
-        err.response?.data?.detail ||
-          err.response?.data?.error ||
-          "خطا در ثبت‌نام",
-      );
-      setTimeout(() => setError(""), 3000);
-    } finally {
-      setEnrolling(null);
+  // ✅ تابع بعد از ثبت موفق - اضافه کردن به سبد خرید
+  const handlePreRegisterSuccess = (courseId: string, courseTitle: string) => {
+    // ✅ 1. اضافه کردن به localStorage
+    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
+    if (!enrollments.includes(courseId)) {
+      enrollments.push(courseId);
+      localStorage.setItem("enrollments", JSON.stringify(enrollments));
     }
+
+    // ✅ 2. اضافه کردن به سبد خرید (cart)
+    const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
+    if (!cartItems.includes(courseId)) {
+      cartItems.push(courseId);
+      localStorage.setItem("cart", JSON.stringify(cartItems));
+    }
+
+    // ✅ 3. به‌روزرسانی لیست دوره‌ها
+    setCourses(
+      courses.map((c) =>
+        c.id === courseId
+          ? {
+              ...c,
+              userEnrolled: true,
+              enrolledCount: (c.enrolledCount || 0) + 1,
+            }
+          : c,
+      ),
+    );
+
+    // ✅ 4. نمایش پیام موفقیت با گزینه رفتن به سبد خرید
+    setSuccess(` دوره "${courseTitle}" به سبد خرید اضافه شد!`);
+    setTimeout(() => setSuccess(""), 5000);
+
+    // ✅ 5. بستن مودال
+    setShowPreRegister(false);
+
+    // ✅ 6. آپشن: هدایت خودکار به سبد خرید (اختیاری)
+    // navigate("/cart");
+  };
+
+  // ✅ تابع رفتن به سبد خرید
+  const goToCart = () => {
+    navigate("/cart");
   };
 
   const handleCourseClick = (slug: string) => {
@@ -237,13 +222,26 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
       </h3>
 
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-          ❌ {error}
+        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
+          <span>❌</span> {error}
         </div>
       )}
+
       {success && (
-        <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
-          ✅ {success}
+        <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>
+              <CheckCircle />
+            </span>{" "}
+            {success}
+          </div>
+          <button
+            onClick={goToCart}
+            className="px-4 py-1.5 bg-green-500/30 hover:bg-green-500/40 text-green-200 rounded-lg text-sm transition-colors flex items-center gap-1"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            مشاهده سبد خرید
+          </button>
         </div>
       )}
 
@@ -265,7 +263,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
               glowIntensity="sm"
               onClick={() => handleCourseClick(course.slug)}
             >
-              {/* ===== تصویر - ارتفاع ثابت ===== */}
+              {/* ===== تصویر ===== */}
               {course.image && (
                 <div className="w-full h-40 flex-shrink-0 overflow-hidden rounded-lg mb-4">
                   <img
@@ -279,7 +277,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                 </div>
               )}
 
-              {/* ===== محتوای اصلی - کشسان ===== */}
+              {/* ===== محتوای اصلی ===== */}
               <div className="flex-1 flex flex-col">
                 {/* عنوان */}
                 <div className="flex justify-between items-start mb-2">
@@ -287,8 +285,9 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                     {course.title}
                   </h4>
                   {course.isFeatured && (
-                    <span className="mr-2 px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded-full whitespace-nowrap flex-shrink-0">
-                      ⭐ ویژه
+                    <span className="mr-2 px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded-full whitespace-nowrap flex-shrink-0 flex items-center gap-1">
+                      <Star className="w-3 h-3" />
+                      ویژه
                     </span>
                   )}
                 </div>
@@ -310,16 +309,14 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                   )}
                   {course.level && (
                     <div className="flex items-center gap-2">
-                      <span>
-                        <ListSortAscending /> سطح: {course.level}
-                      </span>
+                      <ListSortAscending size={14} />
+                      <span>سطح: {course.level}</span>
                     </div>
                   )}
                   {course.instructor_name && (
                     <div className="flex items-center gap-2">
-                      <span>
-                        <User /> مدرس: {course.instructor_name}
-                      </span>
+                      <User size={14} />
+                      <span>مدرس: {course.instructor_name}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2">
@@ -334,7 +331,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                   </div>
                 </div>
 
-                {/* ===== قیمت و دکمه - همیشه در پایین ===== */}
+                {/* ===== قیمت و دکمه ===== */}
                 <div className="mt-auto pt-3">
                   {/* قیمت و وضعیت */}
                   <div className="flex items-center justify-between mb-3">
@@ -353,7 +350,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                     ) : null}
                   </div>
 
-                  {/* دکمه ثبت‌نام */}
+                  {/* ✅ دکمه پیش‌ثبت‌نام */}
                   {!course.userEnrolled && !isPast && !isFull && (
                     <div onClick={(e) => e.stopPropagation()}>
                       <GlassButton
@@ -361,19 +358,21 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                         size="sm"
                         fullWidth
                         loading={enrolling === course.id}
-                        onClick={() => handleEnroll(course.id)}
+                        onClick={() =>
+                          handleOpenPreRegister(course.id, course.title)
+                        }
                         icon={
                           enrolling === course.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <CheckCircle size={16} />
+                            <ShoppingBag className="w-4 h-4" />
                           )
                         }
                         iconPosition="left"
                       >
                         {enrolling === course.id
-                          ? "در حال ثبت‌نام..."
-                          : "ثبت‌نام در دوره"}
+                          ? "در حال ثبت..."
+                          : "پیش‌ثبت‌نام و افزودن به سبد خرید"}
                       </GlassButton>
                     </div>
                   )}
@@ -403,7 +402,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                               key={session.id}
                               className="bg-white/5 rounded-lg p-3 space-y-2"
                             >
-                              {/* ... محتوای جلسه ... */}
+                              {/* محتوای جلسه */}
                             </div>
                           );
                         })
@@ -420,6 +419,17 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
           );
         })}
       </div>
+
+      {/* ✅ مودال پیش‌ثبت‌نام */}
+      <CoursePreRegisterModal
+        isOpen={showPreRegister}
+        onClose={() => setShowPreRegister(false)}
+        courseId={selectedCourseId}
+        courseTitle={selectedCourseTitle}
+        onSuccess={() =>
+          handlePreRegisterSuccess(selectedCourseId, selectedCourseTitle)
+        }
+      />
     </div>
   );
 }

@@ -53,7 +53,7 @@ export function ProtectedRoute({
 
     // لاگ برای دیباگ
     console.log(
-      `🔐 نقش: ${role}, ادمین: ${isAdminUser}, کارمند: ${isEmployeeUser}`,
+      ` نقش: ${role}, ادمین: ${isAdminUser}, کارمند: ${isEmployeeUser}`,
     );
 
     // چک کردن allowedRoles
@@ -64,7 +64,7 @@ export function ProtectedRoute({
       else if (isEmployeeUser) userRole = "EMPLOYEE";
 
       if (!allowedRoles.includes(userRole as any)) {
-        console.warn(`⛔ دسترسی غیرمجاز: نقش ${userRole} مجاز نیست`);
+        console.warn(` دسترسی غیرمجاز: نقش ${userRole} مجاز نیست`);
         return <AccessDenied />;
       }
     }
@@ -89,7 +89,7 @@ export function ProtectedRoute({
 
       if (!hasRequiredRole) {
         console.warn(
-          `⛔ دسترسی غیرمجاز: نقش ${role} برای ${requiredRole} لازم است`,
+          ` دسترسی غیرمجاز: نقش ${role} برای ${requiredRole} لازم است`,
         );
         return <AccessDenied />;
       }
@@ -101,11 +101,11 @@ export function ProtectedRoute({
       : isEmployeeUser
         ? "کارمند"
         : "کاربر عادی";
-    console.log(`✅ دسترسی مجاز برای ${accessType} با نقش ${role}`);
+    console.log(` دسترسی مجاز برای ${accessType} با نقش ${role}`);
 
     return <>{children}</>;
   } catch (error) {
-    console.error("❌ خطا در ProtectedRoute:", error);
+    console.error(" خطا در ProtectedRoute:", error);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("admin");

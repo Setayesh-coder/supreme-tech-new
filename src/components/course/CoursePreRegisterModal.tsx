@@ -1,12 +1,12 @@
 // src/components/course/CoursePreRegisterModal.tsx
 import { useState, useEffect } from "react";
-import { X, CheckCircle, AlertCircle } from "lucide-react";
-import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
-import { GlassButton } from "../../../components/ui/GlassButton";
+import { X, CheckCircle, AlertCircle, GraduationCap } from "lucide-react";
+import { LiquidGlassCard } from "../ui/LiquidGlassCard";
+import { GlassButton } from "../ui/GlassButton";
 import {
   enrollmentsAPI,
   type CoursePreRegisterData,
-} from "../../../lib/api/enrollments";
+} from "../../lib/api/enrollments";
 
 interface CoursePreRegisterModalProps {
   isOpen: boolean;
@@ -38,7 +38,7 @@ export default function CoursePreRegisterModal({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [step, setStep] = useState(1);
+  const [, setStep] = useState(1);
 
   // 🔄 Reset فرم وقتی بسته می‌شود
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function CoursePreRegisterModal({
     setError("");
 
     try {
-      // ✅ ارسال داده به API
+      //  ارسال داده به API
       await enrollmentsAPI.preRegister({
         course_id: courseId,
         field_of_study: formData.field_of_study?.trim() || "",
@@ -91,7 +91,7 @@ export default function CoursePreRegisterModal({
         onClose();
       }, 2000);
     } catch (err: any) {
-      console.error("❌ خطا در پیش‌ثبت‌نام:", err);
+      console.error(" خطا در پیش‌ثبت‌نام:", err);
       setError(
         err.response?.data?.detail ||
           err.response?.data?.message ||
@@ -124,8 +124,9 @@ export default function CoursePreRegisterModal({
 
           {/* هدر */}
           <div className="mb-6 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white">
-              🎓 پیش‌ثبت‌نام در دوره
+            <h2 className="text-xl md:text-2xl font-bold text-white flex items-center justify-center space-x-2 rtl:space-x-reverse">
+              <GraduationCap className="w-6 h-6" />
+              <span>پیش‌ثبت‌نام در دوره</span>
             </h2>
             <p className="text-gray-400 text-sm mt-1">{courseTitle}</p>
           </div>
@@ -136,7 +137,9 @@ export default function CoursePreRegisterModal({
               <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-green-400" />
               </div>
-              <h3 className="text-lg font-bold text-white">✅ ثبت شد!</h3>
+              <h3 className="text-lg font-bold text-white">
+                <CheckCircle /> ثبت شد!
+              </h3>
               <p className="text-gray-400 text-sm mt-1">
                 اطلاعات شما با موفقیت ثبت شد.
               </p>

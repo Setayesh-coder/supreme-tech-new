@@ -1,12 +1,12 @@
 // src/components/admin/AdminLayout.tsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  BookOpen, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  BookOpen,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -28,7 +28,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("admin") || localStorage.getItem("user");
+    const storedUser =
+      localStorage.getItem("admin") || localStorage.getItem("user");
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
@@ -47,35 +48,50 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const menuItems = [
-    { path: "/admin/dashboard", icon: <LayoutDashboard size={20} />, label: "داشبورد" },
+    {
+      path: "/admin/dashboard",
+      icon: <LayoutDashboard size={20} />,
+      label: "داشبورد",
+    },
     { path: "/admin/users", icon: <Users size={20} />, label: "کاربران" },
     { path: "/admin/events", icon: <Calendar size={20} />, label: "رویدادها" },
     { path: "/admin/courses", icon: <BookOpen size={20} />, label: "دوره‌ها" },
     { path: "/admin/blog", icon: <MessageSquare size={20} />, label: "وبلاگ" },
     { path: "/admin/hero", icon: <Image size={20} />, label: "اسلایدر" },
-    { path: "/admin/partners", icon: <Building2 size={20} />, label: "همکاران" },
+    {
+      path: "/admin/partners",
+      icon: <Building2 size={20} />,
+      label: "همکاران",
+    },
     { path: "/admin/team", icon: <Users size={20} />, label: "تیم" },
-    { path: "/admin/employees", icon: <Briefcase size={20} />, label: "کارمندان" },
+    {
+      path: "/admin/employees",
+      icon: <Briefcase size={20} />,
+      label: "کارمندان",
+    },
     { path: "/admin/tickets", icon: <Ticket size={20} />, label: "تیکت‌ها" },
     { path: "/admin/settings", icon: <Settings size={20} />, label: "تنظیمات" },
   ];
 
   const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + "/");
+    return (
+      location.pathname === path || location.pathname.startsWith(path + "/")
+    );
   };
 
-  // ✅ نام کاربر را با safe fallback دریافت کن
   const userName = user?.name || user?.phone || "کاربر";
   const userAvatar = user?.name?.charAt(0) || user?.phone?.charAt(0) || "U";
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900">
       {/* سایدبار */}
-      <aside className={`
+      <aside
+        className={`
         fixed lg:relative top-0 right-0 h-full w-72 bg-gray-900/98 backdrop-blur-xl border-l border-white/10 z-40
         transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-      `}>
+        ${sidebarOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
+      `}
+      >
         <div className="flex flex-col h-full">
           {/* لوگو */}
           <div className="p-4 border-b border-white/10">
@@ -110,13 +126,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     onClick={() => setSidebarOpen(false)}
                     className={`
                       flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
-                      ${isActive(item.path)
-                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                      ${
+                        isActive(item.path)
+                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
                       }
                     `}
                   >
-                    <span className={isActive(item.path) ? 'text-blue-400' : 'text-white/40'}>
+                    <span
+                      className={
+                        isActive(item.path) ? "text-blue-400" : "text-white/40"
+                      }
+                    >
                       {item.icon}
                     </span>
                     {item.label}
@@ -133,8 +154,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 {userAvatar}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{userName}</p>
-                <p className="text-white/40 text-xs truncate">{user?.role || 'ADMIN'}</p>
+                <p className="text-white text-sm font-medium truncate">
+                  {userName}
+                </p>
+                <p className="text-white/40 text-xs truncate">
+                  {user?.role || "ADMIN"}
+                </p>
               </div>
             </div>
             <button
@@ -177,7 +202,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div>
                 <p className="text-white text-sm font-medium">{userName}</p>
-                <p className="text-white/40 text-xs">{user?.role || 'ADMIN'}</p>
+                <p className="text-white/40 text-xs">{user?.role || "ADMIN"}</p>
               </div>
             </div>
             <button
@@ -190,9 +215,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </header>
 
         {/* محتوای صفحه */}
-        <main className="p-4 lg:p-8 pt-20 lg:pt-4">
-          {children}
-        </main>
+        <main className="p-4 lg:p-8 pt-20 lg:pt-4">{children}</main>
       </div>
 
       {/* پس‌زمینه سایه برای موبایل */}

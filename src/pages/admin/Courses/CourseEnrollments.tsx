@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { coursesAPI } from "../../../lib/api/courses";
+import { enrollmentsAPI } from "../../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import {
@@ -17,6 +18,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  X,
+  BookOpen,
 } from "lucide-react";
 
 // ✅ تایپ کاربر
@@ -27,17 +30,19 @@ interface User {
   phone?: string;
 }
 
-// ✅ تایپ ثبت‌نام
+// ✅ تایپ ثبت‌نام (مطابق با بک‌اند)
 interface Enrollment {
   id: string;
-  userId: string;
+  user_id: string; // ✅ تغییر از userId به user_id
   user: User;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
-  createdAt: string;
+  created_at: string; // ✅ تغییر از createdAt به created_at
   paymentStatus?: "PAID" | "UNPAID" | "PENDING";
+  course_id?: string;
+  event_id?: string;
 }
 
-// ✅ تایپ دوره (با فیلدهای اضافی برای نمایش)
+// ✅ تایپ دوره
 interface Course {
   id: string;
   title: string;
@@ -55,7 +60,6 @@ interface Course {
   };
   created_at: string;
   updated_at: string;
-  // ⚠️ این فیلدها در بک‌اند وجود ندارند - برای نمایش استفاده می‌شوند
   capacity?: number;
   enrolledCount?: number;
 }
@@ -70,7 +74,6 @@ export default function CourseEnrollments() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
-    // ✅ فقط اگر courseId وجود داشت، داده رو بگیر
     if (courseId) {
       fetchData();
     } else {
@@ -86,10 +89,8 @@ export default function CourseEnrollments() {
       setLoading(true);
       setError("");
 
-      // ۱. دریافت اطلاعات دوره
+      // ✅ ۱. دریافت اطلاعات دوره
       const courseData = await coursesAPI.getById(courseId);
-
-      // ✅ تبدیل به Course با فیلدهای optional
       const courseWithFields: Course = {
         ...courseData,
         capacity: (courseData as any).capacity || 0,
@@ -97,25 +98,40 @@ export default function CourseEnrollments() {
       };
       setCourse(courseWithFields);
 
-      // ۲. دریافت لیست ثبت‌نام‌ها
+      // ✅ ۲. دریافت لیست ثبت‌نام‌ها از enrollmentsAPI
       try {
-        // اگر دوره دارای enrollments باشد
-        const extendedCourse = courseData as any;
-        if (
-          extendedCourse.enrollments &&
-          Array.isArray(extendedCourse.enrollments)
-        ) {
-          setEnrollments(extendedCourse.enrollments);
-        } else {
-          setEnrollments([]);
-          console.warn("⚠️ هیچ ثبت‌نامی برای این دوره یافت نشد");
-        }
+        const enrollmentsData =
+          await enrollmentsAPI.getCourseEnrollments(courseId);
+        console.log(" ثبت‌نام‌های دوره:", enrollmentsData);
+
+        // ✅ تبدیل داده‌ها به فرمت مورد نیاز
+        const mappedEnrollments: Enrollment[] = (enrollmentsData || []).map(
+          (item: any) => ({
+            id: item.id,
+            user_id: item.user_id || item.userId,
+            user: item.user || {
+              id: item.user_id || item.userId,
+              name: item.name || "کاربر",
+              email: item.email || "",
+              phone: item.phone || "",
+            },
+            status: item.status || "PENDING",
+            created_at:
+              item.created_at || item.createdAt || new Date().toISOString(),
+            paymentStatus:
+              item.payment_status || item.paymentStatus || "PENDING",
+            course_id: item.course_id || item.courseId,
+            event_id: item.event_id || item.eventId,
+          }),
+        );
+
+        setEnrollments(mappedEnrollments);
       } catch (err) {
-        console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
+        console.error(" خطا در دریافت ثبت‌نام‌ها:", err);
         setEnrollments([]);
       }
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError(
         err.response?.data?.detail || err.message || "خطا در دریافت اطلاعات",
       );
@@ -194,6 +210,7 @@ export default function CourseEnrollments() {
     });
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "نامشخص";
     const date = new Date(dateString);
     return date.toLocaleDateString("fa-IR", {
       year: "numeric",
@@ -219,7 +236,10 @@ export default function CourseEnrollments() {
     return (
       <div className="p-4 md:p-6">
         <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl mb-4">
-          <h3 className="font-bold mb-1">❌ خطا</h3>
+          <h3 className="font-bold mb-1 flex items-center gap-1">
+            <X className="w-4 h-4" />
+            خطا
+          </h3>
           <p>{error || "دوره یافت نشد"}</p>
         </div>
         <Link to="/admin/courses">
@@ -256,8 +276,9 @@ export default function CourseEnrollments() {
               </GlassButton>
             </Link>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white mt-3">
-            📋 ثبت‌نام‌های دوره
+          <h1 className="text-2xl md:text-3xl font-bold text-white mt-3 flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-blue-400" />
+            ثبت‌نام‌های دوره
           </h1>
           <p className="text-gray-400 text-sm mt-1">
             {course.title} - {enrolledCount} / {capacity} نفر ثبت‌نام کرده‌اند
@@ -270,7 +291,7 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              alert("📥 قابلیت خروجی گرفتن در حال توسعه است...");
+              alert(" قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
             خروجی Excel
@@ -308,7 +329,7 @@ export default function CourseEnrollments() {
                   : "bg-red-500/20 text-red-400"
               }`}
             >
-              {course.is_active ? "✅ فعال" : "❌ غیرفعال"}
+              {course.is_active ? " فعال" : " غیرفعال"}
             </span>
           </div>
         </div>
@@ -332,10 +353,10 @@ export default function CourseEnrollments() {
           className="bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           <option value="all">همه وضعیت‌ها</option>
-          <option value="CONFIRMED">✅ تایید شده</option>
-          <option value="PENDING">⏳ در انتظار</option>
-          <option value="CANCELLED">❌ لغو شده</option>
-          <option value="COMPLETED">📌 تکمیل شده</option>
+          <option value="CONFIRMED"> تایید شده</option>
+          <option value="PENDING"> در انتظار</option>
+          <option value="CANCELLED"> لغو شده</option>
+          <option value="COMPLETED"> تکمیل شده</option>
         </select>
       </div>
 
@@ -346,7 +367,9 @@ export default function CourseEnrollments() {
           borderRadius="16px"
           blurIntensity="sm"
         >
-          <div className="text-6xl mb-4">👤</div>
+          <div className="text-6xl mb-4">
+            <Users className="w-16 h-16 mx-auto text-white/20" />
+          </div>
           <h3 className="text-xl font-bold text-white mb-2">
             ثبت‌نامی یافت نشد
           </h3>
@@ -416,13 +439,13 @@ export default function CourseEnrollments() {
                   )}
                   <span className="text-gray-500 text-xs flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {formatDate(enrollment.createdAt)}
+                    {formatDate(enrollment.created_at)}
                   </span>
                 </div>
 
                 {/* دکمه‌های اقدام */}
                 <div className="flex items-center gap-2">
-                  <Link to={`/admin/users/${enrollment.userId}`}>
+                  <Link to={`/admin/users/${enrollment.user_id}`}>
                     <GlassButton
                       variant="secondary"
                       size="sm"

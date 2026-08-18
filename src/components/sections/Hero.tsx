@@ -110,7 +110,7 @@ export default function Hero() {
 
   const currentSlide = slides[currentIndex] || slides[0];
   const heroTagline =
-    currentSlide.tagline || "🚀 مرکز توسعه فناوری‌های برتر تهران";
+    currentSlide.tagline || " مرکز توسعه فناوری‌های برتر تهران";
 
   return (
     <section className="relative w-full py-4 sm:py-6 px-2 sm:px-4">
@@ -185,7 +185,7 @@ export default function Hero() {
                 onClick={scrollToContact}
                 className="text-xs sm:text-base px-4 sm:px-8 py-1.5 sm:py-2.5 whitespace-nowrap"
               >
-                {currentSlide.button_link ? "بیشتر بدانید" : "درخواست مشاوره"}
+                {currentSlide.button_link ? "درخواست مشاوره" : "درخواست مشاوره"}
               </GlassButton>
 
               <GlassButton

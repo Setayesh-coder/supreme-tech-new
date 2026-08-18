@@ -46,17 +46,19 @@ export default function TicketGroupCreate() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
   const toggleUser = (userId: string) => {
-    setSelectedUsers(prev =>
+    setSelectedUsers((prev) =>
       prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
     );
   };
 
@@ -79,13 +81,13 @@ export default function TicketGroupCreate() {
         priority: formData.priority,
         members: selectedUsers,
       });
-      
-      setSuccess("✅ تیکت گروهی با موفقیت ایجاد شد!");
+
+      setSuccess(" تیکت گروهی با موفقیت ایجاد شد!");
       setTimeout(() => {
         navigate("/admin/tickets");
       }, 1500);
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError(err.response?.data?.detail || "خطا در ایجاد تیکت گروهی");
     } finally {
       setLoading(false);
@@ -108,7 +110,12 @@ export default function TicketGroupCreate() {
           </h1>
         </div>
 
-        <LiquidGlassCard className="p-6 md:p-8" borderRadius="20px" blurIntensity="lg" glowIntensity="md">
+        <LiquidGlassCard
+          className="p-6 md:p-8"
+          borderRadius="20px"
+          blurIntensity="lg"
+          glowIntensity="md"
+        >
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
@@ -180,10 +187,10 @@ export default function TicketGroupCreate() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
               >
-                <option value="LOW">🔵 کم</option>
-                <option value="MEDIUM">🟡 متوسط</option>
-                <option value="HIGH">🟠 بالا</option>
-                <option value="URGENT">🔴 فوری</option>
+                <option value="LOW"> کم</option>
+                <option value="MEDIUM"> متوسط</option>
+                <option value="HIGH"> بالا</option>
+                <option value="URGENT"> فوری</option>
               </select>
             </div>
 
@@ -193,7 +200,9 @@ export default function TicketGroupCreate() {
               </label>
               <div className="space-y-2 max-h-40 overflow-y-auto bg-white/5 rounded-xl p-3">
                 {loadingUsers ? (
-                  <p className="text-gray-400 text-sm">در حال بارگذاری کاربران...</p>
+                  <p className="text-gray-400 text-sm">
+                    در حال بارگذاری کاربران...
+                  </p>
                 ) : users.length === 0 ? (
                   <p className="text-gray-400 text-sm">هیچ کاربری یافت نشد</p>
                 ) : (
@@ -209,7 +218,9 @@ export default function TicketGroupCreate() {
                         className="w-4 h-4 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
                       />
                       <span className="text-white text-sm">{user.name}</span>
-                      <span className="text-gray-400 text-xs">({user.phone})</span>
+                      <span className="text-gray-400 text-xs">
+                        ({user.phone})
+                      </span>
                     </label>
                   ))
                 )}

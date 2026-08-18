@@ -37,7 +37,7 @@ export default function TicketList() {
       const data = await ticketsAPI.getAll();
       setTickets(data || []);
     } catch (err) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError("خطا در دریافت تیکت‌ها");
     } finally {
       setLoading(false);
@@ -146,7 +146,7 @@ export default function TicketList() {
 
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4">
-            ❌ {error}
+            <X/> {error}
           </div>
         )}
 
@@ -253,7 +253,7 @@ export default function TicketList() {
                       <div key={msg.id} className={`p-3 rounded-xl ${isAdmin ? "bg-blue-500/20 ml-auto max-w-[80%]" : "bg-white/5 mr-auto max-w-[80%]"}`}>
                         <p className="text-white text-sm">{msg.message}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-white/30">{isAdmin ? "👤 پشتیبانی" : "👤 کاربر"}</span>
+                          <span className="text-xs text-white/30">{isAdmin ? " پشتیبانی" : " کاربر"}</span>
                           <span className="text-xs text-white/30">{formatDate(msg.created_at)}</span>
                         </div>
                       </div>

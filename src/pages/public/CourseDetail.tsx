@@ -25,6 +25,7 @@ import {
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
+import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal"; // ✅ اضافه شد
 
 // ✅ تایپ Course
 interface Course {
@@ -123,6 +124,10 @@ export default function CourseDetail() {
   const [enrolling, setEnrolling] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState(true);
 
+  // ✅ State برای مودال پیش‌ثبت‌نام
+  const [showPreRegister, setShowPreRegister] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+
   // ✅ تابع بررسی ثبت‌نام
   const checkUserEnrollment = (courseId: string): boolean => {
     const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
@@ -168,7 +173,7 @@ export default function CourseDetail() {
           setError("دوره یافت نشد");
         }
       } catch (err) {
-        console.error("❌ خطا:", err);
+        console.error(" خطا:", err);
         setError("دوره مورد نظر یافت نشد");
       } finally {
         setLoading(false);
@@ -177,6 +182,43 @@ export default function CourseDetail() {
     fetchCourse();
   }, [slug]);
 
+  // ✅ تابع باز کردن مودال پیش‌ثبت‌نام
+  const handleOpenPreRegister = () => {
+    if (!course) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
+      navigate("/login");
+      return;
+    }
+
+    setSelectedCourseId(course.id);
+    setShowPreRegister(true);
+  };
+
+  // ✅ تابع بعد از ثبت موفق
+  const handlePreRegisterSuccess = () => {
+    if (!course) return;
+
+    // به‌روزرسانی وضعیت دوره
+    setCourse({
+      ...course,
+      userEnrolled: true,
+      enrolledCount: (course.enrolledCount || 0) + 1,
+    });
+
+    // ذخیره در localStorage
+    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
+    if (!enrollments.includes(course.id)) {
+      enrollments.push(course.id);
+      localStorage.setItem("enrollments", JSON.stringify(enrollments));
+    }
+
+    alert("✅ پیش‌ثبت‌نام با موفقیت انجام شد!");
+  };
+
+  // ✅ تابع ثبت‌نام مستقیم (برای کاربران قبلی)
   const handleEnroll = async () => {
     if (!course) return;
 
@@ -206,9 +248,14 @@ export default function CourseDetail() {
         enrolledCount: (course.enrolledCount || 0) + 1,
       });
 
-      alert("✅ ثبت‌نام با موفقیت انجام شد!");
+      alert(" ثبت‌نام با موفقیت انجام شد!");
     } catch (err: any) {
-      alert(err.response?.data?.error || "خطا در ثبت‌نام");
+      // ✅ اگر خطای 422 آمد، یعنی نیاز به فرم پیش‌ثبت‌نام دارد
+      if (err.response?.status === 422) {
+        handleOpenPreRegister();
+      } else {
+        alert(err.response?.data?.error || "خطا در ثبت‌نام");
+      }
     } finally {
       setEnrolling(false);
     }
@@ -692,6 +739,15 @@ export default function CourseDetail() {
           </motion.div>
         </div>
       </div>
+
+      {/* ✅ مودال پیش‌ثبت‌نام */}
+      <CoursePreRegisterModal
+        isOpen={showPreRegister}
+        onClose={() => setShowPreRegister(false)}
+        courseId={selectedCourseId}
+        courseTitle={course?.title || ""}
+        onSuccess={handlePreRegisterSuccess}
+      />
     </section>
   );
 }

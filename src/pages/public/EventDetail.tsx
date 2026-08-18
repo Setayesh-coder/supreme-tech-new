@@ -11,6 +11,7 @@ import {
   Calendar,
   MapPin,
   // Users,
+  Hourglass,
   Clock,
   ChevronLeft,
   ImageOff,
@@ -31,8 +32,8 @@ interface Event {
   content?: string;
   cover_image?: string;
   image?: string;
-  start_date: string; // ✅ تغییر از date به start_date
-  end_date: string; // ✅ اضافه شد
+  start_date: string;
+  end_date: string;
   duration?: string;
   capacity: number;
   price: number;
@@ -99,14 +100,14 @@ export default function EventDetail() {
           ...data,
           description: data.description || "",
           image: data.cover_image,
-          start_date: data.start_date || new Date().toISOString(), // ✅ fallback
-          end_date: data.end_date || new Date().toISOString(), // ✅ fallback
+          start_date: data.start_date || new Date().toISOString(),
+          end_date: data.end_date || new Date().toISOString(),
           type: (data as any).category || "WORKSHOP",
           featured: (data as any).is_featured || false,
         };
         setEvent(mappedEvent);
       } catch (err) {
-        console.error("❌ خطا:", err);
+        console.error(" خطا:", err);
         setError("رویداد مورد نظر یافت نشد");
       } finally {
         setLoading(false);
@@ -140,7 +141,7 @@ export default function EventDetail() {
           blurIntensity="lg"
           glowIntensity="md"
         >
-          <div className="text-6xl mb-4">😕</div>
+          {/* <div className="text-6xl mb-4">😕</div> */}
           <h3 className="text-xl font-bold text-white mb-2">
             {error || "رویداد یافت نشد"}
           </h3>
@@ -328,7 +329,7 @@ export default function EventDetail() {
                 <div className="text-center">
                   <CountdownTimer targetDate={eventDate} />
                   <p className="text-xs md:text-sm text-gray-400 mt-2">
-                    ⏳ زمان باقی‌مانده تا شروع رویداد
+                    <Hourglass /> زمان باقی‌مانده تا شروع رویداد
                   </p>
                 </div>
               </LiquidGlassCard>

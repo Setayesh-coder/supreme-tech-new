@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Send, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Send, MessageCircle, Heart } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
 
 // آیکون اینستاگرام با SVG
@@ -45,7 +45,7 @@ export default function Footer() {
                 alt="supreme tech"
                 className="w-12 h-12"
                 onError={(e) => {
-                  console.error("❌ خطا در لود لوگو:", e);
+                  console.error(" خطا در لود لوگو:", e);
                   (e.target as HTMLImageElement).src = "/favicon.ico";
                 }}
               />
@@ -244,7 +244,11 @@ export default function Footer() {
             </span>
           </Link>
           <p className="text-[7px] md:text-xs text-gray-500">
-            ساخته شده با <span className="text-blue-400">♥️</span> و قدرت{" "}
+            ساخته شده با{" "}
+            <span className="text-blue-400">
+              <Heart />
+            </span>{" "}
+            و قدرت{" "}
             <span className="bg-gradient-to-l from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               هوش مصنوعی
             </span>

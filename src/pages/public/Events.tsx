@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  PenTool,
 } from "lucide-react";
 import { EventsSkeleton } from "../../components/skeletons/EventSkeletons";
 import SectionHeader from "../../components/ui/SectionHeader";
@@ -50,7 +51,6 @@ const getImageUrl = (imagePath?: string) => {
   return `${BASE_URL}/${imagePath}`;
 };
 
-// ✅ تابع فرمت تاریخ به فارسی
 const formatDate = (dateString: string) => {
   if (!dateString) return "نامشخص";
   const date = new Date(dateString);
@@ -93,7 +93,7 @@ export default function Events() {
         setEvents(activeEvents);
         setTotalPages(Math.ceil((data.total || 0) / 50));
       } catch (err) {
-        console.error("❌ خطا:", err);
+        console.error(" خطا:", err);
         setError("خطا در دریافت رویدادها");
       } finally {
         setLoading(false);
@@ -136,7 +136,7 @@ export default function Events() {
           blurIntensity="lg"
           glowIntensity="md"
         >
-          <div className="text-6xl mb-4">😕</div>
+          {/* <div className="text-6xl mb-4">😕</div> */}
           <h3 className="text-xl font-bold text-white mb-2">{error}</h3>
           <p className="text-gray-400 mb-6">لطفاً دوباره تلاش کنید</p>
           <GlassButton
@@ -269,7 +269,9 @@ export default function Events() {
               blurIntensity="lg"
               glowIntensity="md"
             >
-              <div className="text-6xl mb-4">📭</div>
+              <div className="text-6xl mb-4">
+                <PenTool />
+              </div>
               <h3 className="text-2xl font-bold text-white mb-2">
                 دوره‌ای یافت نشد
               </h3>
@@ -329,7 +331,7 @@ export default function Events() {
                         {event.description}
                       </p>
 
-                      {/* ✅ تاریخ به فارسی */}
+                      {/*  تاریخ به فارسی */}
                       <div className="flex items-center text-xs text-gray-400">
                         <Calendar size={14} className="ml-1" />
                         {formatDate(event.start_date)}

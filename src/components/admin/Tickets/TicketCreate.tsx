@@ -19,7 +19,9 @@ export default function TicketCreate() {
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -38,13 +40,13 @@ export default function TicketCreate() {
         department: formData.department || undefined,
         priority: formData.priority,
       });
-      
-      setSuccess("✅ تیکت با موفقیت ایجاد شد!");
+
+      setSuccess(" تیکت با موفقیت ایجاد شد!");
       setTimeout(() => {
         navigate("/admin/tickets");
       }, 1500);
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError(err.response?.data?.detail || "خطا در ایجاد تیکت");
     } finally {
       setLoading(false);
@@ -67,7 +69,12 @@ export default function TicketCreate() {
           </h1>
         </div>
 
-        <LiquidGlassCard className="p-6 md:p-8" borderRadius="20px" blurIntensity="lg" glowIntensity="md">
+        <LiquidGlassCard
+          className="p-6 md:p-8"
+          borderRadius="20px"
+          blurIntensity="lg"
+          glowIntensity="md"
+        >
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
@@ -139,10 +146,10 @@ export default function TicketCreate() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
               >
-                <option value="LOW">🔵 کم</option>
-                <option value="MEDIUM">🟡 متوسط</option>
-                <option value="HIGH">🟠 بالا</option>
-                <option value="URGENT">🔴 فوری</option>
+                <option value="LOW"> کم</option>
+                <option value="MEDIUM"> متوسط</option>
+                <option value="HIGH"> بالا</option>
+                <option value="URGENT"> فوری</option>
               </select>
             </div>
 

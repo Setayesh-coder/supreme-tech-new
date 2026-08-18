@@ -1,6 +1,17 @@
 // src/components/layout/Footer.tsx
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Send, Shield, Award, CheckCircle, Clock, Heart, Globe } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Send,
+  Shield,
+  Award,
+  CheckCircle,
+  Clock,
+  Heart,
+  Globe,
+} from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,7 +21,6 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12 lg:py-16">
         {/* شبکه اصلی - ریسپانسیو */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          
           {/* ستون ۱: درباره */}
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -23,10 +33,10 @@ export function Footer() {
               </div>
             </div>
             <p className="text-white/60 text-sm leading-relaxed">
-              ما در Supreme Tech با تیمی متخصص در حوزه هوش مصنوعی و توسعه نرم‌افزار،
-              راهکارهای نوآورانه را به کسب‌وکارها ارائه می‌دهیم.
+              ما در Supreme Tech با تیمی متخصص در حوزه هوش مصنوعی و توسعه
+              نرم‌افزار، راهکارهای نوآورانه را به کسب‌وکارها ارائه می‌دهیم.
             </p>
-            <div className="flex gap-2 mt-4 flex-wrap">
+            {/* <div className="flex gap-2 mt-4 flex-wrap">
               <a href="#" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors text-lg">
                 📱
               </a>
@@ -42,7 +52,7 @@ export function Footer() {
               <a href="#" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors text-lg">
                 📺
               </a>
-            </div>
+            </div> */}
           </div>
 
           {/* ستون ۲: لینک‌های سریع */}
@@ -50,27 +60,42 @@ export function Footer() {
             <h4 className="text-white font-bold text-sm mb-4">لینک‌های سریع</h4>
             <ul className="space-y-2.5">
               <li>
-                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/about"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   درباره ما
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/services"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   خدمات
                 </Link>
               </li>
               <li>
-                <Link to="/events" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/events"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   رویدادها
                 </Link>
               </li>
               <li>
-                <Link to="/blog" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/blog"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   وبلاگ
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/contact"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   تماس با ما
                 </Link>
               </li>
@@ -82,22 +107,34 @@ export function Footer() {
             <h4 className="text-white font-bold text-sm mb-4">خدمات ما</h4>
             <ul className="space-y-2.5">
               <li>
-                <Link to="/services" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/services"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   توسعه AI Agent
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/services"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   مشاوره هوش مصنوعی
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/services"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   توسعه نرم‌افزار
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="text-white/60 hover:text-white text-sm transition-colors block">
+                <Link
+                  to="/services"
+                  className="text-white/60 hover:text-white text-sm transition-colors block"
+                >
                   آموزش و کارگاه
                 </Link>
               </li>
@@ -132,7 +169,9 @@ export function Footer() {
                   <Send size={18} />
                 </button>
               </div>
-              <p className="text-white/40 text-xs mt-2">برای دریافت خبرنامه عضو شوید</p>
+              <p className="text-white/40 text-xs mt-2">
+                برای دریافت خبرنامه عضو شوید
+              </p>
             </div>
           </div>
         </div>
@@ -142,27 +181,39 @@ export function Footer() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="flex items-center justify-center gap-2 text-white/40 hover:text-white transition-colors p-2 rounded-xl bg-white/5 hover:bg-white/10">
               <Shield size={18} className="text-blue-400" />
-              <span className="text-xs md:text-sm whitespace-nowrap">ضمانت کیفیت</span>
+              <span className="text-xs md:text-sm whitespace-nowrap">
+                ضمانت کیفیت
+              </span>
             </div>
             <div className="flex items-center justify-center gap-2 text-white/40 hover:text-white transition-colors p-2 rounded-xl bg-white/5 hover:bg-white/10">
               <Award size={18} className="text-amber-400" />
-              <span className="text-xs md:text-sm whitespace-nowrap">۱۰ سال تجربه</span>
+              <span className="text-xs md:text-sm whitespace-nowrap">
+                ۱۰ سال تجربه
+              </span>
             </div>
             <div className="flex items-center justify-center gap-2 text-white/40 hover:text-white transition-colors p-2 rounded-xl bg-white/5 hover:bg-white/10">
               <CheckCircle size={18} className="text-emerald-400" />
-              <span className="text-xs md:text-sm whitespace-nowrap">تضمین رضایت</span>
+              <span className="text-xs md:text-sm whitespace-nowrap">
+                تضمین رضایت
+              </span>
             </div>
             <div className="flex items-center justify-center gap-2 text-white/40 hover:text-white transition-colors p-2 rounded-xl bg-white/5 hover:bg-white/10">
               <Clock size={18} className="text-purple-400" />
-              <span className="text-xs md:text-sm whitespace-nowrap">پشتیبانی ۲۴/۷</span>
+              <span className="text-xs md:text-sm whitespace-nowrap">
+                پشتیبانی ۲۴/۷
+              </span>
             </div>
             <div className="flex items-center justify-center gap-2 text-white/40 hover:text-white transition-colors p-2 rounded-xl bg-white/5 hover:bg-white/10">
               <Heart size={18} className="text-red-400" />
-              <span className="text-xs md:text-sm whitespace-nowrap">عشق به فناوری</span>
+              <span className="text-xs md:text-sm whitespace-nowrap">
+                عشق به فناوری
+              </span>
             </div>
             <div className="flex items-center justify-center gap-2 text-white/40 hover:text-white transition-colors p-2 rounded-xl bg-white/5 hover:bg-white/10">
               <Globe size={18} className="text-cyan-400" />
-              <span className="text-xs md:text-sm whitespace-nowrap">حضور جهانی</span>
+              <span className="text-xs md:text-sm whitespace-nowrap">
+                حضور جهانی
+              </span>
             </div>
           </div>
         </div>
@@ -170,18 +221,28 @@ export function Footer() {
         {/* پایین فوتر - ریسپانسیو */}
         <div className="mt-6 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-white/40 text-xs sm:text-sm text-center sm:text-right">
-            © {currentYear} تمامی حقوق برای <span className="text-white/60">Supreme Tech</span> محفوظ است.
+            © {currentYear} تمامی حقوق برای{" "}
+            <span className="text-white/60">Supreme Tech</span> محفوظ است.
           </p>
           <div className="flex flex-wrap justify-center gap-3 text-xs sm:text-sm">
-            <Link to="/privacy" className="text-white/40 hover:text-white transition-colors">
+            <Link
+              to="/privacy"
+              className="text-white/40 hover:text-white transition-colors"
+            >
               حریم خصوصی
             </Link>
             <span className="text-white/20">|</span>
-            <Link to="/terms" className="text-white/40 hover:text-white transition-colors">
+            <Link
+              to="/terms"
+              className="text-white/40 hover:text-white transition-colors"
+            >
               شرایط استفاده
             </Link>
             <span className="text-white/20">|</span>
-            <Link to="/contact" className="text-white/40 hover:text-white transition-colors">
+            <Link
+              to="/contact"
+              className="text-white/40 hover:text-white transition-colors"
+            >
               پشتیبانی
             </Link>
           </div>
