@@ -17,14 +17,15 @@ import {
   FileArchive,
   FileText,
   CheckCircle,
-  Loader2,
+  // Loader2,
   PlayCircle,
   Download,
   BookOpen,
+  ShoppingBag,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
-import { enrollmentsAPI } from "../../lib/api/enrollments";
+// import { enrollmentsAPI } from "../../lib/api/enrollments";
 import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal"; // ✅ اضافه شد
 
 // ✅ تایپ Course
@@ -121,7 +122,7 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState(false);
-  const [enrolling, setEnrolling] = useState(false);
+  // const [, setEnrolling] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState(true);
 
   // ✅ State برای مودال پیش‌ثبت‌نام
@@ -219,47 +220,46 @@ export default function CourseDetail() {
   };
 
   // ✅ تابع ثبت‌نام مستقیم (برای کاربران قبلی)
-  const handleEnroll = async () => {
-    if (!course) return;
+  // const handleEnroll = async () => {
+  //   if (!course) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
-      navigate("/login");
-      return;
-    }
+  //   const token = localStorage.getItem("token");
+  //   if (!token) {
+  //     alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
+  //     navigate("/login");
+  //     return;
+  //   }
 
-    setEnrolling(true);
+  //   setEnrolling(true);
 
-    try {
-      await enrollmentsAPI.create({ courseId: course.id });
+  //   try {
+  //     await enrollmentsAPI.create({ courseId: course.id });
 
-      const enrollments = JSON.parse(
-        localStorage.getItem("enrollments") || "[]",
-      );
-      if (!enrollments.includes(course.id)) {
-        enrollments.push(course.id);
-        localStorage.setItem("enrollments", JSON.stringify(enrollments));
-      }
+  //     const enrollments = JSON.parse(
+  //       localStorage.getItem("enrollments") || "[]",
+  //     );
+  //     if (!enrollments.includes(course.id)) {
+  //       enrollments.push(course.id);
+  //       localStorage.setItem("enrollments", JSON.stringify(enrollments));
+  //     }
 
-      setCourse({
-        ...course,
-        userEnrolled: true,
-        enrolledCount: (course.enrolledCount || 0) + 1,
-      });
+  //     setCourse({
+  //       ...course,
+  //       userEnrolled: true,
+  //       enrolledCount: (course.enrolledCount || 0) + 1,
+  //     });
 
-      alert(" ثبت‌نام با موفقیت انجام شد!");
-    } catch (err: any) {
-      // ✅ اگر خطای 422 آمد، یعنی نیاز به فرم پیش‌ثبت‌نام دارد
-      if (err.response?.status === 422) {
-        handleOpenPreRegister();
-      } else {
-        alert(err.response?.data?.error || "خطا در ثبت‌نام");
-      }
-    } finally {
-      setEnrolling(false);
-    }
-  };
+  //     alert(" ثبت‌نام با موفقیت انجام شد!");
+  //   } catch (err: any) {
+  //     if (err.response?.status === 422) {
+  //       handleOpenPreRegister();
+  //     } else {
+  //       alert(err.response?.data?.error || "خطا در ثبت‌نام");
+  //     }
+  //   } finally {
+  //     setEnrolling(false);
+  //   }
+  // };
 
   if (loading) {
     return <EventDetailSkeleton />;
@@ -686,18 +686,11 @@ export default function CourseDetail() {
                     variant="primary"
                     size="lg"
                     fullWidth
-                    loading={enrolling}
-                    onClick={handleEnroll}
-                    icon={
-                      enrolling ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <CheckCircle size={20} />
-                      )
-                    }
+                    onClick={handleOpenPreRegister}
+                    icon={<ShoppingBag className="w-5 h-5" />}
                     iconPosition="left"
                   >
-                    {enrolling ? "در حال ثبت‌نام..." : "ثبت‌نام در دوره"}
+                    افزودن به سبد خرید
                   </GlassButton>
                 </div>
               )}
@@ -736,6 +729,29 @@ export default function CourseDetail() {
                 </Link>
               </LiquidGlassCard>
             )}
+
+            {course.event && (
+              <LiquidGlassCard
+                className="p-4 md:p-6"
+                borderRadius="24px"
+                blurIntensity="lg"
+                glowIntensity="md"
+                shadowIntensity="lg"
+              >
+                <h3 className="text-sm font-medium text-gray-300 mb-3">
+                  رویداد مرتبط
+                </h3>
+                <Link
+                  to={`/events/${course.event.slug}`}
+                  className="block text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Award size={16} />
+                    <span>{course.event.title}</span>
+                  </div>
+                </Link>
+              </LiquidGlassCard>
+            )}
           </motion.div>
         </div>
       </div>
@@ -744,7 +760,7 @@ export default function CourseDetail() {
       <CoursePreRegisterModal
         isOpen={showPreRegister}
         onClose={() => setShowPreRegister(false)}
-        courseId={selectedCourseId}
+        course_id={selectedCourseId}
         courseTitle={course?.title || ""}
         onSuccess={handlePreRegisterSuccess}
       />

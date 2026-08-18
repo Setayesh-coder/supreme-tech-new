@@ -243,12 +243,12 @@ export default function Footer() {
               Supreme Tech 1405
             </span>
           </Link>
-          <p className="text-[7px] md:text-xs text-gray-500">
-            ساخته شده با{" "}
-            <span className="text-blue-400">
-              <Heart />
-            </span>{" "}
-            و قدرت{" "}
+          <p className="text-[7px] md:text-xs text-gray-500 flex items-center justify-center space-x-1 rtl:space-x-reverse">
+            <span>ساخته شده با</span>
+            <span className="text-blue-400 inline-flex">
+              <Heart className="w-3 h-3 md:w-4 md:h-4 text-rose-500" />
+            </span>
+            <span>و قدرت</span>
             <span className="bg-gradient-to-l from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               هوش مصنوعی
             </span>

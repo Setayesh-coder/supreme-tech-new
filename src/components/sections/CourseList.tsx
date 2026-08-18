@@ -372,7 +372,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                       >
                         {enrolling === course.id
                           ? "در حال ثبت..."
-                          : "پیش‌ثبت‌نام و افزودن به سبد خرید"}
+                          : "افزودن به سبد خرید"}
                       </GlassButton>
                     </div>
                   )}
@@ -424,7 +424,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
       <CoursePreRegisterModal
         isOpen={showPreRegister}
         onClose={() => setShowPreRegister(false)}
-        courseId={selectedCourseId}
+        course_id={selectedCourseId}
         courseTitle={selectedCourseTitle}
         onSuccess={() =>
           handlePreRegisterSuccess(selectedCourseId, selectedCourseTitle)

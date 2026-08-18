@@ -169,7 +169,7 @@ export function CartTab({
             </p>
             {isCartFree && (
               <p className="text-xs text-green-400 mt-1">
-                ✨ همه دوره‌ها رایگان هستند
+                همه دوره‌ها رایگان هستند
               </p>
             )}
           </div>

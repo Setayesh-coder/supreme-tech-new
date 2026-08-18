@@ -5,6 +5,7 @@ import { coursesAPI } from "../../../lib/api/courses";
 import { enrollmentsAPI } from "../../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
+import PaymentDetailsModal from "../../../components/admin/PaymentDetailsModal";
 import {
   Users,
   ChevronLeft,
@@ -20,6 +21,7 @@ import {
   Clock,
   X,
   BookOpen,
+  Check,
 } from "lucide-react";
 
 // ✅ تایپ کاربر
@@ -33,11 +35,11 @@ interface User {
 // ✅ تایپ ثبت‌نام (مطابق با بک‌اند)
 interface Enrollment {
   id: string;
-  user_id: string; // ✅ تغییر از userId به user_id
+  user_id: string;
   user: User;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
-  created_at: string; // ✅ تغییر از createdAt به created_at
-  paymentStatus?: "PAID" | "UNPAID" | "PENDING";
+  created_at: string;
+  paymentStatus?: "PAID" | "UNPAID" | "PENDING" | "WAITING_VERIFY";
   course_id?: string;
   event_id?: string;
 }
@@ -72,6 +74,12 @@ export default function CourseEnrollments() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  // ✅ State برای مودال
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedEnrollment, setSelectedEnrollment] =
+    useState<Enrollment | null>(null);
 
   useEffect(() => {
     if (courseId) {
@@ -82,6 +90,87 @@ export default function CourseEnrollments() {
     }
   }, [courseId]);
 
+  // ✅ تابع دریافت اطلاعات کاربر
+  const fetchUserData = async (userId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `https://supremetech.ir/api/v1/users/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!response.ok) {
+        throw new Error("خطا در دریافت اطلاعات کاربر");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`❌ خطا در دریافت اطلاعات کاربر ${userId}:`, error);
+      return {
+        id: userId,
+        name: "کاربر ناشناس",
+        email: "ایمیل ثبت نشده",
+        phone: "",
+      };
+    }
+  };
+
+  // ✅ تابع تایید پرداخت
+  const handleConfirmPayment = async (enrollmentId: string) => {
+    if (!confirm("آیا از تایید پرداخت این کاربر مطمئن هستید؟")) return;
+
+    setUpdating(enrollmentId);
+    try {
+      await enrollmentsAPI.updateStatus(enrollmentId, "CONFIRMED");
+      await fetchData();
+      alert("✅ پرداخت با موفقیت تایید شد!");
+    } catch (err) {
+      console.error("❌ خطا در تایید پرداخت:", err);
+      alert("❌ خطا در تایید پرداخت");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // ✅ تابع رد پرداخت
+  const handleRejectPayment = async (enrollmentId: string) => {
+    if (!confirm("آیا از رد پرداخت این کاربر مطمئن هستید؟")) return;
+
+    setUpdating(enrollmentId);
+    try {
+      await enrollmentsAPI.updateStatus(enrollmentId, "CANCELLED");
+      await fetchData();
+      alert("❌ پرداخت با موفقیت رد شد!");
+    } catch (err) {
+      console.error("❌ خطا در رد پرداخت:", err);
+      alert("❌ خطا در رد پرداخت");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // ✅ تابع مشاهده جزئیات پرداخت (فقط یک بار تعریف شده)
+  const handleViewPaymentDetails = (enrollment: Enrollment) => {
+    setSelectedEnrollment(enrollment);
+    setShowPaymentModal(true);
+  };
+
+  // ✅ تابع تایید از مودال
+  const handleConfirmFromModal = async (enrollmentId: string) => {
+    await handleConfirmPayment(enrollmentId);
+    setShowPaymentModal(false);
+  };
+
+  // ✅ تابع رد از مودال
+  const handleRejectFromModal = async (enrollmentId: string) => {
+    await handleRejectPayment(enrollmentId);
+    setShowPaymentModal(false);
+  };
+
+  // ✅ اصلاح fetchData
   const fetchData = async () => {
     if (!courseId) return;
 
@@ -89,7 +178,6 @@ export default function CourseEnrollments() {
       setLoading(true);
       setError("");
 
-      // ✅ ۱. دریافت اطلاعات دوره
       const courseData = await coursesAPI.getById(courseId);
       const courseWithFields: Course = {
         ...courseData,
@@ -98,40 +186,56 @@ export default function CourseEnrollments() {
       };
       setCourse(courseWithFields);
 
-      // ✅ ۲. دریافت لیست ثبت‌نام‌ها از enrollmentsAPI
       try {
         const enrollmentsData =
           await enrollmentsAPI.getCourseEnrollments(courseId);
-        console.log(" ثبت‌نام‌های دوره:", enrollmentsData);
+        console.log("📥 ثبت‌نام‌های دوره (خام):", enrollmentsData);
 
-        // ✅ تبدیل داده‌ها به فرمت مورد نیاز
-        const mappedEnrollments: Enrollment[] = (enrollmentsData || []).map(
-          (item: any) => ({
-            id: item.id,
-            user_id: item.user_id || item.userId,
-            user: item.user || {
-              id: item.user_id || item.userId,
-              name: item.name || "کاربر",
-              email: item.email || "",
-              phone: item.phone || "",
-            },
-            status: item.status || "PENDING",
-            created_at:
-              item.created_at || item.createdAt || new Date().toISOString(),
-            paymentStatus:
-              item.payment_status || item.paymentStatus || "PENDING",
-            course_id: item.course_id || item.courseId,
-            event_id: item.event_id || item.eventId,
+        const mappedEnrollments: Enrollment[] = await Promise.all(
+          (enrollmentsData || []).map(async (item: any) => {
+            let userData = item.user;
+            if (!userData || !userData.name) {
+              const userId = item.user_id || item.userId;
+              if (userId) {
+                userData = await fetchUserData(userId);
+              } else {
+                userData = {
+                  id: userId || "unknown",
+                  name: "کاربر ناشناس",
+                  email: "ایمیل ثبت نشده",
+                  phone: "",
+                };
+              }
+            }
+
+            return {
+              id: item.id,
+              user_id: item.user_id || item.userId || userData.id,
+              user: {
+                id: userData.id || item.user_id || item.userId,
+                name: userData.name || "کاربر ناشناس",
+                email: userData.email || "ایمیل ثبت نشده",
+                phone: userData.phone || "",
+              },
+              status: item.status || "PENDING",
+              created_at:
+                item.created_at || item.createdAt || new Date().toISOString(),
+              paymentStatus:
+                item.payment_status || item.paymentStatus || "PENDING",
+              course_id: item.course_id || item.courseId,
+              event_id: item.event_id || item.eventId,
+            };
           }),
         );
 
+        console.log("📋 ثبت‌نام‌های تبدیل شده:", mappedEnrollments);
         setEnrollments(mappedEnrollments);
       } catch (err) {
-        console.error(" خطا در دریافت ثبت‌نام‌ها:", err);
+        console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
         setEnrollments([]);
       }
     } catch (err: any) {
-      console.error(" خطا:", err);
+      console.error("❌ خطا:", err);
       setError(
         err.response?.data?.detail || err.message || "خطا در دریافت اطلاعات",
       );
@@ -193,6 +297,8 @@ export default function CourseEnrollments() {
         return "پرداخت نشده";
       case "PENDING":
         return "در انتظار پرداخت";
+      case "WAITING_VERIFY":
+        return "در انتظار تایید";
       default:
         return "-";
     }
@@ -291,7 +397,7 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              alert(" قابلیت خروجی گرفتن در حال توسعه است...");
+              alert("📥 قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
             خروجی Excel
@@ -329,7 +435,7 @@ export default function CourseEnrollments() {
                   : "bg-red-500/20 text-red-400"
               }`}
             >
-              {course.is_active ? " فعال" : " غیرفعال"}
+              {course.is_active ? "✅ فعال" : "❌ غیرفعال"}
             </span>
           </div>
         </div>
@@ -353,10 +459,10 @@ export default function CourseEnrollments() {
           className="bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           <option value="all">همه وضعیت‌ها</option>
-          <option value="CONFIRMED"> تایید شده</option>
-          <option value="PENDING"> در انتظار</option>
-          <option value="CANCELLED"> لغو شده</option>
-          <option value="COMPLETED"> تکمیل شده</option>
+          <option value="CONFIRMED">✅ تایید شده</option>
+          <option value="PENDING">⏳ در انتظار</option>
+          <option value="CANCELLED">❌ لغو شده</option>
+          <option value="COMPLETED">📌 تکمیل شده</option>
         </select>
       </div>
 
@@ -381,86 +487,150 @@ export default function CourseEnrollments() {
         </LiquidGlassCard>
       ) : (
         <div className="space-y-3">
-          {filteredEnrollments.map((enrollment) => (
-            <LiquidGlassCard
-              key={enrollment.id}
-              className="p-4 hover:scale-[1.01] transition-all duration-300"
-              borderRadius="12px"
-              blurIntensity="sm"
-              glowIntensity="sm"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                {/* اطلاعات کاربر */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                      {enrollment.user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium">
-                        {enrollment.user.name}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {enrollment.user.email}
-                        </span>
-                        {enrollment.user.phone && (
+          {filteredEnrollments.map((enrollment) => {
+            const isWaitingVerify =
+              enrollment.paymentStatus === "WAITING_VERIFY";
+            const isUpdating = updating === enrollment.id;
+
+            return (
+              <LiquidGlassCard
+                key={enrollment.id}
+                className="p-4 hover:scale-[1.01] transition-all duration-300"
+                borderRadius="12px"
+                blurIntensity="sm"
+                glowIntensity="sm"
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* اطلاعات کاربر */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                        {enrollment.user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="text-white font-medium">
+                          {enrollment.user.name}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
                           <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {enrollment.user.phone}
+                            <Mail className="w-3 h-3" />
+                            {enrollment.user.email}
                           </span>
-                        )}
+                          {enrollment.user.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {enrollment.user.phone}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* وضعیت و تاریخ */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 border ${getStatusColor(enrollment.status)}`}
-                  >
-                    {getStatusIcon(enrollment.status)}
-                    {getStatusLabel(enrollment.status)}
-                  </span>
-                  {enrollment.paymentStatus && (
+                  {/* وضعیت و تاریخ */}
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                        enrollment.paymentStatus === "PAID"
-                          ? "text-green-400 bg-green-500/20 border-green-500/30"
-                          : enrollment.paymentStatus === "UNPAID"
-                            ? "text-red-400 bg-red-500/20 border-red-500/30"
-                            : "text-yellow-400 bg-yellow-500/20 border-yellow-500/30"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 border ${getStatusColor(enrollment.status)}`}
                     >
-                      💳 {getPaymentStatusLabel(enrollment.paymentStatus)}
+                      {getStatusIcon(enrollment.status)}
+                      {getStatusLabel(enrollment.status)}
                     </span>
-                  )}
-                  <span className="text-gray-500 text-xs flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {formatDate(enrollment.created_at)}
-                  </span>
-                </div>
+                    {enrollment.paymentStatus && (
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                          enrollment.paymentStatus === "PAID"
+                            ? "text-green-400 bg-green-500/20 border-green-500/30"
+                            : enrollment.paymentStatus === "WAITING_VERIFY"
+                              ? "text-blue-400 bg-blue-500/20 border-blue-500/30"
+                              : enrollment.paymentStatus === "UNPAID"
+                                ? "text-red-400 bg-red-500/20 border-red-500/30"
+                                : "text-yellow-400 bg-yellow-500/20 border-yellow-500/30"
+                        }`}
+                      >
+                        💳 {getPaymentStatusLabel(enrollment.paymentStatus)}
+                      </span>
+                    )}
+                    <span className="text-gray-500 text-xs flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {formatDate(enrollment.created_at)}
+                    </span>
+                  </div>
 
-                {/* دکمه‌های اقدام */}
-                <div className="flex items-center gap-2">
-                  <Link to={`/admin/users/${enrollment.user_id}`}>
+                  {/* ✅ دکمه‌های اقدام */}
+                  <div className="flex items-center gap-2">
+                    {/* دکمه تایید پرداخت */}
+                    {isWaitingVerify && (
+                      <>
+                        <GlassButton
+                          variant="primary"
+                          size="sm"
+                          loading={isUpdating}
+                          disabled={isUpdating}
+                          icon={<Check className="w-3.5 h-3.5" />}
+                          iconPosition="left"
+                          onClick={() => handleConfirmPayment(enrollment.id)}
+                          className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30"
+                        >
+                          تایید
+                        </GlassButton>
+                        <GlassButton
+                          variant="secondary"
+                          size="sm"
+                          loading={isUpdating}
+                          disabled={isUpdating}
+                          icon={<X className="w-3.5 h-3.5" />}
+                          iconPosition="left"
+                          onClick={() => handleRejectPayment(enrollment.id)}
+                          className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30"
+                        >
+                          رد
+                        </GlassButton>
+                      </>
+                    )}
+
+                    {/* دکمه جزئیات - باز کردن مودال */}
                     <GlassButton
                       variant="secondary"
                       size="sm"
                       icon={<User className="w-3.5 h-3.5" />}
                       iconPosition="left"
+                      onClick={() => handleViewPaymentDetails(enrollment)}
                     >
-                      مشاهده کاربر
+                      جزئیات
                     </GlassButton>
-                  </Link>
+
+                    {/* دکمه مشاهده کاربر */}
+                    <Link to={`/admin/users/${enrollment.user_id}`}>
+                      <GlassButton
+                        variant="secondary"
+                        size="sm"
+                        icon={<User className="w-3.5 h-3.5" />}
+                        iconPosition="left"
+                      >
+                        کاربر
+                      </GlassButton>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </LiquidGlassCard>
-          ))}
+              </LiquidGlassCard>
+            );
+          })}
         </div>
       )}
+
+      {/* ✅ مودال جزئیات پرداخت */}
+      <PaymentDetailsModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedEnrollment(null);
+        }}
+        enrollment={selectedEnrollment!}
+        coursePrice={course?.price}
+        courseTitle={course?.title}
+        onConfirm={handleConfirmFromModal}
+        onReject={handleRejectFromModal}
+      />
     </div>
   );
 }

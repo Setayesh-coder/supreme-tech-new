@@ -174,7 +174,7 @@ export default function ProfileInfo({
       )}
       {success && (
         <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-2 rounded-lg mb-4 text-sm">
-          <Check/> {success}
+          <Check /> {success}
         </div>
       )}
 
@@ -319,11 +319,11 @@ export default function ProfileInfo({
             className="w-full"
             disabled={!editing}
           />
-          {!editing && formData.birthDate && (
+          {/* {!editing && formData.birthDate && (
             <p className="text-xs text-white/50 mt-1">
               تاریخ ثبت شده: {persianBirthDate}
             </p>
-          )}
+          )} */}
           {!editing && !formData.birthDate && (
             <p className="text-xs text-white/30 mt-1">
               تاریخ تولدی ثبت نشده است

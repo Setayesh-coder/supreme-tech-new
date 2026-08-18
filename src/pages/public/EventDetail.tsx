@@ -328,8 +328,9 @@ export default function EventDetail() {
               >
                 <div className="text-center">
                   <CountdownTimer targetDate={eventDate} />
-                  <p className="text-xs md:text-sm text-gray-400 mt-2">
-                    <Hourglass /> زمان باقی‌مانده تا شروع رویداد
+                  <p className="text-xs md:text-sm text-gray-400 mt-2 flex items-center justify-center gap-1.5 rtl:flex-row-reverse">
+                    <Hourglass className="w-3.5 h-3.5" />
+                    <span>زمان باقی‌مانده تا شروع رویداد</span>
                   </p>
                 </div>
               </LiquidGlassCard>

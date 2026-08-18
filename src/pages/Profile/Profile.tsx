@@ -6,6 +6,7 @@ import {
   enrollmentsAPI,
   type Enrollment as APIEnrollment,
 } from "../../lib/api/enrollments";
+import { coursesAPI } from "../../lib/api/courses";
 import { ticketsAPI, type Ticket } from "../../lib/api/tickets";
 import { messagesAPI } from "../../lib/api/messages";
 import { uploadAPI } from "../../lib/api/upload";
@@ -13,7 +14,6 @@ import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import {
   ProfileHeader,
-  // ProfileStats,
   ProfileTabs,
   ProfileInfo,
   EnrollmentsTab,
@@ -48,7 +48,6 @@ interface UserProfile {
   isActive: boolean;
 }
 
-// ✅ تایپ محلی برای نمایش
 type Enrollment = APIEnrollment & {
   eventId: string;
   event: {
@@ -61,7 +60,7 @@ type Enrollment = APIEnrollment & {
     duration?: string;
     meetingLink?: string;
   };
-  paymentStatus?: "PENDING" | "PAID" | "FAILED";
+  paymentStatus?: "PENDING" | "PAID" | "FAILED" | "WAITING_VERIFY";
   meetingLink?: string;
   createdAt: string;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "WAITING" | "ATTENDED";
@@ -181,7 +180,7 @@ function RepliesTab({
 
 // ============== Main Component ==============
 export default function Profile() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   // ============== States ==============
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -216,7 +215,10 @@ export default function Profile() {
   >("enrollments");
   const [processing, setProcessing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-
+  const navigate = useNavigate();
+  const handleCartClick = () => {
+    navigate("/cart");
+  };
   // ============== توابع ==============
   const fetchTickets = async () => {
     setTicketsLoading(true);
@@ -248,6 +250,34 @@ export default function Profile() {
       console.error("❌ خطا در دریافت پاسخ‌ها:", err);
     } finally {
       setRepliesLoading(false);
+    }
+  };
+
+  const fetchCourseDetails = async (courseId: string) => {
+    try {
+      const course = await coursesAPI.getById(courseId);
+      return {
+        id: course.id,
+        title: course.title || "دوره آموزشی",
+        slug: course.slug || "",
+        date: course.created_at || new Date().toISOString(),
+        price: course.price || 0,
+        image: course.cover_image || "",
+        duration: course.duration_hours ? `${course.duration_hours} ساعت` : "",
+        meetingLink: "",
+      };
+    } catch (error) {
+      console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
+      return {
+        id: courseId,
+        title: "دوره آموزشی",
+        slug: "",
+        date: new Date().toISOString(),
+        price: 0,
+        image: "",
+        duration: "",
+        meetingLink: "",
+      };
     }
   };
 
@@ -309,32 +339,84 @@ export default function Profile() {
           }
         }
 
+        // ✅ دریافت ثبت‌نام‌ها از هر دو منبع
         try {
-          const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
-          const mappedEnrollments: Enrollment[] = (enrollmentsData || []).map(
-            (e: any) => ({
-              ...e,
-              eventId: e.event_id || e.eventId || e.course_id || "",
-              paymentStatus: e.payment_status || e.paymentStatus || "PENDING",
-              createdAt:
-                e.created_at || e.createdAt || new Date().toISOString(),
-              status: e.status || "PENDING",
-              event: {
-                id: e.eventId || e.course_id || "",
-                title: String(e.event?.title || "بدون عنوان"), // ✅ تبدیل به string
-                slug: e.event?.slug || "",
-                date: e.event?.date || new Date().toISOString(),
-                price: Number(e.event?.price || 0), // ✅ تبدیل به number
-                image: e.event?.image,
-                duration: e.event?.duration,
-                meetingLink: e.event?.meetingLink,
-              },
+          // 1. از localStorage
+          const localEnrollments = JSON.parse(
+            localStorage.getItem("enrollments") || "[]",
+          );
+          console.log("📥 localStorage enrollments:", localEnrollments);
+
+          // 2. از API
+          const apiEnrollments = await enrollmentsAPI.getMyEnrollments();
+          console.log("📥 API enrollments:", apiEnrollments);
+
+          // 3. ترکیب و حذف تکراری‌ها
+          const combined = [...apiEnrollments, ...localEnrollments];
+          const unique = combined.filter(
+            (item, index, self) =>
+              self.findIndex(
+                (i) => i.id === item.id || i.course_id === item.course_id,
+              ) === index,
+          );
+
+          console.log("📋 همه ثبت‌نام‌ها:", unique);
+
+          // ✅ 4. دریافت اطلاعات دوره برای هر ثبت‌نام
+          const mappedEnrollments: Enrollment[] = await Promise.all(
+            unique.map(async (e: any) => {
+              // پیدا کردن course_id
+              const courseId = e.course_id || e.event_id || e.id;
+
+              // دریافت اطلاعات دوره
+              let courseData;
+              if (e.event && e.event.title && e.event.title !== "بدون عنوان") {
+                courseData = e.event;
+              } else if (e.course && e.course.title) {
+                courseData = e.course;
+              } else {
+                courseData = await fetchCourseDetails(courseId);
+              }
+
+              // استفاده از id موجود یا تولید id
+              const id =
+                e.id ||
+                e.enrollment_id ||
+                `enr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+              return {
+                ...e,
+                id: id,
+                eventId: e.event_id || e.eventId || courseId,
+                paymentStatus: e.payment_status || e.paymentStatus || "PENDING",
+                createdAt:
+                  e.created_at || e.createdAt || new Date().toISOString(),
+                status: e.status || "PENDING",
+                event: {
+                  id: courseData.id || courseId,
+                  title: String(courseData.title || "دوره آموزشی"),
+                  slug: courseData.slug || "",
+                  date: courseData.date || new Date().toISOString(),
+                  price: Number(courseData.price || 0),
+                  image: courseData.image || "",
+                  duration: courseData.duration || "",
+                  meetingLink: courseData.meetingLink || "",
+                },
+              };
             }),
           );
+
+          console.log("📋 ثبت‌نام‌های تبدیل شده:", mappedEnrollments);
           setEnrollments(mappedEnrollments);
+
+          // 5. فیلتر برای سبد خرید
           const pending = mappedEnrollments.filter(
-            (e: any) => e.paymentStatus === "PENDING",
+            (e: any) =>
+              e.paymentStatus === "PENDING" ||
+              e.paymentStatus === "WAITING_VERIFY",
           );
+
+          console.log("🛒 آیتم‌های سبد خرید:", pending);
           setCart(pending);
         } catch (err) {
           console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
@@ -491,48 +573,17 @@ export default function Profile() {
   };
 
   // ============== Payment Functions ==============
-  const handlePayment = async (enrollmentId: string) => {
-    try {
-      setProcessing(true);
-      const result = await enrollmentsAPI.processPayment(enrollmentId);
-
-      if (result.paymentUrl) {
-        window.open(result.paymentUrl, "_blank");
-        setSuccess("✅ لینک پرداخت باز شد");
-      } else {
-        setSuccess("✅ پرداخت با موفقیت انجام شد!");
-        const updated = await enrollmentsAPI.getMyEnrollments();
-        const mappedEnrollments: Enrollment[] = (updated || []).map(
-          (e: any) => ({
-            ...e,
-            eventId: e.event_id || e.eventId || e.course_id || "",
-            paymentStatus: e.payment_status || e.paymentStatus || "PENDING",
-            createdAt: e.created_at || e.createdAt || new Date().toISOString(),
-            status: e.status || "PENDING",
-            event: {
-              id: e.event_id || e.course_id || "",
-              title: String(e.event?.title || e.title || "بدون عنوان"),
-              slug: e.event?.slug || e.slug || "",
-              date: e.event?.date || e.date || new Date().toISOString(),
-              price: Number(e.event?.price || e.price || 0),
-              image: e.event?.image || e.image,
-              duration: e.event?.duration || e.duration,
-              meetingLink: e.event?.meetingLink || e.meetingLink,
-            },
-          }),
-        );
-        setEnrollments(mappedEnrollments);
-        setCart(
-          mappedEnrollments.filter((e: any) => e.paymentStatus === "PENDING"),
-        );
-      }
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || "خطا در پردازش پرداخت");
-      setTimeout(() => setError(""), 3000);
-    } finally {
-      setProcessing(false);
+  const handlePayment = (enrollmentId: string) => {
+    console.log("🔍 enrollmentId:", enrollmentId);
+    if (
+      !enrollmentId ||
+      enrollmentId === "undefined" ||
+      enrollmentId === "null"
+    ) {
+      alert("خطا: شناسه ثبت‌نام نامعتبر است");
+      return;
     }
+    navigate(`/cart?payment=${enrollmentId}`);
   };
 
   const processPayment = async () => {
@@ -783,6 +834,7 @@ export default function Profile() {
       PENDING: { label: "در انتظار پرداخت", color: "text-yellow-400" },
       PAID: { label: "پرداخت شده", color: "text-green-400" },
       FAILED: { label: "ناموفق", color: "text-red-400" },
+      WAITING_VERIFY: { label: "در انتظار تایید", color: "text-blue-400" },
     };
     return (
       labels[status || "PENDING"] || {
@@ -807,14 +859,13 @@ export default function Profile() {
   };
 
   // ============== Stats ==============
-  // ✅ اصلاح: استفاده از ATTENDED به جای COMPLETED
   const stats = {
     totalEnrollments: enrollments.length,
     confirmedEnrollments: enrollments.filter((e) => e.status === "CONFIRMED")
       .length,
     pendingEnrollments: enrollments.filter((e) => e.status === "PENDING")
       .length,
-    attendedEnrollments: enrollments.filter((e) => e.status === "CANCELLED") // ✅ تغییر به ATTENDED
+    attendedEnrollments: enrollments.filter((e) => e.status === "CANCELLED")
       .length,
     cartCount: cart.length,
     ticketCount: tickets.length,
@@ -909,13 +960,8 @@ export default function Profile() {
           user={user}
           cartCount={stats.cartCount}
           onLogout={handleLogout}
-          onCartClick={() => setActiveTab("cart")}
+          onCartClick={handleCartClick}
         />
-
-        {/* <ProfileStats
-          stats={stats}
-          onStatClick={(tab) => setActiveTab(tab as any)}
-        /> */}
 
         <ProfileTabs
           activeTab={activeTab}
@@ -952,10 +998,10 @@ export default function Profile() {
                   status: e.status || "PENDING",
                   event: {
                     id: e.eventId || e.course_id || "",
-                    title: String(e.event?.title || "بدون عنوان"), // ✅ تبدیل به string
+                    title: String(e.event?.title || "بدون عنوان"),
                     slug: e.event?.slug || "",
                     date: e.event?.date || new Date().toISOString(),
-                    price: Number(e.event?.price || 0), // ✅ تبدیل به number
+                    price: Number(e.event?.price || 0),
                     image: e.event?.image,
                     duration: e.event?.duration,
                     meetingLink: e.event?.meetingLink,

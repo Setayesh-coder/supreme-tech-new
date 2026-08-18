@@ -15,7 +15,7 @@ import {
   Search,
   ImageOff,
   Loader2,
-  PenTool,
+  // PenTool,
 } from "lucide-react";
 import { BlogListSkeleton } from "../../components/skeletons/BlogListSkeleton";
 import SectionHeader from "../../components/ui/SectionHeader";
@@ -167,9 +167,9 @@ export default function BlogList() {
               blurIntensity="lg"
               glowIntensity="md"
             >
-              <div className="text-6xl mb-4">
+              {/* <div className="text-6xl mb-4">
                 <PenTool />
-              </div>
+              </div> */}
               <h3 className="text-2xl font-bold text-white mb-2">
                 {posts.length === 0
                   ? "هنوز پستی وجود ندارد"

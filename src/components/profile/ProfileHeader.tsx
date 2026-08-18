@@ -1,5 +1,5 @@
 // src/components/profile/ProfileHeader.tsx
-import { User, RectangleEllipsis, LogOut } from "lucide-react";
+import { User, ShoppingCart, LogOut } from "lucide-react";
 import { GlassButton } from "../ui/GlassButton";
 
 interface ProfileHeaderProps {
@@ -11,14 +11,14 @@ interface ProfileHeaderProps {
   } | null;
   cartCount: number;
   onLogout: () => void;
-  onCartClick: () => void;
+  onCartClick: () => void; // ✅ این تابع از والد می‌آید
 }
 
 export default function ProfileHeader({
   user,
   cartCount,
   onLogout,
-  onCartClick,
+  onCartClick, // ✅ از props دریافت می‌شود
 }: ProfileHeaderProps) {
   const userName = user?.name || user?.phone || "کاربر";
 
@@ -43,11 +43,11 @@ export default function ProfileHeader({
         <GlassButton
           variant="secondary"
           size="sm"
-          icon={<RectangleEllipsis className="w-4 h-4" />}
+          icon={<ShoppingCart className="w-4 h-4" />}
           iconPosition="left"
-          onClick={onCartClick}
+          onClick={onCartClick} // ✅ از props استفاده می‌کند
         >
-          تغییر رمز{cartCount > 0 && `(${cartCount})`}
+          سبد خرید {cartCount > 0 && `(${cartCount})`}
         </GlassButton>
         <GlassButton
           variant="danger"

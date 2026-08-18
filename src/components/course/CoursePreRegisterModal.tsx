@@ -11,7 +11,7 @@ import {
 interface CoursePreRegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  courseId: string;
+  course_id: string;
   courseTitle: string;
   onSuccess?: () => void;
 }
@@ -19,12 +19,12 @@ interface CoursePreRegisterModalProps {
 export default function CoursePreRegisterModal({
   isOpen,
   onClose,
-  courseId,
+  course_id,
   courseTitle,
   onSuccess,
 }: CoursePreRegisterModalProps) {
   const [formData, setFormData] = useState<CoursePreRegisterData>({
-    course_id: courseId,
+    course_id: "",
     field_of_study: "",
     university: "",
     has_experience: false,
@@ -43,12 +43,12 @@ export default function CoursePreRegisterModal({
   // 🔄 Reset فرم وقتی بسته می‌شود
   useEffect(() => {
     if (!isOpen) {
-      setFormData({ ...formData, course_id: courseId });
+      setFormData({ ...formData, course_id: course_id });
       setError("");
       setSuccess(false);
       setStep(1);
     }
-  }, [isOpen, courseId]);
+  }, [isOpen, course_id]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -64,15 +64,16 @@ export default function CoursePreRegisterModal({
     });
   };
 
+  // src/components/course/CoursePreRegisterModal.tsx
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      //  ارسال داده به API
-      await enrollmentsAPI.preRegister({
-        course_id: courseId,
+      const response = await enrollmentsAPI.preRegister({
+        course_id: course_id,
         field_of_study: formData.field_of_study?.trim() || "",
         university: formData.university?.trim() || "",
         has_experience: formData.has_experience || false,
@@ -83,20 +84,55 @@ export default function CoursePreRegisterModal({
         referral_source: formData.referral_source?.trim() || "",
       });
 
+      console.log("✅ پاسخ سرور:", response);
+
+      // ✅ ذخیره در localStorage با داده‌های کامل
+      const enrollments = JSON.parse(
+        localStorage.getItem("enrollments") || "[]",
+      );
+
+      // ✅ داده‌های کامل دوره را ذخیره کن
+      const enrollmentData = {
+        id: response.id || course_id,
+        course_id: course_id,
+        paymentStatus: "PENDING",
+        status: "PENDING",
+        event: {
+          id: course_id,
+          title: courseTitle, // ✅ عنوان دوره
+          slug: "", // اگر دارید
+          date: new Date().toISOString(),
+          price: 0, // قیمت دوره
+          image: "",
+          duration: "",
+          meetingLink: "",
+        },
+        created_at: new Date().toISOString(),
+      };
+
+      // اگر قبلاً نبود، اضافه کن
+      const exists = enrollments.some((e: any) => e.id === enrollmentData.id);
+      if (!exists) {
+        enrollments.push(enrollmentData);
+        localStorage.setItem("enrollments", JSON.stringify(enrollments));
+      }
+
+      // ✅ اضافه کردن به سبد خرید
+      const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
+      if (!cartItems.includes(course_id)) {
+        cartItems.push(course_id);
+        localStorage.setItem("cart", JSON.stringify(cartItems));
+      }
+
       setSuccess(true);
       if (onSuccess) onSuccess();
 
-      // بستن خودکار بعد از ۲ ثانیه
       setTimeout(() => {
         onClose();
       }, 2000);
     } catch (err: any) {
-      console.error(" خطا در پیش‌ثبت‌نام:", err);
-      setError(
-        err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "خطا در ثبت اطلاعات",
-      );
+      console.error("❌ خطا:", err);
+      setError(err.response?.data?.detail || "خطا در ثبت اطلاعات");
     } finally {
       setLoading(false);
     }

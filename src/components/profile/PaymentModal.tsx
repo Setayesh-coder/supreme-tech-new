@@ -1,7 +1,7 @@
 // src/components/profile/PaymentModal.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
-import { CreditCard } from "lucide-react";
+import { Check, CreditCard } from "lucide-react";
 
 interface PaymentModalProps {
   selectedEnrollment: any;
@@ -63,7 +63,7 @@ export function PaymentModal({
           )}
           {success && (
             <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 text-sm text-center">
-              ✅ {success}
+              <Check /> {success}
             </div>
           )}
 

@@ -1,7 +1,13 @@
-// src/components/profile/EnrollmentsTab.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
-import { BookOpen, Calendar, Wallet, CreditCard, Video } from "lucide-react";
+import {
+  BookOpen,
+  Calendar,
+  Wallet,
+  CreditCard,
+  Video,
+  Clock,
+} from "lucide-react";
 
 interface Enrollment {
   id: string;
@@ -18,7 +24,7 @@ interface Enrollment {
   };
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "WAITING" | "ATTENDED";
   createdAt: string;
-  paymentStatus?: "PENDING" | "PAID" | "FAILED";
+  paymentStatus?: "PENDING" | "PAID" | "FAILED" | "WAITING_VERIFY";
   meetingLink?: string;
 }
 
@@ -33,7 +39,7 @@ interface EnrollmentsTabProps {
     color: string;
   };
   getPaymentStatusLabel: (status?: string) => { label: string; color: string };
-  handlePayment: (id: string) => void;
+  handlePayment: (id: string) => void; // ✅ این تابع کاربر را به صفحه پرداخت هدایت می‌کند
 }
 
 export function EnrollmentsTab({
@@ -48,16 +54,20 @@ export function EnrollmentsTab({
   if (enrollments.length === 0) {
     return (
       <LiquidGlassCard
-        className="p-8 text-center"
+        className="p-8 flex flex-col items-center justify-center min-h-[300px]"
         borderRadius="20px"
         blurIntensity="lg"
         glowIntensity="md"
       >
         <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-        <p className="text-gray-400 mb-4">
+        <p className="text-gray-400 mb-6 text-center">
           هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید
         </p>
-        <GlassButton variant="primary" onClick={() => navigate("/events")}>
+        <GlassButton
+          variant="primary"
+          onClick={() => navigate("/events")}
+          className="mx-auto"
+        >
           مشاهده رویدادها
         </GlassButton>
       </LiquidGlassCard>
@@ -86,6 +96,7 @@ export function EnrollmentsTab({
           const isPaid = enrollment.paymentStatus === "PAID";
           const isConfirmed = enrollment.status === "CONFIRMED";
           const isEventStarted = new Date(enrollment.event.date) <= new Date();
+          const isWaitingVerify = enrollment.paymentStatus === "WAITING_VERIFY";
 
           return (
             <LiquidGlassCard
@@ -96,6 +107,7 @@ export function EnrollmentsTab({
               glowIntensity="sm"
             >
               <div className="flex flex-col md:flex-row gap-4">
+                {/* تصویر */}
                 <div className="w-full md:w-28 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
                   {enrollment.event.image ? (
                     <img
@@ -110,6 +122,7 @@ export function EnrollmentsTab({
                   )}
                 </div>
 
+                {/* اطلاعات */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="text-base font-bold text-white truncate">
@@ -140,18 +153,47 @@ export function EnrollmentsTab({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {/* ✅ دکمه پرداخت - هدایت به صفحه پرداخت */}
+
                     {enrollment.status === "PENDING" &&
-                      enrollment.paymentStatus !== "PAID" && (
+                      enrollment.paymentStatus !== "PAID" &&
+                      !isWaitingVerify && (
                         <GlassButton
                           variant="primary"
                           size="sm"
                           icon={<CreditCard className="w-3 h-3" />}
                           iconPosition="left"
-                          onClick={() => handlePayment(enrollment.id)}
+                          onClick={() => {
+                            // ✅ استفاده از eventId یا course_id به جای id
+                            const paymentId =
+                              enrollment.id ||
+                              enrollment.eventId ||
+                              // enrollment.course_id ||
+                              enrollment.event?.id;
+
+                            console.log("🔍 paymentId:", paymentId);
+                            console.log("🔍 enrollment:", enrollment);
+
+                            if (!paymentId) {
+                              console.error("❌ شناسه پرداخت وجود ندارد");
+                              alert("خطا: شناسه ثبت‌نام نامعتبر است");
+                              return;
+                            }
+
+                            handlePayment(paymentId);
+                          }}
                         >
                           پرداخت
                         </GlassButton>
                       )}
+                    {/* ✅ وضعیت در انتظار تایید */}
+                    {isWaitingVerify && (
+                      <span className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-xl text-xs font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        در انتظار تایید
+                      </span>
+                    )}
+                    {/* ✅ ورود به جلسه */}
                     {isConfirmed && isPaid && isEventStarted && (
                       <a
                         href={
@@ -167,6 +209,7 @@ export function EnrollmentsTab({
                         ورود به جلسه
                       </a>
                     )}
+                    {/* ✅ دکمه جزئیات */}
                     <GlassButton
                       variant="white"
                       size="sm"
