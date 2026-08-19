@@ -25,7 +25,7 @@ export const heroAPI = {
       title: item.title,
       subtitle: item.subtitle,
       description: item.description,
-      tagline: item.tagline,
+      tagline: item.tagline || "",
       image_url: item.image_url || "",
       button_text: item.button_text,
       button_link: item.button_link,

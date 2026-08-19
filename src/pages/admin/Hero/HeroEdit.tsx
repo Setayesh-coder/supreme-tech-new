@@ -165,7 +165,7 @@ export default function HeroEdit() {
         image_url: imageUrl,
         button_text: formData.button_text?.trim() || undefined,
         button_link: formData.button_link?.trim() || undefined,
-        tagLine: formData.tagline?.trim() || undefined,
+        tagline: formData.tagline?.trim() || undefined,
         order: Number(formData.order) || 0,
         is_active: formData.is_active,
       };

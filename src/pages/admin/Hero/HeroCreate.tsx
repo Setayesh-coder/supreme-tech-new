@@ -126,7 +126,7 @@ export default function HeroCreate() {
         image_url: imageUrl,
         button_text: formData.buttonText?.trim() || undefined,
         button_link: formData.buttonLink?.trim() || undefined,
-        tagLine: formData.tagline?.trim() || undefined, // ✅ اضافه شد
+        tagline: formData.tagline?.trim() || undefined, // ✅ اضافه شد
         order: Number(formData.order) || 0,
         is_active: formData.isActive !== undefined ? formData.isActive : true,
       };

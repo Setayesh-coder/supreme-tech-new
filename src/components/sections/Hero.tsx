@@ -1,520 +1,824 @@
-// src/components/sections/Hero.tsx
-import { useState, useEffect } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ArrowLeft,
-  Target,
-  Loader2,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { Variants } from "framer-motion";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
+import { GlassButton } from "../ui/GlassButton";
+import HeroStats from "./HeroStats";
+
 import { heroAPI } from "../../lib/api/hero";
 import type { HeroSlide } from "../../lib/api/hero";
-import { settingsAPI } from "../../lib/api/settings";
-import { GlassButton } from "../ui/GlassButton";
 
 export default function Hero() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
-  const [, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
+  const [direction, setDirection] = useState(1);
 
-  // اسلایدهای پیش‌فرض
+  /*
+   * Fallback فقط برای زمانی که Backend در دسترس نباشد
+   */
   const defaultSlides: HeroSlide[] = [
     {
       id: "default-1",
-      title: "هوش مصنوعی در خدمت شما",
-      subtitle: "پیشرو در توسعه AI Agent های هوشمند",
-      description: "با تیم Supreme Tech، آینده فناوری را امروز تجربه کنید",
+      title: "ساختن ایده‌ها، تبدیلشان به محصول",
+      subtitle: "توسعه نرم‌افزار، طراحی و راهکارهای هوشمند",
+      description:
+        "از ایده اولیه تا محصول نهایی، راهکارهای دیجیتال متناسب با نیاز کسب‌وکار شما طراحی و توسعه می‌دهیم.",
       image_url: "/assets/ai-hero-new.webp",
-      button_text: "شروع کنید",
+      button_text: "مشاهده خدمات",
       button_link: "/services",
+      tagline: "راهکارهای دیجیتال",
       order: 0,
       is_active: true,
     },
   ];
 
+  /*
+   * دریافت Hero از Backend
+   */
   useEffect(() => {
-    const fetchData = async () => {
+    let mounted = true;
+
+    const fetchHeroSlides = async () => {
       try {
-        const slidesData = await heroAPI.getAll();
-        if (slidesData && slidesData.length > 0) {
-          const activeSlides = slidesData
-            .filter((slide) => slide.is_active !== false)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          if (activeSlides.length > 0) {
-            setSlides(activeSlides);
-          } else {
-            setSlides(defaultSlides);
-          }
+        setLoading(true);
+
+        const data = await heroAPI.getAll();
+
+        if (!mounted) return;
+
+        const activeSlides = (data || [])
+          .filter((slide) => slide.is_active !== false)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        if (activeSlides.length > 0) {
+          setSlides(activeSlides);
+          setCurrentIndex(0);
         } else {
           setSlides(defaultSlides);
         }
-
-        const settingsData = await settingsAPI.getPublic();
-        if (settingsData) {
-          setSettings(settingsData);
-        }
       } catch (error) {
-        console.error("خطا در دریافت داده‌ها:", error);
-        setSlides(defaultSlides);
+        console.error("Failed to load hero slides:", error);
+
+        if (mounted) {
+          setSlides(defaultSlides);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
-    fetchData();
+
+    fetchHeroSlides();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
+  /*
+   * Auto play
+   */
   useEffect(() => {
     if (slides.length <= 1) return;
-    const interval = setInterval(() => {
+
+    const interval = window.setInterval(() => {
       setDirection(1);
+
       setCurrentIndex((prev) => (prev + 1) % slides.length);
     }, 7000);
-    return () => clearInterval(interval);
+
+    return () => {
+      window.clearInterval(interval);
+    };
   }, [slides.length]);
 
+  /*
+   * Navigation
+   */
   const nextSlide = () => {
+    if (slides.length <= 1) return;
+
     setDirection(1);
+
     setCurrentIndex((prev) => (prev + 1) % slides.length);
   };
 
   const prevSlide = () => {
+    if (slides.length <= 1) return;
+
     setDirection(-1);
+
     setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
-  const scrollToContact = () => {
-    const contactSection = document.getElementById("contact");
-    if (contactSection) {
-      contactSection.scrollIntoView({ behavior: "smooth" });
-    }
+  const goToSlide = (index: number) => {
+    if (index === currentIndex) return;
+
+    setDirection(index > currentIndex ? 1 : -1);
+
+    setCurrentIndex(index);
   };
 
-  // انیمیشن‌های اسلاید
-  const slideVariants: Variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? "100%" : "-100%",
-      opacity: 0,
-      scale: 0.95,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        x: { type: "spring", stiffness: 300, damping: 30 },
-        opacity: { duration: 0.6 },
-        scale: { duration: 0.5 },
-      },
-    },
-    exit: (direction: number) => ({
-      x: direction < 0 ? "100%" : "-100%",
-      opacity: 0,
-      scale: 0.95,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        x: { type: "spring", stiffness: 300, damping: 30 },
-        opacity: { duration: 0.5 },
-        scale: { duration: 0.4 },
-      },
-    }),
-  };
-
-  // انیمیشن‌های متن
-  const textVariants: Variants = {
-    hidden: { y: 30, opacity: 0 },
-    visible: (i: number) => ({
-      y: 0,
-      opacity: 1,
-      transition: {
-        delay: i * 0.15,
-        type: "spring",
-        stiffness: 200,
-        damping: 20,
-      },
-    }),
-  };
-
+  /*
+   * Loading
+   */
   if (loading) {
     return (
-      <section className="relative h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+      <section
+        className="
+          w-full
+          px-3
+          pt-20
+          sm:px-5
+          sm:pt-24
+          lg:px-8
+        "
+      >
+        <div
+          className="
+            mx-auto
+            max-w-[1400px]
+
+            h-[380px]
+            sm:h-[440px]
+            lg:h-[580px]
+
+            rounded-[24px]
+            sm:rounded-[32px]
+            lg:rounded-[40px]
+
+            bg-slate-950
+
+            flex
+            items-center
+            justify-center
+          "
         >
-          <Loader2 className="w-12 h-12 text-blue-400" />
-        </motion.div>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        </div>
       </section>
     );
   }
 
-  if (slides.length === 0) {
-    return (
-      <section className="relative h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
-          <p className="text-gray-400 text-lg">
-            هیچ اسلایدی برای نمایش وجود ندارد
-          </p>
-        </motion.div>
-      </section>
-    );
+  if (!slides.length) {
+    return null;
   }
 
   const currentSlide = slides[currentIndex] || slides[0];
-  const heroTagline =
-    currentSlide.tagline || "مرکز توسعه فناوری‌های برتر تهران";
 
   return (
-    <section className="relative w-full py-2 sm:py-4 px-1 sm:px-2">
-      <div className="max-w-[1336px] mx-auto mt-16 sm:mt-20">
-        {/* اسلاید با نسبت ۲:۱ */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative aspect-[2/1] w-full rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl"
+    <section
+      dir="rtl"
+      className="
+        relative
+        w-full
+
+        px-3
+        pt-20
+
+        sm:px-5
+        sm:pt-24
+
+        lg:px-8
+      "
+    >
+      <div className="mx-auto max-w-[1400px]">
+        {/* =================================================
+            HERO
+        ================================================== */}
+
+        <div
+          className="
+            group
+            relative
+            overflow-hidden
+
+            rounded-[24px]
+            sm:rounded-[30px]
+            lg:rounded-[40px]
+
+            border
+            border-white/10
+
+            bg-slate-950
+
+            shadow-[0_25px_80px_rgba(0,0,0,0.35)]
+
+            /*
+             * موبایل همچنان مستطیلی
+             */
+            aspect-[4/3]
+
+            sm:aspect-[16/9]
+
+            lg:aspect-[16/7]
+          "
         >
-          {/* Border شیشه‌ای */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            className="absolute inset-0 rounded-xl sm:rounded-2xl p-[2px] bg-gradient-to-br from-white/30 via-white/10 to-white/5 backdrop-blur-sm z-0"
+          {/* =================================================
+              BACKGROUND SLIDES
+          ================================================== */}
+
+          <AnimatePresence initial={false} custom={direction} mode="wait">
+            <motion.div
+              key={currentSlide.id}
+              custom={direction}
+              initial={{
+                opacity: 0,
+                scale: 1.04,
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+                scale: 1.02,
+              }}
+              transition={{
+                duration: 0.65,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="absolute inset-0"
+            >
+              {/* IMAGE */}
+
+              <img
+                src={currentSlide.image_url || "/assets/ai-hero-new.webp"}
+                alt={currentSlide.title || "Supreme Tech"}
+                className="
+                  absolute
+                  inset-0
+
+                  h-full
+                  w-full
+
+                  object-cover
+                  object-center
+
+                  transition-transform
+                  duration-[7000ms]
+
+                  group-hover:scale-[1.02]
+                "
+                onError={(event) => {
+                  event.currentTarget.src = "/assets/ai-hero-new.webp";
+                }}
+              />
+
+              {/* =================================================
+                  DESKTOP GRADIENT
+              ================================================== */}
+
+              <div
+                className="
+                  absolute
+                  inset-0
+
+                  hidden
+                  lg:block
+
+                  bg-gradient-to-l
+                  from-slate-950
+                  via-slate-950/75
+                  to-slate-950/10
+                "
+              />
+
+              {/* =================================================
+                  MOBILE GRADIENT
+              ================================================== */}
+
+              <div
+                className="
+                  absolute
+                  inset-0
+
+                  lg:hidden
+
+                  bg-gradient-to-t
+                  from-slate-950
+                  via-slate-950/60
+                  to-slate-950/10
+                "
+              />
+
+              {/* Subtle dark overlay */}
+
+              <div
+                className="
+                  absolute
+                  inset-0
+
+                  bg-black/10
+                "
+              />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* =================================================
+              CONTENT
+          ================================================== */}
+          {/* =================================================
+    CONTENT
+================================================= */}
+
+          <div
+            className="
+    absolute
+    inset-0
+    z-10
+
+    flex
+    items-center
+    justify-center
+
+    -translate-y-[4%]
+    sm:-translate-y-[5%]
+    lg:-translate-y-[6%]
+
+    pointer-events-none
+  "
           >
-            <div className="absolute inset-[2px] rounded-xl sm:rounded-2xl overflow-hidden">
-              {/* تصویر زمینه با انیمیشن */}
-              <AnimatePresence mode="wait" custom={direction}>
-                <motion.div
-                  key={currentIndex}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="absolute inset-0"
-                >
-                  {/* لایه‌های تیره‌کننده - تیره‌تر شده */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 z-5" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40 z-5" />
-                  <div className="absolute inset-0 bg-black/30 z-5" />
+            <div
+              className="
+      w-full
+      max-w-[900px]
 
-                  <img
-                    src={currentSlide.image_url || "/slides/ai-hero-new.webp"}
-                    alt={currentSlide.title}
-                    className="w-full h-full object-cover object-center"
-                    onError={(e) => {
-                      const fallbackImages = [
-                        "/slides/ai-hero-new.webp",
-                        "/slides/ai-hero.webp",
-                        "/slides/ai-face-hero.jpg",
-                      ];
-                      const currentSrc = (e.target as HTMLImageElement).src;
-                      const index = fallbackImages.indexOf(currentSrc);
-                      const nextIndex = (index + 1) % fallbackImages.length;
-                      (e.target as HTMLImageElement).src =
-                        fallbackImages[nextIndex];
-                    }}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </motion.div>
+      px-5
+      sm:px-8
+      lg:px-12
 
-          {/* محتوای اسلاید - بهبود یافته برای موبایل */}
-          <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-2 sm:px-8 lg:px-12">
-            {/* تگلاین */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="absolute top-2 sm:top-6 flex justify-center"
+      flex
+      flex-col
+      items-center
+      justify-center
+
+      text-center
+
+      pointer-events-auto
+    "
             >
-              <LiquidGlassCard
-                blurIntensity="lg"
-                borderRadius="100px"
-                glowIntensity="sm"
-                className="px-2 sm:px-4 py-0.5 sm:py-1.5 bg-black/40 backdrop-blur-md border border-white/30"
-              >
-                <motion.span
-                  animate={{
-                    scale: [1, 1.05, 1],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                  }}
-                  className="text-[7px] sm:text-xs text-white font-medium tracking-wider whitespace-nowrap"
-                >
-                  {heroTagline}
-                </motion.span>
-              </LiquidGlassCard>
-            </motion.div>
+              {/* =================================================
+                  TAGLINE
+              ================================================== */}
 
-            {/* عنوان - بزرگتر و واضح‌تر */}
-            <motion.h1
-              custom={0}
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              className="text-xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-0.5 sm:mb-3 leading-tight drop-shadow-2xl max-w-4xl px-1"
-            >
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={`title-${currentIndex}`}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -20, opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="inline-block text-shadow-xl"
-                >
-                  {currentSlide.title}
-                </motion.span>
-              </AnimatePresence>
-            </motion.h1>
-
-            {/* زیرعنوان - واضح‌تر */}
-            <motion.p
-              custom={1}
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              className="text-sm sm:text-xl lg:text-2xl font-bold text-yellow-400 drop-shadow-2xl mb-0.5 sm:mb-4"
-            >
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={`subtitle-${currentIndex}`}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -20, opacity: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="text-shadow-lg"
-                >
-                  {currentSlide.subtitle}
-                </motion.span>
-              </AnimatePresence>
-            </motion.p>
-
-            {/* توضیحات - کوچکتر در موبایل */}
-            <motion.p
-              custom={2}
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              className="text-[10px] sm:text-sm lg:text-base text-white/95 max-w-2xl mx-auto mb-1.5 sm:mb-6 leading-relaxed drop-shadow-2xl px-2 font-medium"
-            >
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={`description-${currentIndex}`}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -20, opacity: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                  {currentSlide.description}
-                </motion.span>
-              </AnimatePresence>
-            </motion.p>
-
-            {/* دکمه‌ها - کوچکتر در موبایل */}
-            <motion.div
-              custom={3}
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              className="flex flex-row gap-1.5 sm:gap-4 items-center justify-center"
-            >
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <GlassButton
-                  icon={<Target className="w-3 h-3 sm:w-5 sm:h-5" />}
-                  iconPosition="right"
-                  variant="primary"
-                  size="sm"
-                  onClick={scrollToContact}
-                  className="text-[10px] sm:text-base px-3 sm:px-8 py-1 sm:py-2.5 whitespace-nowrap"
-                >
-                  درخواست مشاوره
-                </GlassButton>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <GlassButton
-                  icon={
-                    <ArrowLeft className="w-3 h-3 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
-                  }
-                  iconPosition="left"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() =>
-                    (window.location.href =
-                      currentSlide.button_link || "/contact")
-                  }
-                  className="text-[10px] sm:text-base px-3 sm:px-8 py-1 sm:py-2.5 whitespace-nowrap bg-black/40 backdrop-blur-md border border-white/40 hover:bg-black/60"
-                >
-                  {currentSlide.button_text || "شروع کنید"}
-                </GlassButton>
-              </motion.div>
-            </motion.div>
-          </div>
-
-          {/* دکمه‌های ناوبری - کوچکتر در موبایل */}
-          {slides.length > 1 && (
-            <>
-              <motion.button
-                onClick={nextSlide}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 z-20"
-              >
-                <LiquidGlassCard
-                  blurIntensity="lg"
-                  borderRadius="100px"
-                  glowIntensity="sm"
-                  className="p-0.5 sm:p-2 hover:scale-110 transition-all duration-300 bg-black/50 backdrop-blur-md border border-white/30"
-                >
-                  <ChevronLeft className="w-2.5 h-2.5 sm:w-5 sm:h-5 text-white" />
-                </LiquidGlassCard>
-              </motion.button>
-              <motion.button
-                onClick={prevSlide}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 z-20"
-              >
-                <LiquidGlassCard
-                  blurIntensity="lg"
-                  borderRadius="100px"
-                  glowIntensity="sm"
-                  className="p-0.5 sm:p-2 hover:scale-110 transition-all duration-300 bg-black/50 backdrop-blur-md border border-white/30"
-                >
-                  <ChevronRight className="w-2.5 h-2.5 sm:w-5 sm:h-5 text-white" />
-                </LiquidGlassCard>
-              </motion.button>
-            </>
-          )}
-
-          {/* نقطه‌های ناوبری - کوچکتر در موبایل */}
-          <div className="absolute bottom-1.5 sm:bottom-6 left-1/2 -translate-x-1/2 flex justify-center gap-0.5 sm:gap-2 z-20">
-            {slides.map((_, index) => (
-              <motion.button
-                key={index}
-                onClick={() => {
-                  setDirection(index > currentIndex ? 1 : -1);
-                  setCurrentIndex(index);
-                }}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                className="transition-all duration-300"
-              >
-                <LiquidGlassCard
-                  blurIntensity="md"
-                  borderRadius="100px"
-                  glowIntensity="sm"
-                  className={`p-0.5 transition-all duration-300 bg-black/50 backdrop-blur-sm border border-white/30 ${
-                    index === currentIndex ? "w-3 sm:w-8" : "w-1 sm:w-2"
-                  }`}
-                >
+              {currentSlide.tagline && (
+                <AnimatePresence mode="wait">
                   <motion.div
-                    className={`h-0.5 sm:h-1 rounded-full ${
-                      index === currentIndex ? "bg-white" : "bg-white/40"
-                    }`}
-                    animate={{
-                      opacity: index === currentIndex ? 1 : 0.4,
-                      scale: index === currentIndex ? 1 : 0.8,
+                    key={`tagline-${currentSlide.id}`}
+                    initial={{
+                      opacity: 0,
+                      y: 10,
                     }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </LiquidGlassCard>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* آمار - کوچکتر در موبایل */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-2 sm:mt-6"
-        >
-          <div className="flex justify-center gap-1.5 sm:gap-8 flex-wrap">
-            {[
-              {
-                number: "۱۰۰+",
-                label: "پروژه موفق",
-                color: "from-blue-400 to-cyan-400",
-              },
-              { number: "۲۴/۷", label: "پشتیبانی", color: "text-yellow-400" },
-              {
-                number: "∞",
-                label: "امکانات نامحدود",
-                color: "from-blue-400 to-cyan-400",
-              },
-            ].map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
-                whileHover={{
-                  y: -5,
-                  scale: 1.02,
-                  transition: { type: "spring", stiffness: 300 },
-                }}
-              >
-                <LiquidGlassCard
-                  blurIntensity="md"
-                  borderRadius="16px"
-                  glowIntensity="sm"
-                  className="px-2 sm:px-6 py-0.5 sm:py-3 text-center min-w-[40px] sm:min-w-[100px] bg-black/40 backdrop-blur-md border border-white/15 rounded-xl"
-                >
-                  <motion.div
-                    className={`text-[8px] sm:text-2xl font-bold ${
-                      stat.color.startsWith("from")
-                        ? `bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`
-                        : stat.color
-                    }`}
                     animate={{
-                      scale: [1, 1.05, 1],
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
                     }}
                     transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      repeatType: "reverse",
+                      duration: 0.4,
                     }}
+                    className="mb-3 sm:mb-4"
                   >
-                    {stat.number}
+                    <LiquidGlassCard
+                      blurIntensity="lg"
+                      borderRadius="100px"
+                      glowIntensity="sm"
+                      className="
+                        inline-flex
+
+                        px-3
+                        py-1
+
+                        sm:px-4
+                        sm:py-1.5
+
+                        bg-white/10
+
+                        border
+                        border-white/20
+                      "
+                    >
+                      <span
+                        className="
+                          text-[9px]
+                          sm:text-xs
+
+                          font-medium
+
+                          text-white/80
+                        "
+                      >
+                        {currentSlide.tagline ||
+                          "مرکز توسعه فناوری‌های برتر تهران"}
+                      </span>
+                    </LiquidGlassCard>
                   </motion.div>
-                  <div className="text-[5px] sm:text-xs text-white/70">
-                    {stat.label}
-                  </div>
-                </LiquidGlassCard>
-              </motion.div>
-            ))}
+                </AnimatePresence>
+              )}
+
+              {/* =================================================
+                  TITLE
+              ================================================== */}
+
+              <AnimatePresence mode="wait">
+                <motion.h1
+                  key={`title-${currentSlide.id}`}
+                  initial={{
+                    opacity: 0,
+                    y: 20,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: -15,
+                  }}
+                  transition={{
+                    duration: 0.5,
+                  }}
+                  className="
+                    max-w-[700px]
+
+                    text-[27px]
+                    leading-[1.35]
+
+                    sm:text-4xl
+                    sm:leading-[1.4]
+
+                    lg:text-5xl
+                    xl:text-6xl
+
+                    font-bold
+
+                    tracking-tight
+
+                    text-white
+
+                    drop-shadow-[0_3px_15px_rgba(0,0,0,0.35)]
+                  "
+                >
+                  {currentSlide.title}
+                </motion.h1>
+              </AnimatePresence>
+
+              {/* =================================================
+                  SUBTITLE
+              ================================================== */}
+
+              {currentSlide.subtitle && (
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={`subtitle-${currentSlide.id}`}
+                    initial={{
+                      opacity: 0,
+                      y: 15,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                    }}
+                    transition={{
+                      duration: 0.45,
+                      delay: 0.08,
+                    }}
+                    className="
+                      mt-2
+                      sm:mt-3
+
+                      max-w-[650px]
+
+                      text-sm
+                      leading-6
+
+                      sm:text-lg
+                      sm:leading-8
+
+                      lg:text-xl
+
+                      font-medium
+
+                      text-blue-200
+
+                      drop-shadow-lg
+                    "
+                  >
+                    {currentSlide.subtitle}
+                  </motion.p>
+                </AnimatePresence>
+              )}
+
+              {/* =================================================
+                  DESCRIPTION
+              ================================================== */}
+
+              {currentSlide.description && (
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={`description-${currentSlide.id}`}
+                    initial={{
+                      opacity: 0,
+                      y: 12,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                    }}
+                    transition={{
+                      duration: 0.45,
+                      delay: 0.14,
+                    }}
+                    className="
+                      mt-2
+
+                      hidden
+                      sm:block
+
+                      max-w-[570px]
+
+                      text-sm
+                      leading-7
+
+                      lg:text-base
+                      lg:leading-8
+
+                      text-white/70
+                    "
+                  >
+                    {currentSlide.description}
+                  </motion.p>
+                </AnimatePresence>
+              )}
+
+              {/* =================================================
+                  BUTTON
+              ================================================== */}
+            </div>
           </div>
-        </motion.div>
+
+          {/* =================================================
+    BOTTOM CONTROLS
+================================================= */}
+
+          <div
+            className="
+    absolute
+    bottom-5
+    left-5
+    right-5
+
+    sm:bottom-7
+    sm:left-7
+    sm:right-7
+
+    lg:bottom-8
+    lg:left-8
+    lg:right-8
+
+    z-20
+
+    flex
+    items-center
+    justify-between
+
+    gap-4
+  "
+            dir="rtl"
+          >
+            {/* ===============================================
+      CTA — RIGHT
+  ================================================ */}
+
+            <motion.div
+              initial={{
+                opacity: 0,
+                y: 12,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.45,
+                delay: 0.2,
+              }}
+            >
+              <GlassButton
+                icon={
+                  <ArrowLeft
+                    className="
+            h-4
+            w-4
+
+            transition-transform
+            duration-300
+
+            group-hover:-translate-x-1
+          "
+                  />
+                }
+                iconPosition="right"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const link = currentSlide.button_link || "/services";
+
+                  window.location.href = link;
+                }}
+                className="
+        text-xs
+        sm:text-sm
+
+        px-4
+        py-2
+
+        sm:px-5
+        sm:py-2.5
+
+        bg-white/10
+
+        border
+        border-white/20
+
+        backdrop-blur-xl
+
+        hover:bg-white/20
+
+        whitespace-nowrap
+      "
+              >
+                {currentSlide.button_text || "مشاهده خدمات"}
+              </GlassButton>
+            </motion.div>
+
+            {/* ===============================================
+      SLIDER CONTROLS — LEFT
+  ================================================ */}
+
+            {slides.length > 1 && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: 12,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.25,
+                }}
+                className="
+        flex
+        items-center
+        gap-2
+      "
+                dir="ltr"
+              >
+                {/* PREVIOUS */}
+
+                <button
+                  type="button"
+                  onClick={prevSlide}
+                  aria-label="اسلاید قبلی"
+                >
+                  <LiquidGlassCard
+                    blurIntensity="lg"
+                    borderRadius="100px"
+                    glowIntensity="sm"
+                    className="
+            flex
+            h-8
+            w-8
+
+            sm:h-10
+            sm:w-10
+
+            items-center
+            justify-center
+
+            bg-black/20
+
+            border
+            border-white/15
+
+            hover:bg-white/10
+
+            transition
+          "
+                  >
+                    <ChevronRight
+                      className="
+              h-3.5
+              w-3.5
+
+              sm:h-4
+              sm:w-4
+
+              text-white
+            "
+                    />
+                  </LiquidGlassCard>
+                </button>
+
+                {/* DOTS */}
+
+                <div
+                  className="
+          flex
+          items-center
+          gap-1
+        "
+                >
+                  {slides.map((slide, index) => (
+                    <button
+                      key={slide.id}
+                      type="button"
+                      onClick={() => goToSlide(index)}
+                      aria-label={`اسلاید ${index + 1}`}
+                      className="p-1"
+                    >
+                      <span
+                        className={`
+                block
+                h-1
+                rounded-full
+
+                transition-all
+                duration-300
+
+                ${index === currentIndex ? "w-7 bg-white" : "w-1.5 bg-white/35"}
+              `}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {/* NEXT */}
+
+                <button
+                  type="button"
+                  onClick={nextSlide}
+                  aria-label="اسلاید بعدی"
+                >
+                  <LiquidGlassCard
+                    blurIntensity="lg"
+                    borderRadius="100px"
+                    glowIntensity="sm"
+                    className="
+            flex
+            h-8
+            w-8
+
+            sm:h-10
+            sm:w-10
+
+            items-center
+            justify-center
+
+            bg-black/20
+
+            border
+            border-white/15
+
+            hover:bg-white/10
+
+            transition
+          "
+                  >
+                    <ChevronLeft
+                      className="
+              h-3.5
+              w-3.5
+
+              sm:h-4
+              sm:w-4
+
+              text-white
+            "
+                    />
+                  </LiquidGlassCard>
+                </button>
+              </motion.div>
+            )}
+          </div>
+        </div>
+
+        <HeroStats />
       </div>
     </section>
   );
