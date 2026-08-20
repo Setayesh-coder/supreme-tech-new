@@ -65,7 +65,7 @@ export default function PartnerCreate() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "partners");
-      console.log("✅ لوگو آپلود شد:", response.url);
+      // console.log("✅ لوگو آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -109,7 +109,7 @@ export default function PartnerCreate() {
         logo: logoUrl,
       };
 
-      console.log("📤 ارسال داده برای ایجاد همکار:", partnerData);
+      // console.log("📤 ارسال داده برای ایجاد همکار:", partnerData);
 
       await partnersAPI.create(partnerData);
 

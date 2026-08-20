@@ -90,11 +90,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      console.log("🔄 شروع دریافت تنظیمات...");
+      // console.log("🔄 شروع دریافت تنظیمات...");
 
       const response = await api.get("/settings/public");
       const data = response.data;
-      console.log("📦 داده‌های دریافت شده از API:", data);
+      // console.log("📦 داده‌های دریافت شده از API:", data);
 
       if (data) {
         const newSettings = {
@@ -155,7 +155,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
             ...(data.seo || {}),
           },
         };
-        console.log("📦 تنظیمات نهایی:", newSettings);
+        // console.log("📦 تنظیمات نهایی:", newSettings);
         setSettingsState(newSettings);
       }
       setError(null);
@@ -164,7 +164,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
       setError("خطا در دریافت تنظیمات");
     } finally {
       setLoading(false);
-      console.log("✅ دریافت تنظیمات تمام شد");
+      // console.log("✅ دریافت تنظیمات تمام شد");
     }
   };
 
@@ -175,7 +175,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
         throw new Error("برای تغییر تنظیمات باید وارد شوید");
       }
 
-      console.log("🔄 بروزرسانی تنظیمات:", newSettings);
+      // console.log("🔄 بروزرسانی تنظیمات:", newSettings);
 
       const payload: any = {};
       if (newSettings.siteName !== undefined) {
@@ -243,17 +243,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
       //   payload.socialLinks = newSettings.socialLinks;
       if (newSettings.seo) payload.seo = newSettings.seo;
 
-      console.log("📤 payload ارسال به سرور:", payload);
+      //  console.log("📤 payload ارسال به سرور:", payload);
 
-      const response = await api.put("/settings/", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // const response = await api.put("/settings/", payload, {
+      //   headers: { Authorization: `Bearer ${token}` },
+      // });
 
-      console.log("📥 پاسخ سرور:", response.data);
+      // console.log("📥 پاسخ سرور:", response.data);
 
       await fetchSettings();
 
-      console.log("✅ تنظیمات با موفقیت به‌روزرسانی شد");
+      // console.log("✅ تنظیمات با موفقیت به‌روزرسانی شد");
     } catch (err) {
       console.error("❌ خطا در بروزرسانی تنظیمات:", err);
       throw err;

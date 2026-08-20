@@ -36,7 +36,7 @@ export default function AdminLogin() {
         response = await employeesAPI.login({ phone, password });
       }
 
-      console.log("📥 پاسخ کامل:", response);
+      // console.log("📥 پاسخ کامل:", response);
 
       // ✅ بررسی ساختار پاسخ - ممکن است مستقیم یا داخل data باشد
       const data = response.data || response;

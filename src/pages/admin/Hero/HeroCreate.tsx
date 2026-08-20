@@ -77,7 +77,7 @@ export default function HeroCreate() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "hero");
-      console.log("✅ تصویر آپلود شد:", response.url);
+      // console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -131,7 +131,7 @@ export default function HeroCreate() {
         is_active: formData.isActive !== undefined ? formData.isActive : true,
       };
 
-      console.log("📤 ارسال اسلاید:", slideData);
+      // console.log("📤 ارسال اسلاید:", slideData);
 
       await heroAPI.create(slideData);
 

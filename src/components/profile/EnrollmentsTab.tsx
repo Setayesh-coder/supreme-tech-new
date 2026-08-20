@@ -12,6 +12,7 @@ import {
 interface Enrollment {
   id: string;
   eventId: string;
+  course_id?: string;
   event: {
     id: string;
     title: string;
@@ -171,11 +172,11 @@ export function EnrollmentsTab({
                               // enrollment.course_id ||
                               enrollment.event?.id;
 
-                            console.log("🔍 paymentId:", paymentId);
-                            console.log("🔍 enrollment:", enrollment);
+                            // console.log("🔍 paymentId:", paymentId);
+                            // console.log("🔍 enrollment:", enrollment);
 
                             if (!paymentId) {
-                              console.error("❌ شناسه پرداخت وجود ندارد");
+                              // console.error("❌ شناسه پرداخت وجود ندارد");
                               alert("خطا: شناسه ثبت‌نام نامعتبر است");
                               return;
                             }

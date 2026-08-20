@@ -98,7 +98,7 @@ export default function PartnerEdit() {
       setUploading(true);
       // ✅ استفاده صحیح از uploadAPI.uploadImage
       const response = await uploadAPI.uploadImage(file, "partners");
-      console.log("✅ لوگو آپلود شد:", response.url);
+      // console.log("✅ لوگو آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -139,7 +139,7 @@ export default function PartnerEdit() {
         logo: logoUrl,
       };
 
-      console.log("📤 ارسال داده برای ویرایش همکار:", partnerData);
+      // console.log("📤 ارسال داده برای ویرایش همکار:", partnerData);
 
       await partnersAPI.update(id!, partnerData);
 

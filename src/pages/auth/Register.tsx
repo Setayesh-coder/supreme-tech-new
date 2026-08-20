@@ -65,15 +65,15 @@ export default function Register() {
         password: formData.password,
       });
 
-      console.log("📥 پاسخ:", response);
+      // console.log("📥 پاسخ:", response);
 
       if (response && response.token) {
         // 🔥 توکن و کاربر ذخیره می‌شود (در authAPI انجام می‌شود)
-        const token = localStorage.getItem("token");
-        const user = localStorage.getItem("user");
-        
-        console.log("✅ توکن ذخیره شد:", !!token);
-        console.log("✅ کاربر ذخیره شد:", !!user);
+        // const token = localStorage.getItem("token");
+        // const user = localStorage.getItem("user");
+
+        // console.log("✅ توکن ذخیره شد:", !!token);
+        // console.log("✅ کاربر ذخیره شد:", !!user);
 
         // 🔥 هدایت به پروفایل
         navigate("/profile", { replace: true });
@@ -91,7 +91,10 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <Link to="/" className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors">
+        <Link
+          to="/"
+          className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
+        >
           <ArrowLeft size={18} className="ml-2" />
           بازگشت به صفحه اصلی
         </Link>
@@ -105,9 +108,7 @@ export default function Register() {
         >
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-white">ثبت‌نام</h1>
-            <p className="text-gray-400 text-sm mt-2">
-              ایجاد حساب کاربری جدید
-            </p>
+            <p className="text-gray-400 text-sm mt-2">ایجاد حساب کاربری جدید</p>
           </div>
 
           {error && (
@@ -228,7 +229,10 @@ export default function Register() {
           <div className="text-center mt-6">
             <p className="text-gray-400 text-sm">
               قبلاً ثبت‌نام کرده‌اید؟{" "}
-              <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors">
+              <Link
+                to="/login"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
                 وارد شوید
               </Link>
             </p>

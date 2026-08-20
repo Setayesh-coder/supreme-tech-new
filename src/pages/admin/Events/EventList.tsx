@@ -93,10 +93,10 @@ export default function EventList() {
     user?.role === "EMPLOYEE" ||
     user?.role === "employee";
 
-  console.log("🔐 isAdmin:", isAdmin);
-  console.log("🔐 isEmployee:", isEmployee);
-  console.log("👤 user:", user);
-  console.log("🔑 token:", token ? "وجود دارد" : "ندارد");
+  // console.log("🔐 isAdmin:", isAdmin);
+  // console.log("🔐 isEmployee:", isEmployee);
+  // console.log("👤 user:", user);
+  // console.log("🔑 token:", token ? "وجود دارد" : "ندارد");
 
   useEffect(() => {
     fetchEvents();

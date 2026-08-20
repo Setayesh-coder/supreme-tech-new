@@ -33,8 +33,8 @@ export default function Contact() {
     name: "",
     email: "",
     phone: "",
-    projectType: "",
-    description: "",
+    project_type: "",
+    project_description: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,8 +58,8 @@ export default function Contact() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        subject: formData.projectType || "درخواست همکاری",
-        message: formData.description,
+        subject: formData.project_type || "درخواست همکاری",
+        message: formData.project_description,
       });
 
       setSuccess("✅ پیام شما با موفقیت ارسال شد!");
@@ -67,8 +67,8 @@ export default function Contact() {
         name: "",
         email: "",
         phone: "",
-        projectType: "",
-        description: "",
+        project_type: "",
+        project_description: "",
       });
 
       setTimeout(() => setSuccess(""), 3000);
@@ -182,7 +182,7 @@ export default function Contact() {
                 <div>
                   <input
                     name="projectType"
-                    value={formData.projectType}
+                    value={formData.project_type}
                     onChange={handleChange}
                     type="text"
                     placeholder="نوع پروژه"
@@ -194,7 +194,7 @@ export default function Contact() {
               <div>
                 <textarea
                   name="description"
-                  value={formData.description}
+                  value={formData.project_description}
                   onChange={handleChange}
                   rows={4}
                   placeholder="توضیحات پروژه"

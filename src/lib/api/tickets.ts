@@ -1,13 +1,19 @@
 // src/lib/api/tickets.ts
-import api from './axios';
+import api from "./axios";
 
 export interface TicketMessage {
   id: string;
+  // titile:string;
+  // department:string;
+  // priority:string;
+  // status:string;
+  // creator_id:string;
   ticket_id: string;
   sender_id: string;
   message: string;
   attachments?: string[];
   created_at: string;
+  // update_at:string;
 }
 
 export interface Ticket {
@@ -27,7 +33,7 @@ export const ticketsAPI = {
   getAll: async (): Promise<Ticket[]> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.get("/tickets", {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -35,7 +41,7 @@ export const ticketsAPI = {
   getMyTickets: async (): Promise<Ticket[]> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.get("/tickets/my", {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -43,7 +49,7 @@ export const ticketsAPI = {
   getById: async (id: string): Promise<Ticket> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.get(`/tickets/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -56,7 +62,7 @@ export const ticketsAPI = {
   }): Promise<Ticket> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.post("/tickets", data, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -70,31 +76,45 @@ export const ticketsAPI = {
   }): Promise<Ticket> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.post("/tickets/group", data, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
 
-  addMessage: async (ticketId: string, message: string): Promise<TicketMessage> => {
+  addMessage: async (
+    ticketId: string,
+    message: string,
+  ): Promise<TicketMessage> => {
     const token = localStorage.getItem("token") || "";
-    const response = await api.post(`/tickets/${ticketId}/message`, { message }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await api.post(
+      `/tickets/${ticketId}/message`,
+      { message },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     return response.data;
   },
 
-  updateStatus: async (ticketId: string, status: "OPEN" | "PENDING" | "ANSWERED" | "CLOSED"): Promise<Ticket> => {
+  updateStatus: async (
+    ticketId: string,
+    status: "OPEN" | "PENDING" | "ANSWERED" | "CLOSED",
+  ): Promise<Ticket> => {
     const token = localStorage.getItem("token") || "";
-    const response = await api.patch(`/tickets/${ticketId}/status`, { status }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await api.patch(
+      `/tickets/${ticketId}/status`,
+      { status },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
     const token = localStorage.getItem("token") || "";
     await api.delete(`/tickets/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 };

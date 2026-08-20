@@ -121,7 +121,7 @@ export default function Settings() {
         maintenance_mode: localSettings.maintenance || false,
       };
 
-      console.log("📤 ارسال به سرور:", payload);
+      // console.log("📤 ارسال به سرور:", payload);
       await updateSettings(payload);
 
       setSuccess("✅ تنظیمات با موفقیت ذخیره شد");

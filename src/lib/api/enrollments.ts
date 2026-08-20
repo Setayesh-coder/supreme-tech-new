@@ -2,41 +2,34 @@
 import api from "./axios";
 
 // 📦 تایپ‌ها بر اساس بک‌اند
+// src/types/enrollment.ts
 export interface Enrollment {
   id: string;
-  user_id: string;
+  eventId: string;
   course_id?: string;
-  event_id?: string;
-  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
-  meeting_link?: string;
-  // فیلدهای فرم نظرسنجی
-  field_of_study?: string;
-  university?: string;
-  has_experience?: boolean;
-  experience_level?: string;
-  has_laptop?: boolean;
-  os_type?: string;
-  goal?: string;
-  referral_source?: string;
-  created_at: string;
-  updated_at: string;
-  // اطلاعات مرتبط (از relations)
-  user?: {
+  event: {
     id: string;
-    name: string;
-    email: string;
-    phone?: string;
+    title: string;
+    slug: string;
+    date: string;
+    image?: string;
+    price: number;
+    duration?: string;
+    meetingLink?: string;
   };
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "WAITING" | "ATTENDED";
+  createdAt: string;
+  paymentStatus?: "PENDING" | "PAID" | "FAILED" | "WAITING_VERIFY";
+  meetingLink?: string;
   course?: {
     id: string;
     title: string;
     slug: string;
+    date: string;
+    image?: string;
     price: number;
-  };
-  event?: {
-    id: string;
-    title: string;
-    slug: string;
+    duration?: string;
+    meetingLink?: string;
   };
 }
 

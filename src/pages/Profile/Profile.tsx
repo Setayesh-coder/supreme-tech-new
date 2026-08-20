@@ -50,7 +50,7 @@ interface UserProfile {
 
 type Enrollment = APIEnrollment & {
   eventId: string;
-  event: {
+  course: {
     id: string;
     title: string;
     slug: string;
@@ -180,7 +180,7 @@ function RepliesTab({
 
 // ============== Main Component ==============
 export default function Profile() {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   // ============== States ==============
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -213,12 +213,73 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState<
     "enrollments" | "cart" | "tickets" | "replies"
   >("enrollments");
-  const [processing, setProcessing] = useState(false);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const navigate = useNavigate();
+
   const handleCartClick = () => {
     navigate("/cart");
   };
+
+  // ============== Helper: Clean localStorage data ==============
+  const cleanLocalStorageEnrollments = (data: any[]): any[] => {
+    if (!Array.isArray(data)) return [];
+
+    return data
+      .map((item: any) => {
+        // اگر آیتم آرایه است (مشکل شما)
+        if (Array.isArray(item)) {
+          const str = item.join("");
+          const uuidRegex =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(str)) {
+            return {
+              course_id: str,
+              eventId: str,
+              status: "PENDING",
+              paymentStatus: "PENDING",
+              createdAt: new Date().toISOString(),
+            };
+          }
+          return null;
+        }
+
+        // اگر آیتم رشته است (UUID)
+        if (typeof item === "string") {
+          const uuidRegex =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(item)) {
+            return {
+              course_id: item,
+              eventId: item,
+              status: "PENDING",
+              paymentStatus: "PENDING",
+              createdAt: new Date().toISOString(),
+            };
+          }
+          return null;
+        }
+
+        // اگر آیتم آبجکت است
+        if (item && typeof item === "object" && !Array.isArray(item)) {
+          const id = item.course_id || item.courseId || item.eventId || item.id;
+          if (id && typeof id === "string" && id.length > 0) {
+            return {
+              course_id: id,
+              eventId: item.eventId || id,
+              status: item.status || "PENDING",
+              paymentStatus:
+                item.paymentStatus || item.payment_status || "PENDING",
+              createdAt:
+                item.createdAt || item.created_at || new Date().toISOString(),
+              ...item,
+            };
+          }
+          return null;
+        }
+
+        return null;
+      })
+      .filter((item: any) => item !== null);
+  };
+
   // ============== توابع ==============
   const fetchTickets = async () => {
     setTicketsLoading(true);
@@ -248,13 +309,36 @@ export default function Profile() {
       setReplies(data || []);
     } catch (err) {
       console.error("❌ خطا در دریافت پاسخ‌ها:", err);
+      setReplies([]);
     } finally {
       setRepliesLoading(false);
     }
   };
 
+  // ✅ تابع صحیح دریافت اطلاعات دوره
   const fetchCourseDetails = async (courseId: string) => {
+    // اعتبارسنجی courseId
+    if (
+      !courseId ||
+      courseId === "undefined" ||
+      courseId === "null" ||
+      courseId.trim() === ""
+    ) {
+      console.warn("⚠️ courseId نامعتبر:", courseId);
+      return {
+        id: courseId || "unknown",
+        title: "دوره نامشخص",
+        slug: "",
+        date: new Date().toISOString(),
+        price: 0,
+        image: "",
+        duration: "",
+        meetingLink: "",
+      };
+    }
+
     try {
+      console.log(`🔄 دریافت دوره: ${courseId}`);
       const course = await coursesAPI.getById(courseId);
       return {
         id: course.id,
@@ -264,7 +348,7 @@ export default function Profile() {
         price: course.price || 0,
         image: course.cover_image || "",
         duration: course.duration_hours ? `${course.duration_hours} ساعت` : "",
-        meetingLink: "",
+        // meetingLink: course.meeting_link || "",
       };
     } catch (error) {
       console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
@@ -281,154 +365,222 @@ export default function Profile() {
     }
   };
 
-  // ============== useEffect ==============
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
+  // ✅ تابع fetchProfile
+  const fetchProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
 
-        if (!token) {
-          console.warn("⚠️ توکن وجود ندارد، هدایت به لاگین");
-          navigate("/login");
-          return;
+      if (!token) {
+        console.warn("⚠️ توکن وجود ندارد، هدایت به لاگین");
+        navigate("/login");
+        return;
+      }
+
+      // دریافت اطلاعات کاربر
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setFormData({
+          name: parsedUser.name || "",
+          email: parsedUser.email || "",
+          phone: parsedUser.phone || "",
+          province: parsedUser.province || "",
+          birthDate: parsedUser.birthDate || "",
+          gender: parsedUser.gender || "",
+          avatar: parsedUser.avatar || "",
+        });
+        if (parsedUser.avatar) {
+          setAvatarPreview(parsedUser.avatar);
         }
-
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setFormData({
-            name: parsedUser.name || "",
-            email: parsedUser.email || "",
-            phone: parsedUser.phone || "",
-            province: parsedUser.province || "",
-            birthDate: parsedUser.birthDate || "",
-            gender: parsedUser.gender || "",
-            avatar: parsedUser.avatar || "",
-          });
-          if (parsedUser.avatar) {
-            setAvatarPreview(parsedUser.avatar);
-          }
-        } else {
-          try {
-            const profileData = await usersAPI.getMyProfile();
-            if (profileData) {
-              setUser(profileData);
-              localStorage.setItem("user", JSON.stringify(profileData));
-              setFormData({
-                name: profileData.name || "",
-                email: profileData.email || "",
-                phone: profileData.phone || "",
-                province: profileData.province || "",
-                birthDate: profileData.birthDate || "",
-                gender: profileData.gender || "",
-                avatar: profileData.avatar || "",
-              });
-              if (profileData.avatar) {
-                setAvatarPreview(profileData.avatar);
-              }
-            }
-          } catch (err: any) {
-            console.error("❌ خطا در دریافت پروفایل:", err);
-            if (err?.status === 401) {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              navigate("/login");
-              return;
-            }
-          }
-        }
-
-        // ✅ دریافت ثبت‌نام‌ها از هر دو منبع
+      } else {
         try {
-          // 1. از localStorage
-          const localEnrollments = JSON.parse(
-            localStorage.getItem("enrollments") || "[]",
-          );
-          console.log("📥 localStorage enrollments:", localEnrollments);
+          const profileData = await usersAPI.getMyProfile();
+          if (profileData) {
+            setUser(profileData);
+            localStorage.setItem("user", JSON.stringify(profileData));
+            setFormData({
+              name: profileData.name || "",
+              email: profileData.email || "",
+              phone: profileData.phone || "",
+              province: profileData.province || "",
+              birthDate: profileData.birthDate || "",
+              gender: profileData.gender || "",
+              avatar: profileData.avatar || "",
+            });
+            if (profileData.avatar) {
+              setAvatarPreview(profileData.avatar);
+            }
+          }
+        } catch (err: any) {
+          console.error("❌ خطا در دریافت پروفایل:", err);
+          if (err?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            navigate("/login");
+            return;
+          }
+        }
+      }
 
-          // 2. از API
-          const apiEnrollments = await enrollmentsAPI.getMyEnrollments();
+      // ============================================
+      // ✅ دریافت ثبت‌نام‌ها
+      // ============================================
+      try {
+        // 1. دریافت از API
+        let apiEnrollments: any[] = [];
+        try {
+          apiEnrollments = await enrollmentsAPI.getMyEnrollments();
           console.log("📥 API enrollments:", apiEnrollments);
+        } catch (err) {
+          console.error("❌ خطا در دریافت ثبت‌نام از API:", err);
+        }
 
-          // 3. ترکیب و حذف تکراری‌ها
-          const combined = [...apiEnrollments, ...localEnrollments];
-          const unique = combined.filter(
-            (item, index, self) =>
-              self.findIndex(
-                (i) => i.id === item.id || i.course_id === item.course_id,
-              ) === index,
-          );
+        // 2. دریافت از localStorage و پاکسازی
+        let localEnrollments: any[] = [];
+        try {
+          const stored = localStorage.getItem("enrollments");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              localEnrollments = cleanLocalStorageEnrollments(parsed);
+              localStorage.setItem(
+                "enrollments",
+                JSON.stringify(localEnrollments),
+              );
+              console.log(
+                "📥 localStorage enrollments (cleaned):",
+                localEnrollments,
+              );
+            }
+          }
+        } catch (err) {
+          console.error("❌ خطا در خواندن localStorage:", err);
+          localStorage.removeItem("enrollments");
+        }
 
-          console.log("📋 همه ثبت‌نام‌ها:", unique);
+        // 3. ترکیب داده‌ها (API اولویت دارد)
+        const combined = [...apiEnrollments, ...localEnrollments];
 
-          // ✅ 4. دریافت اطلاعات دوره برای هر ثبت‌نام
-          const mappedEnrollments: Enrollment[] = await Promise.all(
-            unique.map(async (e: any) => {
-              // پیدا کردن course_id
-              const courseId = e.course_id || e.event_id || e.id;
+        // حذف تکراری‌ها بر اساس course_id
+        const uniqueMap = new Map();
+        combined.forEach((item: any) => {
+          const id = item.course_id || item.eventId || item.id;
+          if (
+            id &&
+            typeof id === "string" &&
+            id.length > 0 &&
+            !uniqueMap.has(id)
+          ) {
+            uniqueMap.set(id, item);
+          }
+        });
+        const uniqueEnrollments = Array.from(uniqueMap.values());
+        console.log("📋 ثبت‌نام‌های یکتا:", uniqueEnrollments);
 
-              // دریافت اطلاعات دوره
-              let courseData;
-              if (e.event && e.event.title && e.event.title !== "بدون عنوان") {
-                courseData = e.event;
-              } else if (e.course && e.course.title) {
-                courseData = e.course;
+        // 4. دریافت اطلاعات دوره‌ها
+        const mappedEnrollments: Enrollment[] = await Promise.all(
+          uniqueEnrollments.map(async (item: any) => {
+            const courseId = item.course_id || item.eventId || item.id;
+
+            if (!courseId || courseId === "undefined" || courseId === "null") {
+              console.warn("⚠️ courseId نامعتبر:", courseId);
+              return null;
+            }
+
+            let courseData;
+            try {
+              if (
+                item.event &&
+                item.event.title &&
+                item.event.title !== "بدون عنوان"
+              ) {
+                courseData = item.event;
+              } else if (item.course && item.course.title) {
+                courseData = item.course;
               } else {
                 courseData = await fetchCourseDetails(courseId);
               }
-
-              // استفاده از id موجود یا تولید id
-              const id =
-                e.id ||
-                e.enrollment_id ||
-                `enr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-
-              return {
-                ...e,
-                id: id,
-                eventId: e.event_id || e.eventId || courseId,
-                paymentStatus: e.payment_status || e.paymentStatus || "PENDING",
-                createdAt:
-                  e.created_at || e.createdAt || new Date().toISOString(),
-                status: e.status || "PENDING",
-                event: {
-                  id: courseData.id || courseId,
-                  title: String(courseData.title || "دوره آموزشی"),
-                  slug: courseData.slug || "",
-                  date: courseData.date || new Date().toISOString(),
-                  price: Number(courseData.price || 0),
-                  image: courseData.image || "",
-                  duration: courseData.duration || "",
-                  meetingLink: courseData.meetingLink || "",
-                },
+            } catch (error) {
+              console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
+              courseData = {
+                id: courseId,
+                title: "دوره آموزشی",
+                slug: "",
+                date: new Date().toISOString(),
+                price: 0,
+                image: "",
+                duration: "",
+                meetingLink: "",
               };
-            }),
-          );
+            }
 
-          console.log("📋 ثبت‌نام‌های تبدیل شده:", mappedEnrollments);
-          setEnrollments(mappedEnrollments);
+            return {
+              ...item,
+              id:
+                item.id ||
+                `enr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+              eventId: item.eventId || item.event_id || courseId,
+              paymentStatus:
+                item.paymentStatus || item.payment_status || "PENDING",
+              createdAt:
+                item.createdAt || item.created_at || new Date().toISOString(),
+              status: item.status || "PENDING",
+              event: {
+                id: courseData.id || courseId,
+                title: String(courseData.title || "دوره آموزشی"),
+                slug: courseData.slug || "",
+                date: courseData.date || new Date().toISOString(),
+                price: Number(courseData.price || 0),
+                image: courseData.image || "",
+                duration: courseData.duration || "",
+                meetingLink: courseData.meetingLink || "",
+              },
+              course: {
+                id: courseData.id || courseId,
+                title: String(courseData.title || "دوره آموزشی"),
+                slug: courseData.slug || "",
+                date: courseData.date || new Date().toISOString(),
+                price: Number(courseData.price || 0),
+                image: courseData.image || "",
+                duration: courseData.duration || "",
+                meetingLink: courseData.meetingLink || "",
+              },
+            };
+          }),
+        );
 
-          // 5. فیلتر برای سبد خرید
-          const pending = mappedEnrollments.filter(
-            (e: any) =>
-              e.paymentStatus === "PENDING" ||
-              e.paymentStatus === "WAITING_VERIFY",
-          );
+        const validEnrollments = mappedEnrollments.filter(
+          (e): e is Enrollment => e !== null,
+        );
+        console.log("✅ ثبت‌نام‌های نهایی:", validEnrollments);
 
-          console.log("🛒 آیتم‌های سبد خرید:", pending);
-          setCart(pending);
-        } catch (err) {
-          console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
-        }
+        setEnrollments(validEnrollments);
 
-        await fetchTickets();
-      } catch (err: any) {
-        console.error("❌ خطا در fetchProfile:", err);
-      } finally {
-        setLoading(false);
+        // 5. فیلتر برای سبد خرید (آیتم‌های پرداخت نشده)
+        const pending = validEnrollments.filter(
+          (e) =>
+            e.paymentStatus === "PENDING" ||
+            e.paymentStatus === "WAITING_VERIFY",
+        );
+        console.log("🛒 آیتم‌های سبد خرید:", pending);
+        setCart(pending);
+      } catch (err) {
+        console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
+        setEnrollments([]);
+        setCart([]);
       }
-    };
+
+      await fetchTickets();
+    } catch (err: any) {
+      console.error("❌ خطا در fetchProfile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============== useEffect ==============
+  useEffect(() => {
     fetchProfile();
   }, [navigate]);
 
@@ -574,7 +726,6 @@ export default function Profile() {
 
   // ============== Payment Functions ==============
   const handlePayment = (enrollmentId: string) => {
-    console.log("🔍 enrollmentId:", enrollmentId);
     if (
       !enrollmentId ||
       enrollmentId === "undefined" ||
@@ -635,126 +786,6 @@ export default function Profile() {
       setError(err.response?.data?.error || "خطا در پردازش پرداخت");
     } finally {
       setSaving(false);
-    }
-  };
-
-  // ============== Cart Functions ==============
-  const handleCartPayment = async (enrollmentId: string) => {
-    setProcessingId(enrollmentId);
-    setProcessing(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const result = await enrollmentsAPI.processPayment(enrollmentId);
-      if (result.paymentUrl) {
-        window.open(result.paymentUrl, "_blank");
-        setSuccess("✅ لینک پرداخت باز شد");
-      } else {
-        setSuccess("✅ پرداخت با موفقیت انجام شد!");
-        const updated = await enrollmentsAPI.getMyEnrollments();
-        const mappedEnrollments: Enrollment[] = (updated || []).map(
-          (e: any) => ({
-            ...e,
-            eventId: e.event_id || e.eventId || e.course_id || "",
-            paymentStatus: e.payment_status || e.paymentStatus || "PENDING",
-            createdAt: e.created_at || e.createdAt || new Date().toISOString(),
-            status: e.status || "PENDING",
-            event: {
-              id: e.event_id || e.course_id || "",
-              title: String(e.event?.title || e.title || "بدون عنوان"),
-              slug: e.event?.slug || e.slug || "",
-              date: e.event?.date || e.date || new Date().toISOString(),
-              price: Number(e.event?.price || e.price || 0),
-              image: e.event?.image || e.image,
-              duration: e.event?.duration || e.duration,
-              meetingLink: e.event?.meetingLink || e.meetingLink,
-            },
-          }),
-        );
-        setEnrollments(mappedEnrollments);
-        setCart(
-          mappedEnrollments.filter((e: any) => e.paymentStatus === "PENDING"),
-        );
-      }
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (err) {
-      setError("خطا در پردازش پرداخت");
-    } finally {
-      setProcessing(false);
-      setProcessingId(null);
-    }
-  };
-
-  const handleRemoveFromCart = async (enrollmentId: string) => {
-    if (!confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
-
-    try {
-      setCart(cart.filter((item) => item.id !== enrollmentId));
-      setSuccess("✅ آیتم از سبد خرید حذف شد");
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (err) {
-      setError("خطا در حذف آیتم");
-    }
-  };
-
-  const handlePayAll = async () => {
-    if (cart.length === 0) return;
-
-    const totalPrice = cart.reduce(
-      (sum, item) => sum + (item.event?.price || 0),
-      0,
-    );
-    if (
-      !confirm(
-        `آیا از پرداخت مبلغ ${totalPrice.toLocaleString()} تومان برای ${cart.length} دوره مطمئن هستید؟`,
-      )
-    ) {
-      return;
-    }
-
-    setProcessing(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      for (const item of cart) {
-        const result = await enrollmentsAPI.processPayment(item.id);
-        if (!result.paymentUrl) {
-          setError(`خطا در پرداخت دوره "${item.event?.title}"`);
-          setProcessing(false);
-          return;
-        }
-      }
-
-      setSuccess(`✅ پرداخت ${cart.length} دوره با موفقیت انجام شد!`);
-      const updated = await enrollmentsAPI.getMyEnrollments();
-      const mappedEnrollments: Enrollment[] = (updated || []).map((e: any) => ({
-        ...e,
-        eventId: e.event_id || e.eventId || e.course_id || "",
-        paymentStatus: e.payment_status || e.paymentStatus || "PENDING",
-        createdAt: e.created_at || e.createdAt || new Date().toISOString(),
-        status: e.status || "PENDING",
-        event: {
-          id: e.event_id || e.course_id || "",
-          title: String(e.event?.title || e.title || "بدون عنوان"),
-          slug: e.event?.slug || e.slug || "",
-          date: e.event?.date || e.date || new Date().toISOString(),
-          price: Number(e.event?.price || e.price || 0),
-          image: e.event?.image || e.image,
-          duration: e.event?.duration || e.duration,
-          meetingLink: e.event?.meetingLink || e.meetingLink,
-        },
-      }));
-      setEnrollments(mappedEnrollments);
-      setCart(
-        mappedEnrollments.filter((e: any) => e.paymentStatus === "PENDING"),
-      );
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (err) {
-      setError("خطا در پردازش پرداخت‌ها");
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -990,23 +1021,7 @@ export default function Profile() {
           <div className="lg:col-span-2">
             {activeTab === "enrollments" && (
               <EnrollmentsTab
-                enrollments={enrollments.map((e) => ({
-                  ...e,
-                  eventId: e.eventId || e.course_id || "",
-                  createdAt:
-                    e.createdAt || e.created_at || new Date().toISOString(),
-                  status: e.status || "PENDING",
-                  event: {
-                    id: e.eventId || e.course_id || "",
-                    title: String(e.event?.title || "بدون عنوان"),
-                    slug: e.event?.slug || "",
-                    date: e.event?.date || new Date().toISOString(),
-                    price: Number(e.event?.price || 0),
-                    image: e.event?.image,
-                    duration: e.event?.duration,
-                    meetingLink: e.event?.meetingLink,
-                  },
-                }))}
+                enrollments={enrollments}
                 navigate={navigate}
                 formatDate={formatDate}
                 formatPrice={formatPrice}
@@ -1018,24 +1033,10 @@ export default function Profile() {
 
             {activeTab === "cart" && (
               <CartTab
-                cart={cart}
-                processing={processing}
-                processingId={processingId}
-                totalCartPrice={cart.reduce(
-                  (sum, item) => sum + (item.event?.price || 0),
-                  0,
-                )}
-                isCartFree={
-                  cart.reduce(
-                    (sum, item) => sum + (item.event?.price || 0),
-                    0,
-                  ) === 0 && cart.length > 0
-                }
-                handleCartPayment={handleCartPayment}
-                handleRemoveFromCart={handleRemoveFromCart}
-                handlePayAll={handlePayAll}
-                formatPrice={formatPrice}
-                navigate={navigate}
+                externalCart={cart}
+                externalLoading={loading}
+                onRefresh={fetchProfile}
+                standalone={false}
               />
             )}
 

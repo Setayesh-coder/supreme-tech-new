@@ -4,7 +4,7 @@ import axios from "axios";
 // 🔥 استفاده از متغیر محیطی
 const API_URL = import.meta.env.VITE_API_URL || "https://supremetech.ir/api/v1";
 
-console.log("🌐 axios Base URL:", API_URL);
+// console.log("🌐 axios Base URL:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,

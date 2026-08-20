@@ -41,7 +41,7 @@ export default function EventEdit() {
       try {
         setLoading(true);
         const data = await eventsAPI.getById(id);
-        console.log("📥 داده دریافت شد:", data);
+        // console.log("📥 داده دریافت شد:", data);
 
         setFormData({
           title: data.title || "",
@@ -126,7 +126,7 @@ export default function EventEdit() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "events");
-      console.log("✅ تصویر آپلود شد:", response.url);
+      // console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -207,7 +207,7 @@ export default function EventEdit() {
       // (فقط در صورتی که بخواهید اسلاگ هم تغییر کند)
       // eventData.slug = generateSlug(formData.title);
 
-      console.log("📤 ارسال داده برای ویرایش:", eventData);
+      // console.log("📤 ارسال داده برای ویرایش:", eventData);
 
       await eventsAPI.update(id!, eventData);
       setSuccess("✅ رویداد با موفقیت ویرایش شد!");

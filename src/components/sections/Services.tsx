@@ -19,7 +19,7 @@ const services = [
     color: "from-blue-500 to-cyan-500",
     bgColor: "bg-blue-500/10",
     iconColor: "text-blue-400",
-    link: "/blog/ai-custom-agents",
+    link: "/blog/ایجنت-هوشمند-ai-agent-چیست؟-اتوماسیون-پیشرفته-و-کاهش-هزینههای-سازمان",
   },
   {
     id: 2,
@@ -30,7 +30,7 @@ const services = [
     color: "from-purple-500 to-pink-500",
     bgColor: "bg-purple-500/10",
     iconColor: "text-purple-400",
-    link: "/blog/ai-advanced-ml",
+    link: "/blog/کاربردهای-یادگیری-عمیق-و-پردازش-زبان-طبیعی-nlp-در-حل-چالشهای-واقعی-کسبوکارها",
   },
   {
     id: 3,
@@ -41,7 +41,7 @@ const services = [
     color: "from-green-500 to-emerald-500",
     bgColor: "bg-green-500/10",
     iconColor: "text-green-400",
-    link: "/blog/software-development",
+    link: "/blog/راهنمای-انتخاب-پشته-فناوری-tech-stack-برای-توسعه-سایتها-و-سامانههای-مدرن",
   },
   {
     id: 4,
@@ -52,7 +52,7 @@ const services = [
     color: "from-orange-500 to-red-500",
     bgColor: "bg-orange-500/10",
     iconColor: "text-orange-400",
-    link: "/blog/cloud-infrastructure",
+    link: "/blog/اهمیت-استقرار-ابری-و-معماری-مقیاسپذیر-در-بنچمارک-پروژههای-نرمافزاری-و-هوش-مصنوعی",
   },
   {
     id: 5,
@@ -63,7 +63,7 @@ const services = [
     color: "from-yellow-500 to-amber-500",
     bgColor: "bg-yellow-500/10",
     iconColor: "text-yellow-400",
-    link: "/blog/courses",
+    link: "/blog/نقشه-راه-یادگیری-برنامهنویسی-و-هوش-مصنوعی؛-از-صفر-تا-ورود-به-بازار-کار",
   },
   {
     id: 6,
@@ -74,7 +74,7 @@ const services = [
     color: "from-cyan-500 to-blue-500",
     bgColor: "bg-cyan-500/10",
     iconColor: "text-cyan-400",
-    link: "/blog/consulting",
+    link: "/blog/نقشه-راه-تحول-دیجیتال؛-چگونه-کسبوکارهای-سنتی-را-به-سامانههای-هوشمند-مجهز-کنیم؟",
   },
 ];
 

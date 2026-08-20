@@ -60,7 +60,7 @@ export default function EventCreate() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "events");
-      console.log("✅ تصویر آپلود شد:", response.url);
+      // console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -120,7 +120,7 @@ export default function EventCreate() {
         cover_image: imageUrl || "", // ✅ تغییر از image
       };
 
-      console.log("📤 ارسال داده:", eventData);
+      // console.log("📤 ارسال داده:", eventData);
 
       await eventsAPI.create(eventData);
       alert("✅ رویداد با موفقیت ایجاد شد!");

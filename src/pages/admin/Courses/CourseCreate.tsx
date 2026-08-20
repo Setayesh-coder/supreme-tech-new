@@ -140,7 +140,7 @@ export default function CourseCreate() {
         event_id: formData.event_id || undefined, // ✅ رویداد مرتبط
       };
 
-      console.log("📤 ارسال داده:", courseData);
+      // console.log("📤 ارسال داده:", courseData);
 
       await coursesAPI.create(courseData);
       alert("✅ دوره با موفقیت ایجاد شد!");

@@ -110,7 +110,7 @@ export default function ProfileInfo({
 
   // تبدیل تاریخ شمسی به میلادی برای ذخیره
   const handleDateChange = (persianDate: string) => {
-    console.log("📅 تاریخ شمسی انتخاب شده:", persianDate);
+    // console.log("📅 تاریخ شمسی انتخاب شده:", persianDate);
 
     if (persianDate) {
       const parts = persianDate.split("-");
@@ -123,7 +123,7 @@ export default function ProfileInfo({
           const gregorianDate = jalaliToGregorian(jy, jm, jd);
 
           if (gregorianDate) {
-            console.log(" تاریخ میلادی برای ذخیره:", gregorianDate);
+            // console.log(" تاریخ میلادی برای ذخیره:", gregorianDate);
 
             const event = {
               target: {

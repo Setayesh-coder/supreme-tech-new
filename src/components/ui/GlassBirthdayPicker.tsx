@@ -252,7 +252,7 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
       // فرمت شمسی: YYYY-MM-DD
       const persianDateString = `${newPersianYear}-${String(newPersianMonth).padStart(2, "0")}-${String(newPersianDay).padStart(2, "0")}`;
 
-      console.log("📅 تاریخ شمسی انتخاب شده:", persianDateString);
+      // console.log("📅 تاریخ شمسی انتخاب شده:", persianDateString);
 
       if (onChange) onChange(persianDateString);
 

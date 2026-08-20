@@ -38,7 +38,7 @@ export const authAPI = {
   // ========== پروفایل ==========
   getProfile: async () => {
     const response = await api.get("/users/me");
-    console.log("📥 پروفایل دریافت شده از API:", response.data);
+    // console.log("📥 پروفایل دریافت شده از API:", response.data);
     return response.data;
   },
 
@@ -62,7 +62,7 @@ export const authAPI = {
       }
     }
 
-    console.log("📤 ارسال به سرور:", filteredData);
+    // console.log("📤 ارسال به سرور:", filteredData);
 
     // اگر داده‌ای برای ارسال وجود نداشت
     if (Object.keys(filteredData).length === 0) {

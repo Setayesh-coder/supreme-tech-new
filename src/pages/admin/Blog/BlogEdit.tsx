@@ -33,7 +33,7 @@ export default function BlogEdit() {
       try {
         setLoading(true);
         const data = await blogAPI.getById(id);
-        console.log("📥 داده دریافت شد:", data);
+        // console.log("📥 داده دریافت شد:", data);
 
         setTitle(data.title || "");
         setContent(data.content || "");
@@ -103,7 +103,7 @@ export default function BlogEdit() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "blog");
-      console.log("✅ تصویر آپلود شد:", response.url);
+      // console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -152,7 +152,7 @@ export default function BlogEdit() {
         tags: tags,
       };
 
-      console.log("📤 ارسال داده برای ویرایش:", postData);
+      // console.log("📤 ارسال داده برای ویرایش:", postData);
 
       await blogAPI.update(id!, postData);
 

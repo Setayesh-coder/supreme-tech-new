@@ -84,7 +84,7 @@ export default function CoursePreRegisterModal({
         referral_source: formData.referral_source?.trim() || "",
       });
 
-      console.log("✅ پاسخ سرور:", response);
+      // console.log("✅ پاسخ سرور:", response);
 
       // ✅ ذخیره در localStorage با داده‌های کامل
       const enrollments = JSON.parse(

@@ -63,7 +63,7 @@ export default function BlogCreate() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "blog");
-      console.log("✅ تصویر آپلود شد:", response.url);
+      // console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -110,7 +110,7 @@ export default function BlogCreate() {
         published: published,
       };
 
-      console.log("📤 ارسال داده برای ایجاد پست:", data);
+      // console.log("📤 ارسال داده برای ایجاد پست:", data);
 
       await blogAPI.create(data);
 

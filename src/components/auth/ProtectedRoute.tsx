@@ -51,10 +51,10 @@ export function ProtectedRoute({
     const isAdminUser = isAdmin;
     const isEmployeeUser = isEmployee;
 
-    // لاگ برای دیباگ
-    console.log(
-      ` نقش: ${role}, ادمین: ${isAdminUser}, کارمند: ${isEmployeeUser}`,
-    );
+    // // لاگ برای دیباگ
+    // console.log(
+    //   ` نقش: ${role}, ادمین: ${isAdminUser}, کارمند: ${isEmployeeUser}`,
+    // );
 
     // چک کردن allowedRoles
     if (allowedRoles && allowedRoles.length > 0) {
@@ -96,12 +96,12 @@ export function ProtectedRoute({
     }
 
     // استفاده از isAdmin و isEmployee برای نمایش اطلاعات در console
-    const accessType = isAdminUser
-      ? "ادمین"
-      : isEmployeeUser
-        ? "کارمند"
-        : "کاربر عادی";
-    console.log(` دسترسی مجاز برای ${accessType} با نقش ${role}`);
+    // const accessType = isAdminUser
+    //   ? "ادمین"
+    //   : isEmployeeUser
+    //     ? "کارمند"
+    //     : "کاربر عادی";
+    // // console.log(` دسترسی مجاز برای ${accessType} با نقش ${role}`);
 
     return <>{children}</>;
   } catch (error) {

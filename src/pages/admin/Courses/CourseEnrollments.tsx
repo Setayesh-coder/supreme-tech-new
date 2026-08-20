@@ -189,7 +189,7 @@ export default function CourseEnrollments() {
       try {
         const enrollmentsData =
           await enrollmentsAPI.getCourseEnrollments(courseId);
-        console.log("📥 ثبت‌نام‌های دوره (خام):", enrollmentsData);
+        // console.log("📥 ثبت‌نام‌های دوره (خام):", enrollmentsData);
 
         const mappedEnrollments: Enrollment[] = await Promise.all(
           (enrollmentsData || []).map(async (item: any) => {
@@ -228,7 +228,7 @@ export default function CourseEnrollments() {
           }),
         );
 
-        console.log("📋 ثبت‌نام‌های تبدیل شده:", mappedEnrollments);
+        // console.log("📋 ثبت‌نام‌های تبدیل شده:", mappedEnrollments);
         setEnrollments(mappedEnrollments);
       } catch (err) {
         console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);

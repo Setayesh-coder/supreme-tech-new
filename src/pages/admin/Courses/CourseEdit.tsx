@@ -196,7 +196,7 @@ export default function CourseEdit() {
         event_id: formData.event_id || undefined,
       };
 
-      console.log("📤 ارسال داده برای ویرایش:", courseData);
+      // console.log("📤 ارسال داده برای ویرایش:", courseData);
 
       await coursesAPI.update(id!, courseData);
       setSuccess("✅ دوره با موفقیت ویرایش شد!");

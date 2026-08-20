@@ -5,7 +5,7 @@ import {
   CheckCircle,
   Clock,
   Award,
-  ShoppingCart,
+  // ShoppingCart,
   Ticket,
 } from "lucide-react";
 
@@ -51,13 +51,13 @@ export function ProfileStats({ stats, onStatClick }: ProfileStatsProps) {
       color: "purple",
       tab: "enrollments",
     },
-    {
-      icon: ShoppingCart,
-      label: "سبد خرید",
-      value: stats.cartCount,
-      color: "orange",
-      tab: "cart",
-    },
+    // {
+    //   icon: ShoppingCart,
+    //   label: "سبد خرید",
+    //   value: stats.cartCount,
+    //   color: "orange",
+    //   tab: "cart",
+    // },
     {
       icon: Ticket,
       label: "تیکت‌ها",

@@ -18,6 +18,7 @@ import {
   Award,
   CheckCircle,
   XCircle,
+  X,
 } from "lucide-react";
 
 interface Course {
@@ -176,7 +177,7 @@ export default function CourseList() {
         {/* ========== خطا ========== */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl">
-            ❌ {error}
+            <X /> {error}
           </div>
         )}
 

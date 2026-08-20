@@ -35,16 +35,16 @@ export default function Login() {
         password: formData.password,
       });
 
-      console.log("📥 پاسخ:", response);
+      // console.log("📥 پاسخ:", response);
 
       if (response && response.token) {
         // 🔥 توکن و کاربر ذخیره می‌شود (در authAPI انجام می‌شود)
         // اما برای اطمینان، دوباره بررسی می‌کنیم
-        const token = localStorage.getItem("token");
-        const user = localStorage.getItem("user");
-        
-        console.log("✅ توکن ذخیره شد:", !!token);
-        console.log("✅ کاربر ذخیره شد:", !!user);
+        // const token = localStorage.getItem("token");
+        // const user = localStorage.getItem("user");
+
+        // console.log("✅ توکن ذخیره شد:", !!token);
+        // console.log("✅ کاربر ذخیره شد:", !!user);
 
         // 🔥 هدایت به پروفایل
         navigate("/profile", { replace: true });
@@ -62,7 +62,10 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <Link to="/" className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors">
+        <Link
+          to="/"
+          className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
+        >
           <ArrowLeft size={18} className="ml-2" />
           بازگشت به صفحه اصلی
         </Link>
@@ -148,7 +151,10 @@ export default function Login() {
           <div className="text-center mt-6">
             <p className="text-gray-400 text-sm">
               حساب کاربری ندارید؟{" "}
-              <Link to="/register" className="text-blue-400 hover:text-blue-300 transition-colors">
+              <Link
+                to="/register"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
                 ثبت‌نام کنید
               </Link>
             </p>

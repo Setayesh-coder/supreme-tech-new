@@ -127,11 +127,9 @@ export default function PaymentDetailsModal({
           {/* هدر */}
           <div className="mb-6 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white">
-              📋 جزئیات پرداخت
+              جزئیات پرداخت
             </h2>
-            <p className="text-gray-400 text-sm mt-1">
-              {courseTitle || "دوره آموزشی"}
-            </p>
+            <p className="text-gray-400 text-sm mt-1">{courseTitle}</p>
           </div>
 
           {/* اطلاعات کاربر */}
@@ -154,7 +152,7 @@ export default function PaymentDetailsModal({
             {/* اطلاعات کاربر */}
             <div className="bg-white/5 rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-medium text-gray-400 mb-2">
-                👤 اطلاعات کاربر
+                اطلاعات کاربر
               </h3>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
@@ -183,7 +181,7 @@ export default function PaymentDetailsModal({
             {/* اطلاعات پرداخت */}
             <div className="bg-white/5 rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-medium text-gray-400 mb-2">
-                💰 اطلاعات پرداخت
+                اطلاعات پرداخت
               </h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>

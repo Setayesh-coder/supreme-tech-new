@@ -36,7 +36,7 @@ export default function HeroEdit() {
       try {
         setLoading(true);
         const data = await heroAPI.getById(id);
-        console.log("📥 داده اسلاید:", data);
+        // console.log("📥 داده اسلاید:", data);
 
         setFormData({
           title: data.title || "",
@@ -117,7 +117,7 @@ export default function HeroEdit() {
     try {
       setUploading(true);
       const response = await uploadAPI.uploadImage(file, "hero");
-      console.log("✅ تصویر آپلود شد:", response.url);
+      // console.log("✅ تصویر آپلود شد:", response.url);
       return response.url;
     } catch (error: any) {
       console.error("❌ خطا در آپلود:", error);
@@ -170,7 +170,7 @@ export default function HeroEdit() {
         is_active: formData.is_active,
       };
 
-      console.log("📤 ارسال داده برای ویرایش:", slideData);
+      // console.log("📤 ارسال داده برای ویرایش:", slideData);
 
       await heroAPI.update(id!, slideData);
       setSuccess("✅ اسلاید با موفقیت ویرایش شد!");

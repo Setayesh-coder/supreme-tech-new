@@ -18,7 +18,7 @@ export const settingsAPI = {
 
   update: async (data: any) => {
     const token = localStorage.getItem("token") || "";
-    console.log("📤 بروزرسانی تنظیمات:", data);
+    // console.log("📤 بروزرسانی تنظیمات:", data);
 
     // ✅ فقط فیلدهایی که بک‌اند قبول می‌کند
     const payload: any = {};
@@ -42,13 +42,13 @@ export const settingsAPI = {
     if (data.maintenance_mode !== undefined)
       payload.maintenance_mode = data.maintenance_mode;
 
-    console.log("📤 payload نهایی:", payload);
+    // console.log("📤 payload نهایی:", payload);
 
     // ✅ استفاده از /settings/ با خط تیره در انتها
     const response = await api.put("/settings/", payload, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    console.log("📥 پاسخ سرور:", response.data);
+    // console.log("📥 پاسخ سرور:", response.data);
     return response.data;
   },
 

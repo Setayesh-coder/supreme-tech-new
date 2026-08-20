@@ -36,7 +36,7 @@ export default function Partners() {
         }
 
         const data = await response.json();
-        console.log("📦 داده‌های همکاران:", data);
+        // console.log("📦 داده‌های همکاران:", data);
         setPartners(data);
       } catch (err) {
         console.error("❌ خطا در دریافت همکاران:", err);
@@ -52,7 +52,7 @@ export default function Partners() {
   // 🔥 تابع باز کردن لینک
   const handlePartnerClick = (url: string | undefined, name: string) => {
     if (url && url !== "" && url !== "#") {
-      console.log("🔗 باز کردن لینک:", name, "->", url);
+      // console.log("🔗 باز کردن لینک:", name, "->", url);
       window.open(url, "_blank", "noopener,noreferrer");
     } else {
       console.warn("⚠️ لینک معتبر نیست برای:", name);
@@ -115,12 +115,15 @@ export default function Partners() {
 
         <div className="flex flex-wrap justify-center gap-2 md:gap-4 lg:gap-6">
           {partners.map((partner) => {
-            const hasValidUrl = partner.website && partner.website !== "" && partner.website !== "#";
-            
+            const hasValidUrl =
+              partner.website &&
+              partner.website !== "" &&
+              partner.website !== "#";
+
             return (
               <div
                 key={partner.id}
-                className={`flex flex-col items-center ${hasValidUrl ? 'cursor-pointer' : 'cursor-default'}`}
+                className={`flex flex-col items-center ${hasValidUrl ? "cursor-pointer" : "cursor-default"}`}
                 onClick={() => {
                   if (hasValidUrl) {
                     handlePartnerClick(partner.website, partner.name);
@@ -146,13 +149,13 @@ export default function Partners() {
                   ) : (
                     <Building2 className="w-5 h-5 md:w-7 md:h-7 text-gray-500 group-hover:text-blue-400 transition-colors" />
                   )}
-                  
+
                   {/* 🔥 آیکون لینک خارجی */}
                   {hasValidUrl && (
                     <ExternalLink className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   )}
                 </LiquidGlassCard>
-                
+
                 {/* 🔥 اسم با قابلیت شکستن خط */}
                 <div className="text-gray-400 text-[8px] md:text-xs group-hover:text-blue-400 transition mt-1 text-center max-w-[60px] md:max-w-[80px] lg:max-w-[96px] break-words leading-tight">
                   {partner.name}

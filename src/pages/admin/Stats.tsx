@@ -56,14 +56,14 @@ export default function Stats() {
         const blog = await statsAPI.getBlogStats();
         setBlogStats(blog);
       } catch (e) {
-        console.log("آمار بلاگ در دسترس نیست");
+        // console.log("آمار بلاگ در دسترس نیست");
       }
 
       try {
         const events = await statsAPI.getEventStats();
         setEventStats(events);
       } catch (e) {
-        console.log("آمار رویدادها در دسترس نیست");
+        // console.log("آمار رویدادها در دسترس نیست");
       }
     } catch (error) {
       console.error("❌ خطا:", error);
