@@ -145,7 +145,7 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
   value,
   initialDate,
   className = "",
-  label = "تاریخ تولد",
+  label = "",
   disabled = false,
 }) => {
   // تابع تبدیل string تاریخ شمسی به object
