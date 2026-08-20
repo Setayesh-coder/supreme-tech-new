@@ -16,7 +16,6 @@ import {
   Loader2,
   AlertCircle,
   Zap,
-  // ArrowLeft,
   Ticket,
   X,
 } from "lucide-react";
@@ -34,11 +33,9 @@ const VALID_COUPONS: Record<
 };
 
 interface CartTabProps {
-  // اگر از خارج داده می‌آید (مثل Profile)
   externalCart?: any[];
   externalLoading?: boolean;
   onRefresh?: () => void;
-  // حالت مستقل (مثل صفحه Cart)
   standalone?: boolean;
 }
 
@@ -82,7 +79,7 @@ export function CartTab({
   // ✅ بررسی آیا کاربر لاگین است
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // ✅ دریافت داده‌های سبد خرید (فقط در حالت standalone)
+  // ✅ دریافت داده‌های سبد خرید (فقط در حالت standalone) - فقط از بک‌اند
   const fetchCart = async () => {
     if (!standalone || externalCart !== undefined) return;
 
@@ -90,25 +87,20 @@ export function CartTab({
       setInternalLoading(true);
       setError("");
 
-      let enrollmentsData = JSON.parse(
-        localStorage.getItem("enrollments") || "[]",
-      );
+      // ✅ فقط از بک‌اند دریافت کن (بدون localStorage)
+      let enrollmentsData: any[] = [];
 
       if (isLoggedIn) {
         try {
-          const apiEnrollments = await enrollmentsAPI.getMyEnrollments();
-          const combined = [...apiEnrollments, ...enrollmentsData];
-          enrollmentsData = combined.filter(
-            (item, index, self) =>
-              self.findIndex(
-                (i) => i.id === item.id || i.course_id === item.course_id,
-              ) === index,
-          );
+          enrollmentsData = await enrollmentsAPI.getMyEnrollments();
+          console.log("📥 API enrollments (Cart):", enrollmentsData);
         } catch (err) {
-          console.warn("⚠️ خطا در دریافت از API:", err);
+          console.error("❌ خطا در دریافت از API:", err);
+          enrollmentsData = [];
         }
       }
 
+      // ✅ فیلتر آیتم‌های در انتظار پرداخت
       const pendingItems = enrollmentsData.filter(
         (e: any) =>
           e.paymentStatus === "PENDING" ||
@@ -116,10 +108,12 @@ export function CartTab({
           e.status === "PENDING",
       );
 
+      // ✅ دریافت اطلاعات کامل دوره
       const mappedCart = await Promise.all(
         pendingItems.map(async (item: any) => {
-          const course_id = item.course_id || item.event_id || item.id;
+          const course_id = item.course_id || item.eventId || item.id;
 
+          // اگر event وجود دارد
           if (
             item.event &&
             item.event.title &&
@@ -141,6 +135,7 @@ export function CartTab({
             };
           }
 
+          // اگر course وجود دارد
           if (item.course && item.course.title) {
             return {
               ...item,
@@ -160,6 +155,7 @@ export function CartTab({
             };
           }
 
+          // از API دریافت کن
           if (isLoggedIn) {
             try {
               const course = await coursesAPI.getById(course_id);
@@ -184,6 +180,7 @@ export function CartTab({
             }
           }
 
+          // fallback
           return {
             ...item,
             id: item.id || course_id,
@@ -203,6 +200,7 @@ export function CartTab({
 
       setInternalCart(mappedCart);
 
+      // ✅ محاسبه تخفیف اگر وجود دارد
       if (discountInfo && mappedCart.length > 0) {
         const total = mappedCart.reduce(
           (sum, item) => sum + (item.event?.price || 0),
@@ -236,7 +234,7 @@ export function CartTab({
     }
   };
 
-  // ✅ اعمال کد تخفیف
+  // ✅ اعمال کد تخفیف - فقط در حافظه (بدون localStorage)
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       setError("لطفاً کد تخفیف را وارد کنید");
@@ -279,7 +277,8 @@ export function CartTab({
       };
 
       setDiscountInfo(discountData);
-      localStorage.setItem("discountInfo", JSON.stringify(discountData));
+      // ❌ حذف localStorage.setItem
+      // localStorage.setItem("discountInfo", JSON.stringify(discountData));
 
       setSuccess(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
       setCouponCode("");
@@ -292,46 +291,37 @@ export function CartTab({
     }
   };
 
-  // ✅ حذف کد تخفیف
+  // ✅ حذف کد تخفیف - فقط از حافظه
   const handleRemoveCoupon = () => {
     setDiscountInfo(null);
-    localStorage.removeItem("discountInfo");
+    // ❌ حذف localStorage.removeItem
+    // localStorage.removeItem("discountInfo");
     setSuccess("✅ کد تخفیف با موفقیت حذف شد");
     setTimeout(() => setSuccess(""), 3000);
   };
 
-  // ✅ حذف از سبد خرید
+  // ✅ حذف از سبد خرید - فقط از بک‌اند
   const handleRemove = async (enrollmentId: string) => {
     if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
 
     try {
-      // به‌روزرسانی localStorage
-      const enrollments = JSON.parse(
-        localStorage.getItem("enrollments") || "[]",
-      );
-      const updated = enrollments.filter(
-        (e: any) =>
-          e.id !== enrollmentId &&
-          e.course_id !== enrollmentId &&
-          e.eventId !== enrollmentId,
-      );
-      localStorage.setItem("enrollments", JSON.stringify(updated));
+      // ✅ حذف از بک‌اند
+      await enrollmentsAPI.delete(enrollmentId);
 
-      const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
-      const updatedCart = cartItems.filter((id: string) => id !== enrollmentId);
-      localStorage.setItem("cart", JSON.stringify(updatedCart));
-
-      // به‌روزرسانی state
+      // ✅ به‌روزرسانی state
       if (standalone) {
         setInternalCart(cart.filter((item) => item.id !== enrollmentId));
+        // دوباره از بک‌اند دریافت کن
+        await fetchCart();
       } else if (onRefresh) {
         onRefresh();
       }
 
       setSuccess("✅ آیتم از سبد خرید حذف شد");
       setTimeout(() => setSuccess(""), 2000);
-    } catch (err) {
-      setError("خطا در حذف آیتم");
+    } catch (err: any) {
+      console.error("❌ خطا در حذف آیتم:", err);
+      setError(err.response?.data?.detail || "خطا در حذف آیتم");
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -453,15 +443,8 @@ export function CartTab({
   // ✅ بارگذاری اولیه (فقط در حالت standalone)
   useEffect(() => {
     if (standalone) {
-      const savedDiscount = localStorage.getItem("discountInfo");
-      if (savedDiscount) {
-        try {
-          const parsed = JSON.parse(savedDiscount);
-          setDiscountInfo(parsed);
-        } catch {
-          localStorage.removeItem("discountInfo");
-        }
-      }
+      // ❌ حذف خواندن از localStorage
+      // const savedDiscount = localStorage.getItem("discountInfo");
       fetchCart();
     }
   }, [standalone]);

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { coursesAPI } from "../../lib/api/courses";
+import { enrollmentsAPI } from "../../lib/api/enrollments"; // ✅ اضافه شد
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
@@ -17,7 +18,6 @@ import {
   FileArchive,
   FileText,
   CheckCircle,
-  // Loader2,
   PlayCircle,
   Download,
   BookOpen,
@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
-// import { enrollmentsAPI } from "../../lib/api/enrollments";
-import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal"; // ✅ اضافه شد
+import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal";
 
 // ✅ تایپ Course
 interface Course {
@@ -122,17 +121,26 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState(false);
-  // const [, setEnrolling] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState(true);
 
   // ✅ State برای مودال پیش‌ثبت‌نام
   const [showPreRegister, setShowPreRegister] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
 
-  // ✅ تابع بررسی ثبت‌نام
-  const checkUserEnrollment = (courseId: string): boolean => {
-    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
-    return enrollments.includes(courseId);
+  // ✅ تابع بررسی ثبت‌نام از بک‌اند
+  const checkUserEnrollment = async (courseId: string): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return false;
+
+      const enrollments = await enrollmentsAPI.getMyEnrollments();
+      return enrollments.some(
+        (e: any) => e.course_id === courseId || e.eventId === courseId,
+      );
+    } catch (error) {
+      console.error("❌ خطا در بررسی ثبت‌نام:", error);
+      return false;
+    }
   };
 
   useEffect(() => {
@@ -147,6 +155,9 @@ export default function CourseDetail() {
         const foundCourse = await coursesAPI.getBySlug(slug);
 
         if (foundCourse) {
+          // ✅ بررسی ثبت‌نام از بک‌اند
+          const userEnrolled = await checkUserEnrollment(foundCourse.id);
+
           // ✅ نگاشت داده‌ها به تایپ Course
           const mappedCourse: Course = {
             ...foundCourse,
@@ -159,7 +170,7 @@ export default function CourseDetail() {
             enrolledCount: (foundCourse as any).enrolledCount || 0,
             isFeatured: (foundCourse as any).isFeatured || false,
             level: (foundCourse as any).level || undefined,
-            userEnrolled: checkUserEnrollment(foundCourse.id),
+            userEnrolled: userEnrolled,
             sessions: (foundCourse as any).sessions || [],
             event: (foundCourse as any).event
               ? {
@@ -174,7 +185,7 @@ export default function CourseDetail() {
           setError("دوره یافت نشد");
         }
       } catch (err) {
-        console.error(" خطا:", err);
+        console.error("❌ خطا:", err);
         setError("دوره مورد نظر یافت نشد");
       } finally {
         setLoading(false);
@@ -198,68 +209,29 @@ export default function CourseDetail() {
     setShowPreRegister(true);
   };
 
-  // ✅ تابع بعد از ثبت موفق
-  const handlePreRegisterSuccess = () => {
+  // ✅ تابع بعد از ثبت موفق - فقط از بک‌اند استفاده می‌کند
+  const handlePreRegisterSuccess = async () => {
     if (!course) return;
 
-    // به‌روزرسانی وضعیت دوره
-    setCourse({
-      ...course,
-      userEnrolled: true,
-      enrolledCount: (course.enrolledCount || 0) + 1,
-    });
+    try {
+      // ✅ دوباره از بک‌اند دریافت کن تا وضعیت به‌روز شود
+      const userEnrolled = await checkUserEnrollment(course.id);
 
-    // ذخیره در localStorage
-    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
-    if (!enrollments.includes(course.id)) {
-      enrollments.push(course.id);
-      localStorage.setItem("enrollments", JSON.stringify(enrollments));
+      // ✅ به‌روزرسانی وضعیت دوره با داده‌های بک‌اند
+      setCourse({
+        ...course,
+        userEnrolled: userEnrolled,
+        enrolledCount: (course.enrolledCount || 0) + 1,
+      });
+
+      // ✅ نمایش پیام موفقیت
+      alert(
+        "✅ پیش‌ثبت‌نام با موفقیت انجام شد! دوره به سبد خرید شما اضافه شد.",
+      );
+    } catch (error) {
+      console.error("❌ خطا در به‌روزرسانی وضعیت:", error);
     }
-
-    alert("✅ پیش‌ثبت‌نام با موفقیت انجام شد!");
   };
-
-  // ✅ تابع ثبت‌نام مستقیم (برای کاربران قبلی)
-  // const handleEnroll = async () => {
-  //   if (!course) return;
-
-  //   const token = localStorage.getItem("token");
-  //   if (!token) {
-  //     alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
-  //     navigate("/login");
-  //     return;
-  //   }
-
-  //   setEnrolling(true);
-
-  //   try {
-  //     await enrollmentsAPI.create({ courseId: course.id });
-
-  //     const enrollments = JSON.parse(
-  //       localStorage.getItem("enrollments") || "[]",
-  //     );
-  //     if (!enrollments.includes(course.id)) {
-  //       enrollments.push(course.id);
-  //       localStorage.setItem("enrollments", JSON.stringify(enrollments));
-  //     }
-
-  //     setCourse({
-  //       ...course,
-  //       userEnrolled: true,
-  //       enrolledCount: (course.enrolledCount || 0) + 1,
-  //     });
-
-  //     alert(" ثبت‌نام با موفقیت انجام شد!");
-  //   } catch (err: any) {
-  //     if (err.response?.status === 422) {
-  //       handleOpenPreRegister();
-  //     } else {
-  //       alert(err.response?.data?.error || "خطا در ثبت‌نام");
-  //     }
-  //   } finally {
-  //     setEnrolling(false);
-  //   }
-  // };
 
   if (loading) {
     return <EventDetailSkeleton />;
@@ -706,29 +678,6 @@ export default function CourseDetail() {
                 </div>
               )}
             </LiquidGlassCard>
-
-            {course.event && (
-              <LiquidGlassCard
-                className="p-4 md:p-6"
-                borderRadius="24px"
-                blurIntensity="lg"
-                glowIntensity="md"
-                shadowIntensity="lg"
-              >
-                <h3 className="text-sm font-medium text-gray-300 mb-3">
-                  رویداد مرتبط
-                </h3>
-                <Link
-                  to={`/events/${course.event.slug}`}
-                  className="block text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Award size={16} />
-                    <span>{course.event.title}</span>
-                  </div>
-                </Link>
-              </LiquidGlassCard>
-            )}
 
             {course.event && (
               <LiquidGlassCard

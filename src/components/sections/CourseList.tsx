@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { coursesAPI } from "../../lib/api/courses";
+import { enrollmentsAPI } from "../../lib/api/enrollments";
 import CoursePreRegisterModal from "../course/CoursePreRegisterModal";
 import {
   ShoppingBag,
@@ -68,7 +69,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enrolling] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
@@ -78,9 +79,27 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [selectedCourseTitle, setSelectedCourseTitle] = useState<string>("");
 
+  // ✅ بررسی آیا کاربر لاگین است
+  const isLoggedIn = !!localStorage.getItem("token");
+
   useEffect(() => {
     fetchCourses();
   }, [eventId]);
+
+  // ✅ بررسی ثبت‌نام کاربر از بک‌اند
+  const checkUserEnrollment = async (courseId: string): Promise<boolean> => {
+    if (!isLoggedIn) return false;
+
+    try {
+      const enrollments = await enrollmentsAPI.getMyEnrollments();
+      return enrollments.some(
+        (e: any) => e.course_id === courseId || e.eventId === courseId,
+      );
+    } catch (error) {
+      console.error("❌ خطا در بررسی ثبت‌نام:", error);
+      return false;
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -95,41 +114,39 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
 
       const fetchedCourses = data.items || [];
 
-      const coursesWithEnrollment: Course[] = fetchedCourses.map(
-        (course: any) => ({
-          ...course,
-          image: course.cover_image,
-          duration: course.duration_hours
-            ? `${course.duration_hours} ساعت`
-            : undefined,
-          capacity: course.capacity || 0,
-          enrolledCount: course.enrolledCount || 0,
-          isFeatured: course.isFeatured || false,
-          level: course.level || undefined,
-          userEnrolled: checkUserEnrollment(course.id),
-          sessions: course.sessions || [],
-          endDate: course.endDate || undefined,
+      // ✅ دریافت وضعیت ثبت‌نام برای هر دوره از بک‌اند
+      const coursesWithEnrollment: Course[] = await Promise.all(
+        fetchedCourses.map(async (course: any) => {
+          const userEnrolled = await checkUserEnrollment(course.id);
+          return {
+            ...course,
+            image: course.cover_image,
+            duration: course.duration_hours
+              ? `${course.duration_hours} ساعت`
+              : undefined,
+            capacity: course.capacity || 0,
+            enrolledCount: course.enrolledCount || 0,
+            isFeatured: course.isFeatured || false,
+            level: course.level || undefined,
+            userEnrolled: userEnrolled,
+            sessions: course.sessions || [],
+            endDate: course.endDate || undefined,
+          };
         }),
       );
 
       setCourses(coursesWithEnrollment);
     } catch (err) {
-      console.error(" خطا:", err);
+      console.error("❌ خطا:", err);
       setError("خطا در دریافت دوره‌ها");
     } finally {
       setLoading(false);
     }
   };
 
-  const checkUserEnrollment = (courseId: string): boolean => {
-    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
-    return enrollments.includes(courseId);
-  };
-
   // ✅ باز کردن مودال پیش‌ثبت‌نام
   const handleOpenPreRegister = (courseId: string, courseTitle: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (!isLoggedIn) {
       alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
       navigate("/login");
       return;
@@ -140,44 +157,42 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     setShowPreRegister(true);
   };
 
-  // ✅ تابع بعد از ثبت موفق - اضافه کردن به سبد خرید
-  const handlePreRegisterSuccess = (courseId: string, courseTitle: string) => {
-    // ✅ 1. اضافه کردن به localStorage
-    const enrollments = JSON.parse(localStorage.getItem("enrollments") || "[]");
-    if (!enrollments.includes(courseId)) {
-      enrollments.push(courseId);
-      localStorage.setItem("enrollments", JSON.stringify(enrollments));
+  // ✅ تابع بعد از ثبت موفق - فقط از بک‌اند استفاده می‌کند
+  const handlePreRegisterSuccess = async (
+    courseId: string,
+    courseTitle: string,
+  ) => {
+    setEnrolling(courseId);
+
+    try {
+      // ✅ دوباره از بک‌اند بررسی کن
+      const userEnrolled = await checkUserEnrollment(courseId);
+
+      // ✅ به‌روزرسانی لیست دوره‌ها
+      setCourses(
+        courses.map((c) =>
+          c.id === courseId
+            ? {
+                ...c,
+                userEnrolled: userEnrolled,
+                enrolledCount: (c.enrolledCount || 0) + 1,
+              }
+            : c,
+        ),
+      );
+
+      // ✅ نمایش پیام موفقیت
+      setSuccess(`✅ دوره "${courseTitle}" به سبد خرید اضافه شد!`);
+      setTimeout(() => setSuccess(""), 5000);
+
+      // ✅ بستن مودال
+      setShowPreRegister(false);
+    } catch (error) {
+      console.error("❌ خطا در به‌روزرسانی:", error);
+      setError("خطا در به‌روزرسانی وضعیت ثبت‌نام");
+    } finally {
+      setEnrolling(null);
     }
-
-    // ✅ 2. اضافه کردن به سبد خرید (cart)
-    const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
-    if (!cartItems.includes(courseId)) {
-      cartItems.push(courseId);
-      localStorage.setItem("cart", JSON.stringify(cartItems));
-    }
-
-    // ✅ 3. به‌روزرسانی لیست دوره‌ها
-    setCourses(
-      courses.map((c) =>
-        c.id === courseId
-          ? {
-              ...c,
-              userEnrolled: true,
-              enrolledCount: (c.enrolledCount || 0) + 1,
-            }
-          : c,
-      ),
-    );
-
-    // ✅ 4. نمایش پیام موفقیت با گزینه رفتن به سبد خرید
-    setSuccess(` دوره "${courseTitle}" به سبد خرید اضافه شد!`);
-    setTimeout(() => setSuccess(""), 5000);
-
-    // ✅ 5. بستن مودال
-    setShowPreRegister(false);
-
-    // ✅ 6. آپشن: هدایت خودکار به سبد خرید (اختیاری)
-    // navigate("/cart");
   };
 
   // ✅ تابع رفتن به سبد خرید
@@ -230,10 +245,8 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
       {success && (
         <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>
-              <CheckCircle />
-            </span>{" "}
-            {success}
+            <CheckCircle className="w-5 h-5" />
+            <span>{success}</span>
           </div>
           <button
             onClick={goToCart}
@@ -402,7 +415,21 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                               key={session.id}
                               className="bg-white/5 rounded-lg p-3 space-y-2"
                             >
-                              {/* محتوای جلسه */}
+                              <div className="flex justify-between items-start">
+                                <h6 className="text-sm text-white">
+                                  {session.title}
+                                </h6>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(session.date).toLocaleDateString(
+                                    "fa-IR",
+                                  )}
+                                </span>
+                              </div>
+                              {session.description && (
+                                <p className="text-xs text-gray-400">
+                                  {session.description}
+                                </p>
+                              )}
                             </div>
                           );
                         })
