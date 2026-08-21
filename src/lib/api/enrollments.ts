@@ -216,5 +216,17 @@ export const enrollmentsAPI = {
    */
   getMyCourses: async (): Promise<Enrollment[]> => {
     return enrollmentsAPI.getMyEnrollments();
+  } /**
+   * 📋 دریافت یک ثبت‌نام خاص
+   * GET /api/v1/enrollments/{id}
+   */,
+  getById: async (id: string): Promise<Enrollment> => {
+    try {
+      const response = await api.get(`/enrollments/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در دریافت ثبت‌نام ${id}:`, error);
+      throw error;
+    }
   },
 };

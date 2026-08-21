@@ -6,7 +6,8 @@ import {
   enrollmentsAPI,
   type Enrollment as APIEnrollment,
 } from "../../lib/api/enrollments";
-import { coursesAPI } from "../../lib/api/courses";
+import { cartAPI } from "../../lib/api/cart";
+// import { coursesAPI } from "../../lib/api/courses";
 import { ticketsAPI, type Ticket } from "../../lib/api/tickets";
 import { messagesAPI } from "../../lib/api/messages";
 import { uploadAPI } from "../../lib/api/upload";
@@ -185,7 +186,7 @@ export default function Profile() {
   // ============== States ==============
   const [user, setUser] = useState<UserProfile | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [cart, setCart] = useState<Enrollment[]>([]);
+  const [cart, setCart] = useState<any[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [replies, setReplies] = useState<MessageReply[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,52 +255,52 @@ export default function Profile() {
   };
 
   // ✅ تابع صحیح دریافت اطلاعات دوره
-  const fetchCourseDetails = async (courseId: string) => {
-    if (
-      !courseId ||
-      courseId === "undefined" ||
-      courseId === "null" ||
-      courseId.trim() === ""
-    ) {
-      console.warn("⚠️ courseId نامعتبر:", courseId);
-      return {
-        id: courseId || "unknown",
-        title: "دوره نامشخص",
-        slug: "",
-        date: new Date().toISOString(),
-        price: 0,
-        image: "",
-        duration: "",
-        meetingLink: "",
-      };
-    }
+  // const fetchCourseDetails = async (courseId: string) => {
+  //   if (
+  //     !courseId ||
+  //     courseId === "undefined" ||
+  //     courseId === "null" ||
+  //     courseId.trim() === ""
+  //   ) {
+  //     console.warn("⚠️ courseId نامعتبر:", courseId);
+  //     return {
+  //       id: courseId || "unknown",
+  //       title: "دوره نامشخص",
+  //       slug: "",
+  //       date: new Date().toISOString(),
+  //       price: 0,
+  //       image: "",
+  //       duration: "",
+  //       meetingLink: "",
+  //     };
+  //   }
 
-    try {
-      console.log(`🔄 دریافت دوره: ${courseId}`);
-      const course = await coursesAPI.getById(courseId);
-      return {
-        id: course.id,
-        title: course.title || "دوره آموزشی",
-        slug: course.slug || "",
-        date: course.created_at || new Date().toISOString(),
-        price: course.price || 0,
-        image: course.cover_image || "",
-        duration: course.duration_hours ? `${course.duration_hours} ساعت` : "",
-      };
-    } catch (error) {
-      console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
-      return {
-        id: courseId,
-        title: "دوره آموزشی",
-        slug: "",
-        date: new Date().toISOString(),
-        price: 0,
-        image: "",
-        duration: "",
-        meetingLink: "",
-      };
-    }
-  };
+  //   try {
+  //     console.log(`🔄 دریافت دوره: ${courseId}`);
+  //     const course = await coursesAPI.getById(courseId);
+  //     return {
+  //       id: course.id,
+  //       title: course.title || "دوره آموزشی",
+  //       slug: course.slug || "",
+  //       date: course.created_at || new Date().toISOString(),
+  //       price: course.price || 0,
+  //       image: course.cover_image || "",
+  //       duration: course.duration_hours ? `${course.duration_hours} ساعت` : "",
+  //     };
+  //   } catch (error) {
+  //     console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
+  //     return {
+  //       id: courseId,
+  //       title: "دوره آموزشی",
+  //       slug: "",
+  //       date: new Date().toISOString(),
+  //       price: 0,
+  //       image: "",
+  //       duration: "",
+  //       meetingLink: "",
+  //     };
+  //   }
+  // };
 
   // ✅ تابع fetchProfile - فقط از بک‌اند استفاده می‌کند
   const fetchProfile = async () => {
@@ -312,7 +313,7 @@ export default function Profile() {
         return;
       }
 
-      // ✅ دریافت اطلاعات کاربر از بک‌اند (نه localStorage)
+      // ✅ دریافت اطلاعات کاربر از بک‌اند
       try {
         const profileData = await usersAPI.getMyProfile();
         if (profileData) {
@@ -340,61 +341,19 @@ export default function Profile() {
       }
 
       // ============================================
-      // ✅ دریافت ثبت‌نام‌ها - فقط از بک‌اند
+      // ✅ دریافت ثبت‌نام‌های نهایی (CONFIRMED و WAITING)
       // ============================================
       try {
-        // ✅ فقط از API دریافت کن (بدون localStorage)
-        let apiEnrollments: any[] = [];
-        try {
-          apiEnrollments = await enrollmentsAPI.getMyEnrollments();
-          console.log("📥 API enrollments:", apiEnrollments);
-        } catch (err) {
-          console.error("❌ خطا در دریافت ثبت‌نام از API:", err);
-          apiEnrollments = [];
-        }
+        const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
+        console.log("📥 ثبت‌نام‌های نهایی:", enrollmentsData);
 
-        // ✅ دریافت اطلاعات دوره‌ها
         const mappedEnrollments: Enrollment[] = await Promise.all(
-          apiEnrollments.map(async (item: any) => {
+          enrollmentsData.map(async (item: any) => {
             const courseId = item.course_id || item.eventId || item.id;
-
-            if (!courseId || courseId === "undefined" || courseId === "null") {
-              console.warn("⚠️ courseId نامعتبر:", courseId);
-              return null;
-            }
-
-            let courseData;
-            try {
-              if (
-                item.event &&
-                item.event.title &&
-                item.event.title !== "بدون عنوان"
-              ) {
-                courseData = item.event;
-              } else if (item.course && item.course.title) {
-                courseData = item.course;
-              } else {
-                courseData = await fetchCourseDetails(courseId);
-              }
-            } catch (error) {
-              console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
-              courseData = {
-                id: courseId,
-                title: "دوره آموزشی",
-                slug: "",
-                date: new Date().toISOString(),
-                price: 0,
-                image: "",
-                duration: "",
-                meetingLink: "",
-              };
-            }
-
+            // ... بقیه کد mapping
             return {
               ...item,
-              id:
-                item.id ||
-                `enr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+              id: item.id || `enr_${Date.now()}`,
               eventId: item.eventId || item.event_id || courseId,
               paymentStatus:
                 item.paymentStatus || item.payment_status || "PENDING",
@@ -402,56 +361,72 @@ export default function Profile() {
                 item.createdAt || item.created_at || new Date().toISOString(),
               status: item.status || "PENDING",
               event: {
-                id: courseData.id || courseId,
-                title: String(courseData.title || "دوره آموزشی"),
-                slug: courseData.slug || "",
-                date: courseData.date || new Date().toISOString(),
-                price: Number(courseData.price || 0),
-                image: courseData.image || "",
-                duration: courseData.duration || "",
-                meetingLink: courseData.meetingLink || "",
+                id: courseId,
+                title: item.event?.title || "دوره آموزشی",
+                slug: item.event?.slug || "",
+                date: item.event?.date || new Date().toISOString(),
+                price: item.event?.price || 0,
+                image: item.event?.image || "",
+                duration: item.event?.duration || "",
+                meetingLink: item.event?.meetingLink || "",
               },
               course: {
-                id: courseData.id || courseId,
-                title: String(courseData.title || "دوره آموزشی"),
-                slug: courseData.slug || "",
-                date: courseData.date || new Date().toISOString(),
-                price: Number(courseData.price || 0),
-                image: courseData.image || "",
-                duration: courseData.duration || "",
-                meetingLink: courseData.meetingLink || "",
+                id: courseId,
+                title: item.course?.title || "دوره آموزشی",
+                slug: item.course?.slug || "",
+                date: item.course?.date || new Date().toISOString(),
+                price: item.course?.price || 0,
+                image: item.course?.image || "",
+                duration: item.course?.duration || "",
+                meetingLink: item.course?.meetingLink || "",
               },
             };
           }),
         );
 
-        const validEnrollments = mappedEnrollments.filter(
+        const finalEnrollments = mappedEnrollments.filter(
           (e): e is Enrollment => e !== null,
         );
-        console.log("✅ ثبت‌نام‌های نهایی:", validEnrollments);
-
-        // ✅ تفکیک: ثبت‌نام‌های نهایی (پرداخت شده) vs سبد خرید (پرداخت نشده)
-        const finalEnrollments = validEnrollments.filter(
-          (e) =>
-            e.paymentStatus === "PAID" ||
-            e.paymentStatus === "WAITING_VERIFY" ||
-            e.status === "CONFIRMED" ||
-            e.status === "ATTENDED",
-        );
-        console.log("✅ ثبت‌نام‌های نهایی:", finalEnrollments);
-
-        const pendingEnrollments = validEnrollments.filter(
-          (e) =>
-            e.paymentStatus === "PENDING" ||
-            (e.paymentStatus !== "PAID" && e.status === "PENDING"),
-        );
-        console.log("🛒 سبد خرید:", pendingEnrollments);
-
+        console.log("✅ دوره‌های من:", finalEnrollments);
         setEnrollments(finalEnrollments);
-        setCart(pendingEnrollments);
       } catch (err) {
-        console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
+        console.error("❌ خطا در دریافت ثبت‌نام‌های نهایی:", err);
         setEnrollments([]);
+      }
+
+      // ============================================
+      // ✅ دریافت سبد خرید (آیتم‌های در انتظار پرداخت)
+      // ============================================
+      try {
+        const cartData = await cartAPI.getCart();
+        console.log("🛒 سبد خرید از API:", cartData);
+
+        const items = cartData.items || [];
+
+        // ✅ مپ کردن مستقیم به فرمت مورد نیاز CartTab
+        const mappedCart = items.map((item: any) => ({
+          id: item.enrollment_id,
+          enrollment_id: item.enrollment_id,
+          course_id: item.course_id,
+          event: {
+            id: item.course_id,
+            title: item.course_title || "دوره آموزشی",
+            slug: item.course_slug || "",
+            date: item.created_at || new Date().toISOString(),
+            price: item.discounted_price || item.original_price || 0,
+            image: item.course_image || "",
+            duration: "",
+            meetingLink: "",
+          },
+          paymentStatus: "PENDING",
+          status: "PENDING",
+          createdAt: item.created_at || new Date().toISOString(),
+        }));
+
+        console.log("🛒 سبد خرید نهایی:", mappedCart);
+        setCart(mappedCart);
+      } catch (err) {
+        console.error("❌ خطا در دریافت سبد خرید:", err);
         setCart([]);
       }
 
@@ -635,7 +610,7 @@ export default function Profile() {
         setSelectedEnrollment(null);
       } else {
         setSuccess("✅ پرداخت با موفقیت انجام شد!");
-        await fetchProfile(); // ✅ دوباره از بک‌اند دریافت کن
+        await fetchProfile();
         setShowPayment(false);
         setSelectedEnrollment(null);
       }

@@ -1,8 +1,9 @@
 // src/components/profile/CartTab.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { enrollmentsAPI } from "../../lib/api/enrollments";
-import { coursesAPI } from "../../lib/api/courses";
+import { cartAPI } from "../../lib/api/cart";
+import { paymentsAPI } from "../../lib/api/payment";
+// import { coursesAPI } from "../../lib/api/courses";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import PaymentModal from "../payment/PaymentModal";
@@ -19,8 +20,9 @@ import {
   Ticket,
   X,
 } from "lucide-react";
+import { enrollmentsAPI } from "../../lib/api";
 
-// ✅ لیست کدهای تخفیف معتبر (فرانت‌اند)
+// ✅ لیست کدهای تخفیف معتبر
 const VALID_COUPONS: Record<
   string,
   { type: "PERCENT" | "FIXED"; value: number }
@@ -47,21 +49,18 @@ export function CartTab({
 }: CartTabProps) {
   const navigate = useNavigate();
 
-  // Stateهای داخلی برای حالت standalone
   const [internalCart, setInternalCart] = useState<any[]>([]);
   const [internalLoading, setInternalLoading] = useState(true);
 
-  // استفاده از external یا internal
   const cart = externalCart !== undefined ? externalCart : internalCart;
   const loading =
     externalLoading !== undefined ? externalLoading : internalLoading;
 
   const [processing, setProcessing] = useState(false);
-  const [processingId] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ✅ State برای کد تخفیف
   const [couponCode, setCouponCode] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [discountInfo, setDiscountInfo] = useState<{
@@ -72,14 +71,13 @@ export function CartTab({
     value: number;
   } | null>(null);
 
-  // ✅ State برای مودال پرداخت
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
-  // ✅ بررسی آیا کاربر لاگین است
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // ✅ دریافت داده‌های سبد خرید (فقط در حالت standalone) - فقط از بک‌اند
+  // ✅ دریافت داده‌های سبد خرید - از API سبد خرید
+  // ✅ دریافت داده‌های سبد خرید - از API سبد خرید
   const fetchCart = async () => {
     if (!standalone || externalCart !== undefined) return;
 
@@ -87,132 +85,42 @@ export function CartTab({
       setInternalLoading(true);
       setError("");
 
-      // ✅ فقط از بک‌اند دریافت کن (بدون localStorage)
-      let enrollmentsData: any[] = [];
+      let cartData: any = { items: [], summary: {} };
 
       if (isLoggedIn) {
         try {
-          enrollmentsData = await enrollmentsAPI.getMyEnrollments();
-          console.log("📥 API enrollments (Cart):", enrollmentsData);
+          cartData = await cartAPI.getCart();
+          console.log("🛒 سبد خرید از API:", cartData);
         } catch (err) {
-          console.error("❌ خطا در دریافت از API:", err);
-          enrollmentsData = [];
+          console.error("❌ خطا در دریافت سبد خرید:", err);
+          cartData = { items: [], summary: {} };
         }
       }
 
-      // ✅ فیلتر آیتم‌های در انتظار پرداخت
-      const pendingItems = enrollmentsData.filter(
-        (e: any) =>
-          e.paymentStatus === "PENDING" ||
-          e.paymentStatus === "WAITING_VERIFY" ||
-          e.status === "PENDING",
-      );
+      const items = cartData.items || [];
+      console.log("📋 آیتم‌های خام سبد خرید:", items);
 
-      // ✅ دریافت اطلاعات کامل دوره
-      const mappedCart = await Promise.all(
-        pendingItems.map(async (item: any) => {
-          const course_id = item.course_id || item.eventId || item.id;
+      // ✅ مپ کردن مستقیم از داده‌های سبد خرید (بدون نیاز به getById)
+      const mappedCart = items.map((item: any) => ({
+        id: item.enrollment_id, // یا item.id
+        enrollment_id: item.enrollment_id,
+        course_id: item.course_id,
+        event: {
+          id: item.course_id,
+          title: item.course_title || "دوره آموزشی",
+          slug: item.course_slug || "",
+          date: item.created_at || new Date().toISOString(),
+          price: item.discounted_price || item.original_price || 0,
+          image: item.course_image || "",
+          duration: "",
+          meetingLink: "",
+        },
+      }));
 
-          // اگر event وجود دارد
-          if (
-            item.event &&
-            item.event.title &&
-            item.event.title !== "بدون عنوان"
-          ) {
-            return {
-              ...item,
-              id: item.id || course_id,
-              event: {
-                id: item.event.id || course_id,
-                title: item.event.title || "دوره آموزشی",
-                slug: item.event.slug || "",
-                date: item.event.date || new Date().toISOString(),
-                price: item.event.price || 0,
-                image: item.event.image || "",
-                duration: item.event.duration || "",
-                meetingLink: item.event.meetingLink || "",
-              },
-            };
-          }
-
-          // اگر course وجود دارد
-          if (item.course && item.course.title) {
-            return {
-              ...item,
-              id: item.id || course_id,
-              event: {
-                id: item.course.id || course_id,
-                title: item.course.title || "دوره آموزشی",
-                slug: item.course.slug || "",
-                date: item.course.created_at || new Date().toISOString(),
-                price: item.course.price || 0,
-                image: item.course.cover_image || "",
-                duration: item.course.duration_hours
-                  ? `${item.course.duration_hours} ساعت`
-                  : "",
-                meetingLink: "",
-              },
-            };
-          }
-
-          // از API دریافت کن
-          if (isLoggedIn) {
-            try {
-              const course = await coursesAPI.getById(course_id);
-              return {
-                ...item,
-                id: item.id || course_id,
-                event: {
-                  id: course.id,
-                  title: course.title || "دوره آموزشی",
-                  slug: course.slug || "",
-                  date: course.created_at || new Date().toISOString(),
-                  price: course.price || 0,
-                  image: course.cover_image || "",
-                  duration: course.duration_hours
-                    ? `${course.duration_hours} ساعت`
-                    : "",
-                  meetingLink: "",
-                },
-              };
-            } catch (error) {
-              console.error(`❌ خطا در دریافت دوره ${course_id}:`, error);
-            }
-          }
-
-          // fallback
-          return {
-            ...item,
-            id: item.id || course_id,
-            event: {
-              id: course_id,
-              title: "دوره آموزشی",
-              slug: "",
-              date: new Date().toISOString(),
-              price: 0,
-              image: "",
-              duration: "",
-              meetingLink: "",
-            },
-          };
-        }),
-      );
-
+      console.log("✅ سبد خرید نهایی:", mappedCart);
       setInternalCart(mappedCart);
 
-      // ✅ محاسبه تخفیف اگر وجود دارد
-      if (discountInfo && mappedCart.length > 0) {
-        const total = mappedCart.reduce(
-          (sum, item) => sum + (item.event?.price || 0),
-          0,
-        );
-        const discountAmount = calculateDiscount(total, discountInfo);
-        setDiscountInfo({
-          ...discountInfo,
-          discount_amount: discountAmount,
-          final_total: total - discountAmount,
-        });
-      }
+      // ... بقیه کد
     } catch (err) {
       console.error("❌ خطا:", err);
       setError("خطا در دریافت سبد خرید");
@@ -220,7 +128,6 @@ export function CartTab({
       setInternalLoading(false);
     }
   };
-
   // ✅ محاسبه تخفیف
   const calculateDiscount = (
     total: number,
@@ -234,7 +141,7 @@ export function CartTab({
     }
   };
 
-  // ✅ اعمال کد تخفیف - فقط در حافظه (بدون localStorage)
+  // ✅ اعمال کد تخفیف
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       setError("لطفاً کد تخفیف را وارد کنید");
@@ -277,9 +184,6 @@ export function CartTab({
       };
 
       setDiscountInfo(discountData);
-      // ❌ حذف localStorage.setItem
-      // localStorage.setItem("discountInfo", JSON.stringify(discountData));
-
       setSuccess(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
       setCouponCode("");
       setTimeout(() => setSuccess(""), 4000);
@@ -291,27 +195,23 @@ export function CartTab({
     }
   };
 
-  // ✅ حذف کد تخفیف - فقط از حافظه
+  // ✅ حذف کد تخفیف
   const handleRemoveCoupon = () => {
     setDiscountInfo(null);
-    // ❌ حذف localStorage.removeItem
-    // localStorage.removeItem("discountInfo");
     setSuccess("✅ کد تخفیف با موفقیت حذف شد");
     setTimeout(() => setSuccess(""), 3000);
   };
 
-  // ✅ حذف از سبد خرید - فقط از بک‌اند
+  // ✅ حذف از سبد خرید - DELETE /api/cart/{id}
   const handleRemove = async (enrollmentId: string) => {
     if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
 
     try {
-      // ✅ حذف از بک‌اند
+      // 📌 حذف با enrollment_id
       await enrollmentsAPI.delete(enrollmentId);
 
-      // ✅ به‌روزرسانی state
       if (standalone) {
         setInternalCart(cart.filter((item) => item.id !== enrollmentId));
-        // دوباره از بک‌اند دریافت کن
         await fetchCart();
       } else if (onRefresh) {
         onRefresh();
@@ -326,7 +226,7 @@ export function CartTab({
     }
   };
 
-  // ✅ پرداخت همه
+  // ✅ پرداخت همه - با انتخاب روش پرداخت
   const handlePayAll = async () => {
     if (!isLoggedIn) {
       setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
@@ -340,28 +240,53 @@ export function CartTab({
       (sum, item) => sum + (item.event?.price || 0),
       0,
     );
-    if (
-      !confirm(
-        `آیا از پرداخت مبلغ ${totalPrice.toLocaleString()} تومان برای ${cart.length} دوره مطمئن هستید؟`,
-      )
-    ) {
-      return;
-    }
+
+    // انتخاب روش پرداخت
+    const paymentMethod = confirm(
+      `آیا از پرداخت مبلغ ${totalPrice.toLocaleString()} تومان برای ${cart.length} دوره مطمئن هستید؟\n\n` +
+        `روش‌های پرداخت:\n` +
+        `• OK → پرداخت از طریق بله (پرداخت خودکار)\n` +
+        `• Cancel → پرداخت کارت به کارت (نیاز به تایید ادمین)`,
+    );
 
     setProcessing(true);
+    setProcessingId("all");
     setError("");
     setSuccess("");
 
     try {
-      for (const item of cart) {
-        const result = await enrollmentsAPI.processPayment(item.id);
-        if (!result.paymentUrl) {
-          continue;
-        }
-        window.open(result.paymentUrl, "_blank");
+      // ✅ استفاده از enrollment_id که در CartItem وجود دارد
+      // هر آیتم سبد خرید دارای enrollment_id است
+      const enrollmentId = cart[0]?.enrollment_id || cart[0]?.id;
+
+      if (!enrollmentId) {
+        setError("شناسه ثبت‌نام یافت نشد");
+        setProcessing(false);
+        setProcessingId(null);
+        return;
       }
 
-      setSuccess(`✅ پرداخت ${cart.length} دوره با موفقیت انجام شد!`);
+      if (paymentMethod) {
+        // 📌 پرداخت از طریق بله - POST /api/payment/ble/initiate
+        const result = await paymentsAPI.baleInitiate({
+          enrollment_id: enrollmentId,
+          amount: totalPrice,
+          description: `پرداخت ${cart.length} دوره`,
+        });
+
+        if (result.payment_url) {
+          window.open(result.payment_url, "_blank");
+          setSuccess(`✅ لینک پرداخت بله برای ${cart.length} دوره باز شد!`);
+        } else {
+          setSuccess(`✅ درخواست پرداخت ${cart.length} دوره با موفقیت ثبت شد!`);
+        }
+      } else {
+        // 📌 پرداخت کارت به کارت - POST /api/payment/card-to-card
+        // اینجا باید فرم کارت به کارت باز شود
+        setSuccess(`✅ لطفاً اطلاعات کارت به کارت را وارد کنید`);
+        // می‌توانید یک مودال برای کارت به کارت باز کنید
+      }
+
       setTimeout(() => {
         if (standalone) {
           fetchCart();
@@ -369,11 +294,15 @@ export function CartTab({
           onRefresh();
         }
         setSuccess("");
-      }, 1500);
-    } catch (err) {
-      setError("خطا در پردازش پرداخت‌ها");
+      }, 3000);
+    } catch (err: any) {
+      console.error("❌ خطا در پرداخت:", err);
+      setError(
+        err.response?.data?.detail || err.message || "خطا در پردازش پرداخت‌ها",
+      );
     } finally {
       setProcessing(false);
+      setProcessingId(null);
     }
   };
 
@@ -389,7 +318,8 @@ export function CartTab({
       (item) =>
         item.id === enrollmentId ||
         item.course_id === enrollmentId ||
-        item.eventId === enrollmentId,
+        item.eventId === enrollmentId ||
+        item.enrollment_id === enrollmentId,
     );
 
     if (enrollment) {
@@ -410,11 +340,18 @@ export function CartTab({
     } else if (onRefresh) {
       onRefresh();
     }
-    setSuccess("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
+    setSuccess("✅ پرداخت با موفقیت انجام شد!");
     setTimeout(() => setSuccess(""), 5000);
   };
 
-  // ✅ بررسی پارامتر payment از URL (فقط در حالت standalone)
+  // ✅ بارگذاری اولیه
+  useEffect(() => {
+    if (standalone) {
+      fetchCart();
+    }
+  }, [standalone]);
+
+  // ✅ بررسی پارامتر payment از URL
   useEffect(() => {
     if (!standalone) return;
 
@@ -426,7 +363,8 @@ export function CartTab({
         (item) =>
           item.id === paymentId ||
           item.course_id === paymentId ||
-          item.eventId === paymentId,
+          item.eventId === paymentId ||
+          item.enrollment_id === paymentId,
       );
 
       if (enrollment) {
@@ -439,15 +377,6 @@ export function CartTab({
       }
     }
   }, [cart, standalone]);
-
-  // ✅ بارگذاری اولیه (فقط در حالت standalone)
-  useEffect(() => {
-    if (standalone) {
-      // ❌ حذف خواندن از localStorage
-      // const savedDiscount = localStorage.getItem("discountInfo");
-      fetchCart();
-    }
-  }, [standalone]);
 
   const formatPrice = (price: number) => {
     if (price === 0) return "رایگان";
@@ -472,7 +401,6 @@ export function CartTab({
 
   return (
     <div className="space-y-4">
-      {/* Messages */}
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-center text-sm">
           ❌ {error}
@@ -499,7 +427,7 @@ export function CartTab({
               سبد خرید خالی است
             </h3>
             <p className="text-gray-400 text-sm mb-6">
-              هیچ دوره‌ای برای پرداخت در سبد خرید نیست
+              هیچ دوره‌ای در انتظار پرداخت نیست
             </p>
             <GlassButton variant="primary" onClick={() => navigate("/events")}>
               مشاهده رویدادها
@@ -761,7 +689,6 @@ export function CartTab({
             )}
           </LiquidGlassCard>
 
-          {/* Continue Shopping */}
           <div className="text-center">
             <button
               onClick={() => navigate("/events")}

@@ -155,7 +155,7 @@ export function EnrollmentsTab({
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {/* ✅ دکمه پرداخت - هدایت به صفحه پرداخت */}
-
+                    // src/components/profile/EnrollmentsTab.tsx
                     {enrollment.status === "PENDING" &&
                       enrollment.paymentStatus !== "PAID" &&
                       !isWaitingVerify && (
@@ -165,18 +165,10 @@ export function EnrollmentsTab({
                           icon={<CreditCard className="w-3 h-3" />}
                           iconPosition="left"
                           onClick={() => {
-                            // ✅ استفاده از eventId یا course_id به جای id
-                            const paymentId =
-                              enrollment.id ||
-                              enrollment.eventId ||
-                              // enrollment.course_id ||
-                              enrollment.event?.id;
-
-                            // console.log("🔍 paymentId:", paymentId);
-                            // console.log("🔍 enrollment:", enrollment);
+                            // ✅ استفاده از enrollment.id (که همان enrollment_id در بک‌اند است)
+                            const paymentId = enrollment.id;
 
                             if (!paymentId) {
-                              // console.error("❌ شناسه پرداخت وجود ندارد");
                               alert("خطا: شناسه ثبت‌نام نامعتبر است");
                               return;
                             }
