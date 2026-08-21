@@ -1,8 +1,10 @@
 // src/components/payment/CardToCardPayment.tsx
-
 import { useState } from "react";
 import { GlassButton } from "../ui/GlassButton";
-import { Upload } from "lucide-react";
+import { LiquidGlassCard } from "../ui/LiquidGlassCard";
+import { ArrowRight, Upload, AlertCircle } from "lucide-react";
+import { paymentsAPI } from "../../lib/api/payment";
+import { uploadAPI } from "../../lib/api/upload";
 
 interface CardToCardPaymentProps {
   enrollmentId: string;
@@ -12,35 +14,44 @@ interface CardToCardPaymentProps {
 }
 
 export default function CardToCardPayment({
-  enrollmentId: _enrollmentId,
+  enrollmentId,
   amount,
   onSuccess,
   onBack,
 }: CardToCardPaymentProps) {
   const [trackingCode, setTrackingCode] = useState("");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setError("حجم عکس نباید بیشتر از ۲ مگابایت باشد");
+      if (file.size > 5 * 1024 * 1024) {
+        setError("حجم تصویر نباید بیشتر از 5 مگابایت باشد");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setError("لطفاً یک تصویر معتبر انتخاب کنید");
         return;
       }
       setReceiptImage(file);
-      setReceiptPreview(URL.createObjectURL(file));
       setError("");
     }
   };
 
-  const handleSubmit = async () => {
-    if (!trackingCode.trim()) {
-      setError("لطفاً کد پیگیری را وارد کنید");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // ✅ اعتبارسنجی tracking_code - فقط اعداد
+    const cleanTrackingCode = trackingCode.replace(/[^0-9]/g, "");
+    if (!cleanTrackingCode || cleanTrackingCode.length < 5) {
+      setError("کد پیگیری باید حداقل 5 عدد باشد (فقط اعداد انگلیسی)");
       return;
     }
+
     if (!receiptImage) {
       setError("لطفاً تصویر رسید را آپلود کنید");
       return;
@@ -48,19 +59,55 @@ export default function CardToCardPayment({
 
     setLoading(true);
     setError("");
+    setSuccess("");
+    setUploadProgress(0);
 
     try {
-      // TODO: ارسال به سرور
-      // await paymentsAPI.submitCardToCard({
-      //   enrollmentId,
-      //   trackingCode,
-      //   receiptImage,
-      // });
+      console.log("🔄 آپلود تصویر رسید...");
+      const uploadResult = await uploadAPI.uploadImage(
+        receiptImage,
+        "receipts",
+      );
+      console.log("✅ تصویر آپلود شد:", uploadResult);
+      setUploadProgress(50);
 
-      alert("✅ اطلاعات پرداخت با موفقیت ثبت شد. منتظر تایید ادمین باشید.");
-      onSuccess();
-    } catch (err) {
-      setError("خطا در ثبت اطلاعات پرداخت");
+      const imageUrl = uploadResult.url;
+
+      console.log("📤 ارسال به سرور:", {
+        enrollment_id: enrollmentId,
+        tracking_code: cleanTrackingCode,
+        receipt_image_url: imageUrl,
+      });
+
+      // ✅ بدون result - فقط await
+      await paymentsAPI.cardToCard({
+        enrollment_id: enrollmentId,
+        tracking_code: cleanTrackingCode,
+        receipt_image_url: imageUrl,
+      });
+
+      setUploadProgress(100);
+      setSuccess("✅ پرداخت کارت به کارت با موفقیت ثبت شد!");
+      setTimeout(() => {
+        onSuccess();
+      }, 2000);
+    } catch (err: any) {
+      console.error("❌ خطا در پرداخت کارت به کارت:", err);
+
+      if (err.response?.data?.detail) {
+        if (Array.isArray(err.response.data.detail)) {
+          const messages = err.response.data.detail
+            .map((d: any) => d.msg)
+            .join(", ");
+          setError(messages);
+        } else {
+          setError(err.response.data.detail);
+        }
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError(err.message || "خطا در پرداخت کارت به کارت");
+      }
     } finally {
       setLoading(false);
     }
@@ -68,87 +115,120 @@ export default function CardToCardPayment({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-        <p className="text-sm text-gray-300">
-          لطفاً مبلغ {amount.toLocaleString()} تومان را به شماره کارت زیر واریز
-          کنید:
-        </p>
-        <p className="text-xl font-bold text-white text-center mt-2 font-mono tracking-widest">
-          6037-9918-1234-5678
-        </p>
-        <p className="text-xs text-gray-500 text-center mt-1">
-          بانک ملی - به نام شرکت Supreme Tech
-        </p>
-      </div>
+      <button
+        onClick={onBack}
+        className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-1"
+      >
+        <ArrowRight className="w-4 h-4" />
+        بازگشت
+      </button>
 
-      <div>
-        <label className="block text-sm font-medium text-white/80 mb-1">
-          کد پیگیری
-        </label>
-        <input
-          type="text"
-          value={trackingCode}
-          onChange={(e) => setTrackingCode(e.target.value)}
-          placeholder="کد پیگیری را وارد کنید"
-          className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500"
-        />
-      </div>
+      <LiquidGlassCard
+        className="p-4"
+        borderRadius="16px"
+        blurIntensity="sm"
+        glowIntensity="sm"
+      >
+        <h3 className="text-white font-bold mb-2 text-center">
+          پرداخت کارت به کارت
+        </h3>
+        <p className="text-gray-400 text-sm text-center mb-4">
+          مبلغ: {amount.toLocaleString()} تومان
+        </p>
 
-      <div>
-        <label className="block text-sm font-medium text-white/80 mb-1">
-          تصویر رسید
-        </label>
-        <div className="flex items-center gap-4">
-          <label className="flex-1 flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-xl cursor-pointer hover:bg-white/20 transition-colors">
-            <Upload className="w-5 h-5 text-gray-400 ml-2" />
-            <span className="text-gray-400 text-sm">
-              {receiptImage ? receiptImage.name : "آپلود تصویر"}
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+          <p className="text-yellow-400 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>
+              لطفاً پس از واریز مبلغ به حساب زیر، کد پیگیری و تصویر رسید را وارد
+              کنید:
+              <br />
+              <span className="font-mono text-white">
+                شماره کارت: 1234-5678-9012-3456
+              </span>
+              <br />
+              <span className="font-mono text-white">
+                به نام: شرکت Supreme Tech
+              </span>
             </span>
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">
+              کد پیگیری
+            </label>
             <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
+              type="text"
+              value={trackingCode}
+              onChange={(e) => {
+                // ✅ فقط اعداد انگلیسی
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                setTrackingCode(value);
+              }}
+              placeholder="کد پیگیری را وارد کنید..."
+              className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+              disabled={loading}
             />
-          </label>
-          {receiptPreview && (
-            <img
-              src={receiptPreview}
-              alt="رسید"
-              className="w-16 h-16 object-cover rounded-lg"
-            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">
+              تصویر رسید
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-500/20 file:text-blue-400 file:text-sm hover:file:bg-blue-500/30"
+                disabled={loading}
+              />
+              {receiptImage && (
+                <p className="text-green-400 text-xs mt-1">
+                  ✅ {receiptImage.name} (
+                  {(receiptImage.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+            </div>
+          </div>
+
+          {uploadProgress > 0 && uploadProgress < 100 && (
+            <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-blue-500 h-2 transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
           )}
-        </div>
-      </div>
 
-      {error && (
-        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm">
-          {error}
-        </div>
-      )}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm">
+              ❌ {error}
+            </div>
+          )}
 
-      <div className="flex gap-3 pt-2">
-        <GlassButton
-          type="button"
-          variant="white"
-          size="md"
-          onClick={onBack}
-          className="flex-1"
-        >
-          بازگشت
-        </GlassButton>
-        <GlassButton
-          type="button"
-          variant="primary"
-          size="md"
-          loading={loading}
-          disabled={loading}
-          onClick={handleSubmit}
-          className="flex-1"
-        >
-          {loading ? "در حال ثبت..." : "ثبت پرداخت"}
-        </GlassButton>
-      </div>
+          {success && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl text-sm">
+              {success}
+            </div>
+          )}
+
+          <GlassButton
+            type="submit"
+            variant="primary"
+            size="md"
+            fullWidth
+            loading={loading}
+            disabled={loading}
+            icon={<Upload className="w-4 h-4" />}
+            iconPosition="left"
+          >
+            {loading ? "در حال ثبت..." : "ثبت پرداخت"}
+          </GlassButton>
+        </form>
+      </LiquidGlassCard>
     </div>
   );
 }

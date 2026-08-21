@@ -240,6 +240,7 @@ export function CartTab({
   };
 
   // ✅ پرداخت همه
+  // ✅ پرداخت همه - هر آیتم جداگانه پرداخت می‌شود
   const handlePayAll = async () => {
     if (!isLoggedIn) {
       setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
@@ -255,9 +256,10 @@ export function CartTab({
     );
 
     const paymentMethod = confirm(
-      `آیا از پرداخت مبلغ ${totalPrice.toLocaleString()} تومان برای ${cart.length} دوره مطمئن هستید؟\n\n` +
-        `روش‌های پرداخت:\n` +
-        `• OK → پرداخت از طریق بله (پرداخت خودکار)\n` +
+      `💰 مبلغ قابل پرداخت: ${totalPrice.toLocaleString()} تومان\n` +
+        `📚 تعداد دوره‌ها: ${cart.length} دوره\n\n` +
+        `روش پرداخت را انتخاب کنید:\n` +
+        `• OK → پرداخت از طریق بله (پرداخت خودکار و سریع)\n` +
         `• Cancel → پرداخت کارت به کارت (نیاز به تایید ادمین)`,
     );
 
@@ -267,30 +269,43 @@ export function CartTab({
     setSuccess("");
 
     try {
-      const enrollmentId = cart[0]?.enrollment_id || cart[0]?.id;
+      // گرفتن همه enrollment_idها
+      const enrollmentIds = cart
+        .map((item) => item.enrollment_id || item.id)
+        .filter(Boolean);
 
-      if (!enrollmentId) {
-        setError("شناسه ثبت‌نام یافت نشد");
+      if (enrollmentIds.length === 0) {
+        setError("❌ شناسه ثبت‌نام یافت نشد");
         setProcessing(false);
         setProcessingId(null);
         return;
       }
 
+      // ارسال همه enrollment_idها به صورت رشته با کاما
+      const enrollmentIdString = enrollmentIds.join(",");
+
       if (paymentMethod) {
+        // 📌 پرداخت از طریق بله - همه با هم
         const result = await paymentsAPI.baleInitiate({
-          enrollment_id: enrollmentId,
+          enrollment_id: enrollmentIdString,
           amount: totalPrice,
           description: `پرداخت ${cart.length} دوره`,
         });
 
-        if (result.payment_url) {
-          window.open(result.payment_url, "_blank");
+        if (result.payment_link) {
+          window.open(result.payment_link, "_blank");
           setSuccess(`✅ لینک پرداخت بله برای ${cart.length} دوره باز شد!`);
         } else {
-          setSuccess(`✅ درخواست پرداخت ${cart.length} دوره با موفقیت ثبت شد!`);
+          setError("❌ لینک پرداخت دریافت نشد");
         }
       } else {
-        setSuccess(`✅ لطفاً اطلاعات کارت به کارت را وارد کنید`);
+        // 📌 پرداخت کارت به کارت
+        setSuccess(
+          `✅ لطفاً اطلاعات کارت به کارت را برای ${cart.length} دوره وارد کنید`,
+        );
+
+        // اگر مودال کارت به کارت دارید، اینجا باز کنید
+        // setShowCardToCardModal(true);
       }
 
       setTimeout(() => {
@@ -311,7 +326,7 @@ export function CartTab({
       setProcessingId(null);
     }
   };
-
+  // ✅ باز کردن مودال پرداخت
   // ✅ باز کردن مودال پرداخت
   const handleOpenPaymentModal = (enrollmentId: string) => {
     if (!isLoggedIn) {
@@ -329,24 +344,81 @@ export function CartTab({
     );
 
     if (enrollment) {
-      setSelectedEnrollment(enrollment);
+      setSelectedEnrollment({
+        ...enrollment,
+        id: enrollment.enrollment_id || enrollment.id,
+      });
       setShowPaymentModal(true);
     } else {
-      setError("دوره مورد نظر یافت نشد");
+      setError("❌ دوره مورد نظر یافت نشد");
       setTimeout(() => setError(""), 3000);
     }
   };
 
+  // ✅ پرداخت از طریق مودال
+  // const handleModalPayment = async () => {
+  //   if (!selectedEnrollment) return;
+
+  //   try {
+  //     setProcessing(true);
+
+  //     // انتخاب روش پرداخت
+  //     const useBale = confirm(
+  //       `💰 مبلغ: ${selectedEnrollment.event?.price?.toLocaleString()} تومان\n` +
+  //         `📚 دوره: ${selectedEnrollment.event?.title}\n\n` +
+  //         `• OK → پرداخت از طریق بله\n` +
+  //         `• Cancel → پرداخت کارت به کارت`,
+  //     );
+
+  //     if (useBale) {
+  //       const result = await paymentsAPI.baleInitiate({
+  //         enrollment_id: selectedEnrollment.id,
+  //         amount: selectedEnrollment.event?.price || 0,
+  //         description: `پرداخت دوره ${selectedEnrollment.event?.title}`,
+  //       });
+
+  //       if (result.) {
+  //         window.open(result.payment_url, "_blank");
+  //         setSuccess(`✅ لینک پرداخت باز شد!`);
+  //       }
+  //     } else {
+  //       setSuccess(`✅ لطفاً اطلاعات کارت به کارت را وارد کنید`);
+  //     }
+
+  //     setShowPaymentModal(false);
+  //     setSelectedEnrollment(null);
+
+  //     setTimeout(() => {
+  //       if (standalone) {
+  //         fetchCart();
+  //       } else if (onRefresh) {
+  //         onRefresh();
+  //       }
+  //       setSuccess("");
+  //     }, 3000);
+  //   } catch (err: any) {
+  //     console.error("❌ خطا در پرداخت:", err);
+  //     setError(
+  //       err.response?.data?.detail || err.message || "خطا در پردازش پرداخت",
+  //     );
+  //   } finally {
+  //     setProcessing(false);
+  //   }
+  // };
   // ✅ بعد از پرداخت موفق
+  // CartTab.tsx - handlePaymentSuccess
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
     setSelectedEnrollment(null);
+
+    // ✅ این خط باید اجرا شود
     if (standalone) {
-      fetchCart();
+      fetchCart(); // سبد خرید را به‌روزرسانی می‌کند
     } else if (onRefresh) {
-      onRefresh();
+      onRefresh(); // fetchProfile را صدا می‌زند
     }
-    setSuccess("✅ پرداخت با موفقیت انجام شد!");
+
+    setSuccess("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
     setTimeout(() => setSuccess(""), 5000);
   };
 

@@ -52,7 +52,7 @@ export interface Coupon {
 export interface CardToCardPaymentRequest {
   enrollment_id: string;
   tracking_code: string;
-  receipt_image: File;
+  receipt_image_url: string;
 }
 
 export interface BalePaymentRequest {
@@ -62,6 +62,6 @@ export interface BalePaymentRequest {
 }
 
 export interface BalePaymentResponse {
-  payment_url: string;
+  payment_link: string;
   transaction_id: string;
 }
