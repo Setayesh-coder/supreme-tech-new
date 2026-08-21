@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cartAPI } from "../../lib/api/cart";
 import { paymentsAPI } from "../../lib/api/payment";
-// import { coursesAPI } from "../../lib/api/courses";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import PaymentModal from "../payment/PaymentModal";
@@ -20,7 +19,6 @@ import {
   Ticket,
   X,
 } from "lucide-react";
-import { enrollmentsAPI } from "../../lib/api";
 
 // ✅ لیست کدهای تخفیف معتبر
 const VALID_COUPONS: Record<
@@ -39,6 +37,7 @@ interface CartTabProps {
   externalLoading?: boolean;
   onRefresh?: () => void;
   standalone?: boolean;
+  onRemoveFromCart?: (id: string) => void;
 }
 
 export function CartTab({
@@ -46,6 +45,7 @@ export function CartTab({
   externalLoading,
   onRefresh,
   standalone = false,
+  onRemoveFromCart,
 }: CartTabProps) {
   const navigate = useNavigate();
 
@@ -77,7 +77,6 @@ export function CartTab({
   const isLoggedIn = !!localStorage.getItem("token");
 
   // ✅ دریافت داده‌های سبد خرید - از API سبد خرید
-  // ✅ دریافت داده‌های سبد خرید - از API سبد خرید
   const fetchCart = async () => {
     if (!standalone || externalCart !== undefined) return;
 
@@ -100,9 +99,8 @@ export function CartTab({
       const items = cartData.items || [];
       console.log("📋 آیتم‌های خام سبد خرید:", items);
 
-      // ✅ مپ کردن مستقیم از داده‌های سبد خرید (بدون نیاز به getById)
       const mappedCart = items.map((item: any) => ({
-        id: item.enrollment_id, // یا item.id
+        id: item.enrollment_id,
         enrollment_id: item.enrollment_id,
         course_id: item.course_id,
         event: {
@@ -119,8 +117,6 @@ export function CartTab({
 
       console.log("✅ سبد خرید نهایی:", mappedCart);
       setInternalCart(mappedCart);
-
-      // ... بقیه کد
     } catch (err) {
       console.error("❌ خطا:", err);
       setError("خطا در دریافت سبد خرید");
@@ -128,6 +124,7 @@ export function CartTab({
       setInternalLoading(false);
     }
   };
+
   // ✅ محاسبه تخفیف
   const calculateDiscount = (
     total: number,
@@ -202,18 +199,32 @@ export function CartTab({
     setTimeout(() => setSuccess(""), 3000);
   };
 
-  // ✅ حذف از سبد خرید - DELETE /api/cart/{id}
+  // ✅ حذف از سبد خرید
   const handleRemove = async (enrollmentId: string) => {
     if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
 
-    try {
-      // 📌 حذف با enrollment_id
-      await enrollmentsAPI.delete(enrollmentId);
+    // اگر پراپ onRemoveFromCart وجود دارد، از آن استفاده کن
+    if (onRemoveFromCart) {
+      onRemoveFromCart(enrollmentId);
+      return;
+    }
 
+    // در غیر این صورت از منطق داخلی استفاده کن
+    try {
+      setProcessing(true);
+
+      // حذف از state داخلی
       if (standalone) {
-        setInternalCart(cart.filter((item) => item.id !== enrollmentId));
-        await fetchCart();
-      } else if (onRefresh) {
+        setInternalCart(
+          cart.filter(
+            (item) =>
+              item.id !== enrollmentId && item.enrollment_id !== enrollmentId,
+          ),
+        );
+      }
+
+      // اگر onRefresh وجود دارد، صدا بزن
+      if (onRefresh) {
         onRefresh();
       }
 
@@ -223,10 +234,12 @@ export function CartTab({
       console.error("❌ خطا در حذف آیتم:", err);
       setError(err.response?.data?.detail || "خطا در حذف آیتم");
       setTimeout(() => setError(""), 3000);
+    } finally {
+      setProcessing(false);
     }
   };
 
-  // ✅ پرداخت همه - با انتخاب روش پرداخت
+  // ✅ پرداخت همه
   const handlePayAll = async () => {
     if (!isLoggedIn) {
       setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
@@ -241,7 +254,6 @@ export function CartTab({
       0,
     );
 
-    // انتخاب روش پرداخت
     const paymentMethod = confirm(
       `آیا از پرداخت مبلغ ${totalPrice.toLocaleString()} تومان برای ${cart.length} دوره مطمئن هستید؟\n\n` +
         `روش‌های پرداخت:\n` +
@@ -255,8 +267,6 @@ export function CartTab({
     setSuccess("");
 
     try {
-      // ✅ استفاده از enrollment_id که در CartItem وجود دارد
-      // هر آیتم سبد خرید دارای enrollment_id است
       const enrollmentId = cart[0]?.enrollment_id || cart[0]?.id;
 
       if (!enrollmentId) {
@@ -267,7 +277,6 @@ export function CartTab({
       }
 
       if (paymentMethod) {
-        // 📌 پرداخت از طریق بله - POST /api/payment/ble/initiate
         const result = await paymentsAPI.baleInitiate({
           enrollment_id: enrollmentId,
           amount: totalPrice,
@@ -281,10 +290,7 @@ export function CartTab({
           setSuccess(`✅ درخواست پرداخت ${cart.length} دوره با موفقیت ثبت شد!`);
         }
       } else {
-        // 📌 پرداخت کارت به کارت - POST /api/payment/card-to-card
-        // اینجا باید فرم کارت به کارت باز شود
         setSuccess(`✅ لطفاً اطلاعات کارت به کارت را وارد کنید`);
-        // می‌توانید یک مودال برای کارت به کارت باز کنید
       }
 
       setTimeout(() => {

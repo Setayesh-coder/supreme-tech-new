@@ -621,7 +621,42 @@ export default function Profile() {
       setSaving(false);
     }
   };
+  // ============================================
+  // ✅ تابع حذف از سبد خرید
+  // ============================================
+  // Profile.tsx
 
+  // ============================================
+  // ✅ تابع حذف از سبد خرید
+  // ============================================
+  const handleRemoveFromCart = async (enrollmentId: string) => {
+    if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
+
+    try {
+      setLoading(true);
+
+      // 📌 حذف با استفاده از /enrollments/${enrollmentId}/cancel
+      const result = await enrollmentsAPI.cancel(enrollmentId);
+      console.log("✅ نتیجه لغو ثبت‌نام:", result);
+
+      // ✅ به‌روزرسانی سبد خرید
+      setCart((prev) =>
+        prev.filter(
+          (item) =>
+            item.id !== enrollmentId && item.enrollment_id !== enrollmentId,
+        ),
+      );
+
+      setSuccess("✅ آیتم از سبد خرید حذف شد");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error("❌ خطا در حذف از سبد خرید:", err);
+      setError(err.response?.data?.detail || err.message || "خطا در حذف آیتم");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
   // ============== Ticket Functions ==============
   const handleCreateTicket = () => {
     navigate("/tickets/create");
@@ -870,6 +905,7 @@ export default function Profile() {
                 externalLoading={loading}
                 onRefresh={fetchProfile}
                 standalone={false}
+                onRemoveFromCart={handleRemoveFromCart}
               />
             )}
 

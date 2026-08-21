@@ -149,7 +149,30 @@ export const enrollmentsAPI = {
     });
     return response.data;
   },
+  // src/lib/api/enrollments.ts
 
+  /**
+   * ❌ لغو/حذف ثبت‌نام (برای کاربر)
+   * POST /api/v1/enrollments/{id}/cancel
+   * نیازمند احراز هویت
+   */
+  cancel: async (id: string): Promise<{ message: string }> => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      // ✅ استفاده از PATCH به جای POST
+      const response = await api.patch(
+        `/enrollments/${id}/cancel`,
+        {}, // body خالی
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در لغو ثبت‌نام ${id}:`, error);
+      throw error;
+    }
+  },
   /**
    * 💳 پرداخت برای ثبت‌نام
    * نیازمند احراز هویت
