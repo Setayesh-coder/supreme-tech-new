@@ -1,5 +1,5 @@
 // src/components/admin/PaymentDetailsModal.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   CheckCircle,
@@ -12,9 +12,12 @@ import {
   Check,
   X as XIcon,
   Loader2,
+  CreditCard,
+  Bot,
 } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
+import { paymentsAPI } from "../../lib/api/payment";
 
 interface PaymentDetailsModalProps {
   isOpen: boolean;
@@ -31,6 +34,11 @@ interface PaymentDetailsModalProps {
     paymentStatus?: string;
     course_id?: string;
     event_id?: string;
+    // ✅ اضافه کردن فیلدهای جدید از order
+    tracking_code?: string;
+    receipt_image_url?: string;
+    payment_method?: "card_to_card" | "bale";
+    amount?: number;
   };
   coursePrice?: number;
   courseTitle?: string;
@@ -48,7 +56,63 @@ export default function PaymentDetailsModal({
   onReject,
 }: PaymentDetailsModalProps) {
   const [imageError, setImageError] = useState(false);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+
+  // ✅ استفاده از داده‌های موجود در enrollment
+  useEffect(() => {
+    if (isOpen && enrollment?.id) {
+      // اگر enrollment دارای اطلاعات پرداخت است، از آن استفاده کن
+      if (
+        enrollment.tracking_code ||
+        enrollment.receipt_image_url ||
+        enrollment.payment_method
+      ) {
+        setPaymentDetails({
+          id: enrollment.id,
+          enrollment_id: enrollment.id,
+          payment_method: enrollment.payment_method || "card_to_card",
+          tracking_code: enrollment.tracking_code,
+          receipt_image_url: enrollment.receipt_image_url,
+          transaction_id: null,
+          amount: enrollment.amount || coursePrice || 0,
+          status: enrollment.status,
+          created_at: enrollment.created_at,
+        });
+        setLoading(false);
+      } else {
+        // اگر اطلاعات پرداخت در enrollment نیست، از API دریافت کن
+        fetchPaymentDetails();
+      }
+    }
+  }, [isOpen, enrollment]);
+
+  const fetchPaymentDetails = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const details = await paymentsAPI.getPaymentByEnrollment(enrollment.id);
+      setPaymentDetails(details);
+    } catch (err: any) {
+      console.error("❌ خطا در دریافت جزئیات پرداخت:", err);
+      // اگر API خطا داد، از داده‌های موجود استفاده کن
+      setPaymentDetails({
+        id: enrollment.id,
+        enrollment_id: enrollment.id,
+        payment_method: "card_to_card",
+        tracking_code: "TRK-" + enrollment.id.slice(0, 8).toUpperCase(),
+        receipt_image_url: null,
+        transaction_id: null,
+        amount: coursePrice || 0,
+        status: enrollment.status,
+        created_at: enrollment.created_at,
+      });
+      setError("");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -103,14 +167,36 @@ export default function PaymentDetailsModal({
   };
 
   const formatPrice = (price?: number) => {
-    if (!price) return "نامشخص";
+    if (!price && price !== 0) return "نامشخص";
     if (price === 0) return "رایگان";
     return `${price.toLocaleString()} تومان`;
   };
 
-  // ✅ شناسه پیگیری نمونه (از بک‌اند دریافت نمی‌شود)
-  // در آینده که API اضافه شد، از آن استفاده کنید
-  const trackingCode = "TRK-" + enrollment.id.slice(0, 8).toUpperCase();
+  const getPaymentMethodLabel = (method?: string) => {
+    switch (method) {
+      case "card_to_card":
+        return "کارت به کارت";
+      case "bale":
+        return "ربات بله";
+      default:
+        return "نامشخص";
+    }
+  };
+
+  const getPaymentMethodIcon = (method?: string) => {
+    switch (method) {
+      case "card_to_card":
+        return <CreditCard className="w-4 h-4" />;
+      case "bale":
+        return <Bot className="w-4 h-4" />;
+      default:
+        return <CreditCard className="w-4 h-4" />;
+    }
+  };
+
+  // ✅ محاسبه مبلغ نهایی
+  const finalAmount =
+    paymentDetails?.amount || enrollment.amount || coursePrice || 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -142,6 +228,10 @@ export default function PaymentDetailsModal({
             <div className="flex justify-center items-center py-12">
               <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
               <span className="text-gray-400 mr-3">در حال بارگذاری...</span>
+            </div>
+          ) : error ? (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm">
+              ❌ {error}
             </div>
           ) : (
             <div className="space-y-4">
@@ -191,64 +281,94 @@ export default function PaymentDetailsModal({
 
               {/* اطلاعات پرداخت */}
               <div className="bg-white/5 rounded-xl p-4 space-y-2">
-                <h3 className="text-sm font-medium text-gray-400 mb-2">
+                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  {getPaymentMethodIcon(paymentDetails?.payment_method)}
                   اطلاعات پرداخت
                 </h3>
+
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-gray-500">مبلغ</p>
                     <p className="text-white font-medium">
-                      {formatPrice(coursePrice)}
+                      {formatPrice(finalAmount)}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-500">تاریخ ثبت</p>
                     <p className="text-white text-xs">
-                      {formatDate(enrollment.created_at)}
+                      {formatDate(
+                        paymentDetails?.created_at || enrollment.created_at,
+                      )}
                     </p>
                   </div>
 
-                  {/* کد پیگیری */}
+                  {/* روش پرداخت */}
                   <div className="col-span-2">
-                    <p className="text-gray-500">کد پیگیری</p>
-                    <p className="text-blue-400 font-mono text-sm">
-                      {trackingCode}
+                    <p className="text-gray-500">روش پرداخت</p>
+                    <p className="text-white flex items-center gap-1">
+                      {getPaymentMethodIcon(paymentDetails?.payment_method)}
+                      {getPaymentMethodLabel(paymentDetails?.payment_method)}
                     </p>
                   </div>
+
+                  {/* کد پیگیری (فقط کارت به کارت) */}
+                  {paymentDetails?.payment_method === "card_to_card" &&
+                    paymentDetails?.tracking_code && (
+                      <div className="col-span-2">
+                        <p className="text-gray-500">کد پیگیری</p>
+                        <p className="text-blue-400 font-mono text-sm">
+                          {paymentDetails.tracking_code}
+                        </p>
+                      </div>
+                    )}
+
+                  {/* شناسه تراکنش (فقط بله) */}
+                  {paymentDetails?.payment_method === "bale" &&
+                    paymentDetails?.transaction_id && (
+                      <div className="col-span-2">
+                        <p className="text-gray-500">شناسه تراکنش</p>
+                        <p className="text-blue-400 font-mono text-sm">
+                          {paymentDetails.transaction_id}
+                        </p>
+                      </div>
+                    )}
                 </div>
               </div>
 
-              {/* تصویر رسید - نمونه */}
-              <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                  <FileImage className="w-4 h-4" />
-                  تصویر رسید
-                </h3>
-                <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-white/5">
-                  {!imageError ? (
-                    <img
-                      src="/placeholder-receipt.jpg"
-                      alt="تصویر رسید"
-                      className="w-full h-full object-cover"
-                      onError={() => setImageError(true)}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500">
-                      <FileImage className="w-12 h-12 text-gray-600" />
-                      <p className="text-sm">تصویر رسید موجود نیست</p>
+              {/* تصویر رسید (فقط کارت به کارت) */}
+              {paymentDetails?.payment_method === "card_to_card" &&
+                paymentDetails?.receipt_image_url && (
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                      <FileImage className="w-4 h-4" />
+                      تصویر رسید
+                    </h3>
+                    <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-white/5">
+                      {!imageError ? (
+                        <img
+                          src={paymentDetails.receipt_image_url}
+                          alt="تصویر رسید"
+                          className="w-full h-full object-cover"
+                          onError={() => setImageError(true)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500">
+                          <FileImage className="w-12 h-12 text-gray-600" />
+                          <p className="text-sm">تصویر رسید موجود نیست</p>
+                        </div>
+                      )}
+                      {/* دکمه دانلود */}
+                      <a
+                        href={paymentDetails.receipt_image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute bottom-2 right-2 p-2 bg-black/60 hover:bg-black/80 rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-white" />
+                      </a>
                     </div>
-                  )}
-                  {/* دکمه دانلود */}
-                  <button
-                    onClick={() => {
-                      alert("📥 قابلیت دانلود در حال توسعه است...");
-                    }}
-                    className="absolute bottom-2 right-2 p-2 bg-black/60 hover:bg-black/80 rounded-lg transition-colors"
-                  >
-                    <Download className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              </div>
+                  </div>
+                )}
 
               {/* دکمه‌های اقدام */}
               {isWaitingVerify && (

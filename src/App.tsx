@@ -27,6 +27,7 @@ import BlogListAdmin from "./pages/admin/Blog/BlogList";
 import BlogCreate from "./pages/admin/Blog/BlogCreate";
 import BlogEdit from "./pages/admin/Blog/BlogEdit";
 import CourseList from "./pages/admin/Courses/CourseList";
+import OrdersList from "./pages/admin/Payments/OrdersList";
 import CourseCreate from "./pages/admin/Courses/CourseCreate";
 import CourseEdit from "./pages/admin/Courses/CourseEdit";
 import CourseEnrollments from "./pages/admin/Courses/CourseEnrollments";
@@ -173,6 +174,14 @@ function App() {
             />
 
             {/* دوره‌ها */}
+            <Route
+              path="/admin/payments/orders"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <OrdersList />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin/courses"
               element={

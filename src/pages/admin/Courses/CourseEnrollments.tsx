@@ -21,7 +21,7 @@ import {
   Clock,
   X,
   BookOpen,
-  Check,
+  // Check,
   Timer,
 } from "lucide-react";
 
@@ -38,7 +38,7 @@ interface Enrollment {
   id: string;
   user_id: string;
   user: User;
-  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "WAITING";
   created_at: string;
   paymentStatus?: "PAID" | "UNPAID" | "PENDING" | "WAITING_VERIFY";
   course_id?: string;
@@ -75,7 +75,7 @@ export default function CourseEnrollments() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [updating, setUpdating] = useState<string | null>(null);
+  const [, setUpdating] = useState<string | null>(null);
 
   // ✅ State برای مودال
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -153,7 +153,7 @@ export default function CourseEnrollments() {
     }
   };
 
-  // ✅ تابع مشاهده جزئیات پرداخت (فقط یک بار تعریف شده)
+  // ✅ تابع مشاهده جزئیات پرداخت
   const handleViewPaymentDetails = (enrollment: Enrollment) => {
     setSelectedEnrollment(enrollment);
     setShowPaymentModal(true);
@@ -171,7 +171,7 @@ export default function CourseEnrollments() {
     setShowPaymentModal(false);
   };
 
-  // ✅ اصلاح fetchData
+  // ✅ اصلاح fetchData - فقط نمایش کاربران با پرداخت کامل
   const fetchData = async () => {
     if (!courseId) return;
 
@@ -190,11 +190,7 @@ export default function CourseEnrollments() {
       try {
         const enrollmentsData =
           await enrollmentsAPI.getCourseEnrollments(courseId);
-        // console.log("📥 ثبت‌نام‌های دوره (خام):", enrollmentsData);
 
-        // src/pages/admin/Courses/CourseEnrollments.tsx
-
-        // ✅ اصلاح بخش mapping در fetchData
         const mappedEnrollments: Enrollment[] = await Promise.all(
           (enrollmentsData || []).map(async (item: any) => {
             let userData = item.user;
@@ -216,16 +212,11 @@ export default function CourseEnrollments() {
             let paymentStatus =
               item.payment_status || item.paymentStatus || "PENDING";
 
-            // اگر وضعیت CONFIRMED یا COMPLETED است، paymentStatus باید PAID باشد
             if (item.status === "CONFIRMED" || item.status === "COMPLETED") {
               paymentStatus = "PAID";
-            }
-            // اگر وضعیت WAITING است، paymentStatus باید WAITING_VERIFY باشد
-            else if (item.status === "WAITING") {
+            } else if (item.status === "WAITING") {
               paymentStatus = "WAITING_VERIFY";
-            }
-            // اگر وضعیت CANCELLED است، paymentStatus باید UNPAID باشد
-            else if (item.status === "CANCELLED") {
+            } else if (item.status === "CANCELLED") {
               paymentStatus = "UNPAID";
             }
 
@@ -241,15 +232,23 @@ export default function CourseEnrollments() {
               status: item.status || "PENDING",
               created_at:
                 item.created_at || item.createdAt || new Date().toISOString(),
-              paymentStatus: paymentStatus, // ✅ تنظیم شده
+              paymentStatus: paymentStatus,
               course_id: item.course_id || item.courseId,
               event_id: item.event_id || item.eventId,
             };
           }),
         );
 
-        // console.log("📋 ثبت‌نام‌های تبدیل شده:", mappedEnrollments);
-        setEnrollments(mappedEnrollments);
+        // ✅ ✅ فقط کاربرانی که پرداخت کامل کرده‌اند (CONFIRMED یا PAID)
+        const confirmedEnrollments = mappedEnrollments.filter(
+          (enrollment) =>
+            enrollment.status === "CONFIRMED" ||
+            enrollment.status === "COMPLETED" ||
+            enrollment.paymentStatus === "PAID",
+        );
+
+        console.log("✅ ثبت‌نام‌های تایید شده:", confirmedEnrollments);
+        setEnrollments(confirmedEnrollments);
       } catch (err) {
         console.error("❌ خطا در دریافت ثبت‌نام‌ها:", err);
         setEnrollments([]);
@@ -276,7 +275,6 @@ export default function CourseEnrollments() {
         return "text-blue-400 bg-blue-500/20 border-blue-500/30";
       case "WAITING":
         return "text-yellow-400 bg-yellow-500/20 border-yellow-500/30";
-
       default:
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
     }
@@ -310,7 +308,7 @@ export default function CourseEnrollments() {
       case "COMPLETED":
         return "تکمیل شده";
       case "WAITING":
-        return "در انتظار تایید شما";
+        return "در انتظار تایید";
       default:
         return status;
     }
@@ -390,7 +388,7 @@ export default function CourseEnrollments() {
   }
 
   const enrolledCount = enrollments.length;
-  const capacity = course.capacity || "نامحدود";
+  // const capacity = course.capacity || "نامحدود";
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -411,10 +409,10 @@ export default function CourseEnrollments() {
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-white mt-3 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-blue-400" />
-            ثبت‌نام‌های دوره
+            ثبت‌نام‌های تایید شده
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            {course.title} - {enrolledCount} / {capacity} نفر ثبت‌نام کرده‌اند
+            {course.title} - {enrolledCount} نفر ثبت‌نام نهایی شده‌اند
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -487,8 +485,6 @@ export default function CourseEnrollments() {
         >
           <option value="all">همه وضعیت‌ها</option>
           <option value="CONFIRMED">✅ تایید شده</option>
-          <option value="PENDING">⏳ در انتظار</option>
-          <option value="CANCELLED">❌ لغو شده</option>
           <option value="COMPLETED">📌 تکمیل شده</option>
         </select>
       </div>
@@ -509,15 +505,13 @@ export default function CourseEnrollments() {
           <p className="text-gray-400">
             {searchTerm || statusFilter !== "all"
               ? "با این فیلترها هیچ کاربری یافت نشد"
-              : "هنوز کاربری در این دوره ثبت‌نام نکرده است"}
+              : "هیچ کاربری ثبت‌نام نهایی خود را تکمیل نکرده است"}
           </p>
         </LiquidGlassCard>
       ) : (
         <div className="space-y-3">
           {filteredEnrollments.map((enrollment) => {
-            const isWaitingVerify =
-              enrollment.paymentStatus === "WAITING_VERIFY";
-            const isUpdating = updating === enrollment.id;
+            // const isUpdating = updating === enrollment.id;
 
             return (
               <LiquidGlassCard
@@ -567,11 +561,7 @@ export default function CourseEnrollments() {
                         className={`px-3 py-1 rounded-full text-xs font-medium border ${
                           enrollment.paymentStatus === "PAID"
                             ? "text-green-400 bg-green-500/20 border-green-500/30"
-                            : enrollment.paymentStatus === "WAITING_VERIFY"
-                              ? "text-blue-400 bg-blue-500/20 border-blue-500/30"
-                              : enrollment.paymentStatus === "UNPAID"
-                                ? "text-red-400 bg-red-500/20 border-red-500/30"
-                                : "text-yellow-400 bg-yellow-500/20 border-yellow-500/30"
+                            : "text-blue-400 bg-blue-500/20 border-blue-500/30"
                         }`}
                       >
                         💳 {getPaymentStatusLabel(enrollment.paymentStatus)}
@@ -585,36 +575,6 @@ export default function CourseEnrollments() {
 
                   {/* ✅ دکمه‌های اقدام */}
                   <div className="flex items-center gap-2">
-                    {/* دکمه تایید پرداخت */}
-                    {isWaitingVerify && (
-                      <>
-                        <GlassButton
-                          variant="primary"
-                          size="sm"
-                          loading={isUpdating}
-                          disabled={isUpdating}
-                          icon={<Check className="w-3.5 h-3.5" />}
-                          iconPosition="left"
-                          onClick={() => handleConfirmPayment(enrollment.id)}
-                          className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30"
-                        >
-                          تایید
-                        </GlassButton>
-                        <GlassButton
-                          variant="secondary"
-                          size="sm"
-                          loading={isUpdating}
-                          disabled={isUpdating}
-                          icon={<X className="w-3.5 h-3.5" />}
-                          iconPosition="left"
-                          onClick={() => handleRejectPayment(enrollment.id)}
-                          className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30"
-                        >
-                          رد
-                        </GlassButton>
-                      </>
-                    )}
-
                     {/* دکمه جزئیات - باز کردن مودال */}
                     <GlassButton
                       variant="secondary"

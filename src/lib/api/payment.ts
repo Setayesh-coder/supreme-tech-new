@@ -4,6 +4,7 @@ import type {
   CardToCardPaymentRequest,
   BalePaymentRequest,
   BalePaymentResponse,
+  Order,
 } from "../../types/cart";
 
 export const paymentsAPI = {
@@ -100,6 +101,48 @@ export const paymentsAPI = {
         return null;
       }
 
+      throw error;
+    }
+  }, // src/lib/api/payment.ts
+
+  /**
+   * 📋 دریافت لیست تمام سفارشات (فقط ادمین)
+   * GET /api/v1/payments/orders
+   */
+  getOrders: async (params?: { status?: string }): Promise<Order[]> => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.get("/payments/orders", {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data || [];
+    } catch (error: any) {
+      console.error("❌ خطا در دریافت سفارشات:", error);
+      if (error.response?.status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * ✅ تایید یا رد سفارش (فقط ادمین)
+   * PATCH /api/v1/payments/orders/{order_id}/verify
+   */
+  verifyOrder: async (orderId: string, approved: boolean): Promise<any> => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.patch(
+        `/payments/orders/${orderId}/verify`,
+        { approved },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در تایید سفارش ${orderId}:`, error);
       throw error;
     }
   },

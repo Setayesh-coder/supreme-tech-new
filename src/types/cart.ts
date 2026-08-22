@@ -27,6 +27,36 @@ export interface Cart {
     type: "PERCENT" | "FIXED";
   };
 }
+// src/types/cart.ts
+
+// ... سایر تایپ‌ها
+
+export interface Order {
+  id: string;
+  user_id: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  total_original_price: number;
+  total_discount: number;
+  total_payable: number;
+  status: "PENDING" | "PAID" | "FAILED" | "CANCELLED";
+  payment_method: "card_to_card" | "bale";
+  tracking_code?: string;
+  receipt_image_url?: string;
+  transaction_id?: string;
+  enrollments: {
+    id: string;
+    course_id: string;
+    course_title: string;
+    status: string;
+  }[];
+  created_at: string;
+  updated_at: string;
+}
 
 export interface ApplyCouponRequest {
   code: string;

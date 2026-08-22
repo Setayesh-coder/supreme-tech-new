@@ -1,12 +1,14 @@
+// src/components/profile/EnrollmentsTab.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import {
   BookOpen,
   Calendar,
   Wallet,
-  CreditCard,
+  // CreditCard,
   Video,
   Clock,
+  CheckCircle,
 } from "lucide-react";
 
 interface Enrollment {
@@ -40,7 +42,8 @@ interface EnrollmentsTabProps {
     color: string;
   };
   getPaymentStatusLabel: (status?: string) => { label: string; color: string };
-  handlePayment: (id: string) => void; // ✅ این تابع کاربر را به صفحه پرداخت هدایت می‌کند
+  // ❌ حذف handlePayment - دیگر نیازی نیست
+  // handlePayment: (id: string) => void;
 }
 
 export function EnrollmentsTab({
@@ -50,8 +53,8 @@ export function EnrollmentsTab({
   formatPrice,
   getStatusLabel,
   getPaymentStatusLabel,
-  handlePayment,
-}: EnrollmentsTabProps) {
+}: // ❌ حذف handlePayment
+EnrollmentsTabProps) {
   if (enrollments.length === 0) {
     return (
       <LiquidGlassCard
@@ -98,6 +101,7 @@ export function EnrollmentsTab({
           const isConfirmed = enrollment.status === "CONFIRMED";
           const isEventStarted = new Date(enrollment.event.date) <= new Date();
           const isWaitingVerify = enrollment.paymentStatus === "WAITING_VERIFY";
+          const isPending = enrollment.status === "PENDING";
 
           return (
             <LiquidGlassCard
@@ -146,47 +150,46 @@ export function EnrollmentsTab({
                       <Wallet className="w-3 h-3" />
                       {formatPrice(enrollment.event.price)}
                     </span>
-                    <span
-                      className={`flex items-center gap-1 ${paymentStatus.color}`}
-                    >
-                      {paymentStatus.label}
-                    </span>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {/* ✅ دکمه پرداخت - هدایت به صفحه پرداخت */}
+                    {/* ✅ نمایش وضعیت پرداخت فقط برای دوره‌های در انتظار */}
+                    {isPending && (
+                      <span
+                        className={`flex items-center gap-1 ${paymentStatus.color}`}
+                      >
+                        {paymentStatus.label}
+                      </span>
+                    )}
 
-                    {enrollment.status === "PENDING" &&
-                      enrollment.paymentStatus !== "PAID" &&
-                      !isWaitingVerify && (
-                        <GlassButton
-                          variant="primary"
-                          size="sm"
-                          icon={<CreditCard className="w-3 h-3" />}
-                          iconPosition="left"
-                          onClick={() => {
-                            // ✅ استفاده از enrollment.id (که همان enrollment_id در بک‌اند است)
-                            const paymentId = enrollment.id;
-
-                            if (!paymentId) {
-                              alert("خطا: شناسه ثبت‌نام نامعتبر است");
-                              return;
-                            }
-
-                            handlePayment(paymentId);
-                          }}
-                        >
-                          پرداخت
-                        </GlassButton>
-                      )}
-                    {/* ✅ وضعیت در انتظار تایید */}
+                    {/* ✅ وضعیت در انتظار تایید ادمین */}
                     {isWaitingVerify && (
-                      <span className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-xl text-xs font-medium flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-blue-400">
                         <Clock className="w-3 h-3" />
                         در انتظار تایید
                       </span>
                     )}
-                    {/* ✅ ورود به جلسه */}
+
+                    {/* ✅ وضعیت پرداخت شده */}
+                    {isConfirmed && isPaid && (
+                      <span className="flex items-center gap-1 text-green-400">
+                        <CheckCircle className="w-3 h-3" />
+                        پرداخت شده
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {/* ✅ فقط دکمه جزئیات - بدون دکمه پرداخت */}
+                    <GlassButton
+                      variant="white"
+                      size="sm"
+                      onClick={() =>
+                        navigate(`/courses/${enrollment.event.slug}`)
+                      }
+                    >
+                      جزئیات
+                    </GlassButton>
+
+                    {/* ✅ ورود به جلسه (فقط برای دوره‌های تایید شده و شروع شده) */}
                     {isConfirmed && isPaid && isEventStarted && (
                       <a
                         href={
@@ -202,16 +205,6 @@ export function EnrollmentsTab({
                         ورود به جلسه
                       </a>
                     )}
-                    {/* ✅ دکمه جزئیات */}
-                    <GlassButton
-                      variant="white"
-                      size="sm"
-                      onClick={() =>
-                        navigate(`/courses/${enrollment.event.slug}`)
-                      }
-                    >
-                      جزئیات
-                    </GlassButton>
                   </div>
                 </div>
               </div>

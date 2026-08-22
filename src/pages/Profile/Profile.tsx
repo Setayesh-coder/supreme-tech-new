@@ -605,17 +605,17 @@ export default function Profile() {
   };
 
   // ============== Payment Functions ==============
-  const handlePayment = (enrollmentId: string) => {
-    if (
-      !enrollmentId ||
-      enrollmentId === "undefined" ||
-      enrollmentId === "null"
-    ) {
-      alert("خطا: شناسه ثبت‌نام نامعتبر است");
-      return;
-    }
-    navigate(`/cart?payment=${enrollmentId}`);
-  };
+  // const handlePayment = (enrollmentId: string) => {
+  //   if (
+  //     !enrollmentId ||
+  //     enrollmentId === "undefined" ||
+  //     enrollmentId === "null"
+  //   ) {
+  //     alert("خطا: شناسه ثبت‌نام نامعتبر است");
+  //     return;
+  //   }
+  //   navigate(`/cart?payment=${enrollmentId}`);
+  // };
 
   const processPayment = async () => {
     if (!selectedEnrollment) return;
@@ -919,7 +919,7 @@ export default function Profile() {
                 formatPrice={formatPrice}
                 getStatusLabel={getStatusLabel}
                 getPaymentStatusLabel={getPaymentStatusLabel}
-                handlePayment={handlePayment}
+                // ❌ handlePayment={handlePayment} - حذف شود
               />
             )}
 
