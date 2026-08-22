@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { coursesAPI } from "../../lib/api/courses";
-import { enrollmentsAPI } from "../../lib/api/enrollments"; // ✅ اضافه شد
+import { enrollmentsAPI } from "../../lib/api/enrollments"; 
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";

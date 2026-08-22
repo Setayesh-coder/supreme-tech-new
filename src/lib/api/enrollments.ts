@@ -2,7 +2,6 @@
 import api from "./axios";
 
 // 📦 تایپ‌ها بر اساس بک‌اند
-// src/types/enrollment.ts
 export interface Enrollment {
   id: string;
   eventId: string;
@@ -48,7 +47,7 @@ export interface CoursePreRegisterData {
 
 // 📦 تایپ برای بروزرسانی وضعیت
 export interface EnrollmentStatusUpdate {
-  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "WAITING";
 }
 
 // 📦 تایپ برای لینک جلسه
@@ -63,11 +62,19 @@ export const enrollmentsAPI = {
    * نیازمند احراز هویت
    */
   getMyEnrollments: async (): Promise<Enrollment[]> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.get("/enrollments/my", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.get("/enrollments/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data || [];
+    } catch (error: any) {
+      console.error("❌ خطا در دریافت ثبت‌نام‌ها:", error);
+      if (error.response?.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   /**
@@ -76,11 +83,16 @@ export const enrollmentsAPI = {
    * نیازمند احراز هویت
    */
   preRegister: async (data: CoursePreRegisterData): Promise<Enrollment> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.post("/enrollments/pre-register", data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.post("/enrollments/pre-register", data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ خطا در پیش‌ثبت‌نام:", error);
+      throw error;
+    }
   },
 
   /**
@@ -91,78 +103,98 @@ export const enrollmentsAPI = {
     courseId: string,
     params?: { status?: string },
   ): Promise<Enrollment[]> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.get(`/enrollments/course/${courseId}`, {
-      params,
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.get(`/enrollments/course/${courseId}`, {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data || [];
+    } catch (error: any) {
+      console.error(`❌ خطا در دریافت ثبت‌نام‌های دوره ${courseId}:`, error);
+      throw error;
+    }
   },
 
   /**
    * ✏️ بروزرسانی وضعیت ثبت‌نام (فقط ادمین)
+   * PATCH /api/v1/enrollments/{id}/status
    * نیازمند احراز هویت ادمین
    */
   updateStatus: async (
     id: string,
-    status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED",
+    status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "WAITING",
   ): Promise<Enrollment> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.patch(
-      `/enrollments/${id}/status`,
-      { status },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.patch(
+        `/enrollments/${id}/status`,
+        { status },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در بروزرسانی وضعیت ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
    * 🔗 ثبت لینک جلسه آنلاین (فقط ادمین)
+   * POST /api/v1/enrollments/{id}/meeting-link
    * نیازمند احراز هویت ادمین
    */
   setMeetingLink: async (
     id: string,
     meetingLink: string,
   ): Promise<Enrollment> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.post(
-      `/enrollments/${id}/meeting-link`,
-      { meeting_link: meetingLink },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.post(
+        `/enrollments/${id}/meeting-link`,
+        { meeting_link: meetingLink },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در ثبت لینک جلسه ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
-   * 🗑️ حذف/لغو ثبت‌نام
-   * فقط کاربر خودش می‌تواند ثبت‌نام خود را لغو کند
-   * نیازمند احراز هویت
+   * 🗑️ حذف/لغو ثبت‌نام (فقط ادمین)
+   * DELETE /api/v1/enrollments/{id}
+   * نیازمند احراز هویت ادمین
    */
   delete: async (id: string): Promise<{ message: string }> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.delete(`/enrollments/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.delete(`/enrollments/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در حذف ثبت‌نام ${id}:`, error);
+      throw error;
+    }
   },
-  // src/lib/api/enrollments.ts
 
   /**
-   * ❌ لغو/حذف ثبت‌نام (برای کاربر)
-   * POST /api/v1/enrollments/{id}/cancel
+   * ❌ لغو ثبت‌نام (برای کاربر)
+   * PATCH /api/v1/enrollments/{id}/cancel
    * نیازمند احراز هویت
    */
   cancel: async (id: string): Promise<{ message: string }> => {
     try {
       const token = localStorage.getItem("token") || "";
-      // ✅ استفاده از PATCH به جای POST
       const response = await api.patch(
         `/enrollments/${id}/cancel`,
-        {}, // body خالی
+        {},
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -173,22 +205,47 @@ export const enrollmentsAPI = {
       throw error;
     }
   },
+
   /**
    * 💳 پرداخت برای ثبت‌نام
+   * POST /api/v1/enrollments/{id}/pay
    * نیازمند احراز هویت
    */
   processPayment: async (
     enrollmentId: string,
   ): Promise<{ paymentUrl: string; status: string }> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.post(
-      `/enrollments/${enrollmentId}/pay`,
-      {},
-      {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.post(
+        `/enrollments/${enrollmentId}/pay`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در پردازش پرداخت ${enrollmentId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 📋 دریافت یک ثبت‌نام خاص
+   * GET /api/v1/enrollments/{id}
+   * نیازمند احراز هویت
+   */
+  getById: async (id: string): Promise<Enrollment> => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.get(`/enrollments/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در دریافت ثبت‌نام ${id}:`, error);
+      throw error;
+    }
   },
 
   // ============================================================
@@ -197,7 +254,6 @@ export const enrollmentsAPI = {
 
   /**
    * ⚠️ سازگاری با کدهای قدیمی - استفاده از preRegister به جای create
-   * ✅ اضافه کردن formData برای ارسال فیلدهای فرم
    */
   create: async (data: {
     courseId: string;
@@ -212,7 +268,6 @@ export const enrollmentsAPI = {
       referral_source?: string;
     };
   }): Promise<Enrollment> => {
-    // ✅ ارسال داده‌های کامل‌تر
     const preRegisterData: CoursePreRegisterData = {
       course_id: data.courseId,
       field_of_study: data.formData?.field_of_study || "",
@@ -239,17 +294,5 @@ export const enrollmentsAPI = {
    */
   getMyCourses: async (): Promise<Enrollment[]> => {
     return enrollmentsAPI.getMyEnrollments();
-  } /**
-   * 📋 دریافت یک ثبت‌نام خاص
-   * GET /api/v1/enrollments/{id}
-   */,
-  getById: async (id: string): Promise<Enrollment> => {
-    try {
-      const response = await api.get(`/enrollments/${id}`);
-      return response.data;
-    } catch (error: any) {
-      console.error(`❌ خطا در دریافت ثبت‌نام ${id}:`, error);
-      throw error;
-    }
   },
 };

@@ -22,6 +22,7 @@ import {
   X,
   BookOpen,
   Check,
+  Timer,
 } from "lucide-react";
 
 // ✅ تایپ کاربر
@@ -191,6 +192,9 @@ export default function CourseEnrollments() {
           await enrollmentsAPI.getCourseEnrollments(courseId);
         // console.log("📥 ثبت‌نام‌های دوره (خام):", enrollmentsData);
 
+        // src/pages/admin/Courses/CourseEnrollments.tsx
+
+        // ✅ اصلاح بخش mapping در fetchData
         const mappedEnrollments: Enrollment[] = await Promise.all(
           (enrollmentsData || []).map(async (item: any) => {
             let userData = item.user;
@@ -208,6 +212,23 @@ export default function CourseEnrollments() {
               }
             }
 
+            // ✅ تنظیم paymentStatus بر اساس status
+            let paymentStatus =
+              item.payment_status || item.paymentStatus || "PENDING";
+
+            // اگر وضعیت CONFIRMED یا COMPLETED است، paymentStatus باید PAID باشد
+            if (item.status === "CONFIRMED" || item.status === "COMPLETED") {
+              paymentStatus = "PAID";
+            }
+            // اگر وضعیت WAITING است، paymentStatus باید WAITING_VERIFY باشد
+            else if (item.status === "WAITING") {
+              paymentStatus = "WAITING_VERIFY";
+            }
+            // اگر وضعیت CANCELLED است، paymentStatus باید UNPAID باشد
+            else if (item.status === "CANCELLED") {
+              paymentStatus = "UNPAID";
+            }
+
             return {
               id: item.id,
               user_id: item.user_id || item.userId || userData.id,
@@ -220,8 +241,7 @@ export default function CourseEnrollments() {
               status: item.status || "PENDING",
               created_at:
                 item.created_at || item.createdAt || new Date().toISOString(),
-              paymentStatus:
-                item.payment_status || item.paymentStatus || "PENDING",
+              paymentStatus: paymentStatus, // ✅ تنظیم شده
               course_id: item.course_id || item.courseId,
               event_id: item.event_id || item.eventId,
             };
@@ -254,6 +274,9 @@ export default function CourseEnrollments() {
         return "text-red-400 bg-red-500/20 border-red-500/30";
       case "COMPLETED":
         return "text-blue-400 bg-blue-500/20 border-blue-500/30";
+      case "WAITING":
+        return "text-yellow-400 bg-yellow-500/20 border-yellow-500/30";
+
       default:
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
     }
@@ -269,6 +292,8 @@ export default function CourseEnrollments() {
         return <XCircle className="w-4 h-4" />;
       case "COMPLETED":
         return <CheckCircle className="w-4 h-4" />;
+      case "WAITING":
+        return <Timer className="w-4 h-4" />;
       default:
         return <Users className="w-4 h-4" />;
     }
@@ -284,6 +309,8 @@ export default function CourseEnrollments() {
         return "لغو شده";
       case "COMPLETED":
         return "تکمیل شده";
+      case "WAITING":
+        return "در انتظار تایید شما";
       default:
         return status;
     }

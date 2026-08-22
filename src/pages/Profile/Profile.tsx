@@ -343,45 +343,69 @@ export default function Profile() {
       // ============================================
       // ✅ دریافت ثبت‌نام‌های نهایی (CONFIRMED و WAITING)
       // ============================================
+      // src/pages/Profile/Profile.tsx
+
+      // ✅ تابع fetchProfile - بخش دریافت ثبت‌نام‌های نهایی
       try {
         const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
         console.log("📥 ثبت‌نام‌های نهایی:", enrollmentsData);
 
-        const mappedEnrollments: Enrollment[] = await Promise.all(
-          enrollmentsData.map(async (item: any) => {
+        const mappedEnrollments: Enrollment[] = enrollmentsData.map(
+          (item: any) => {
             const courseId = item.course_id || item.eventId || item.id;
-            // ... بقیه کد mapping
+
+            // ✅ استفاده از اطلاعات موجود در item
+            // اگر item.event یا item.course وجود دارد از آن استفاده کن
+            const courseInfo = item.event || item.course || {};
+
+            // ✅ اگر اطلاعات دوره در خود item وجود دارد
+            const title = courseInfo.title || item.title || "دوره آموزشی";
+            const slug = courseInfo.slug || item.slug || "";
+            const date =
+              courseInfo.date ||
+              item.date ||
+              item.created_at ||
+              new Date().toISOString();
+            const price = courseInfo.price || item.price || 0;
+            const image =
+              courseInfo.image || courseInfo.cover_image || item.image || "";
+            const duration = courseInfo.duration || "";
+            const meetingLink = courseInfo.meetingLink || "";
+
+            // ✅ وضعیت پرداخت - فقط برای دوره‌های PENDING نمایش داده شود
+            const paymentStatus =
+              item.status === "PENDING" ? "PENDING" : undefined;
+
             return {
               ...item,
               id: item.id || `enr_${Date.now()}`,
               eventId: item.eventId || item.event_id || courseId,
-              paymentStatus:
-                item.paymentStatus || item.payment_status || "PENDING",
+              paymentStatus: paymentStatus,
               createdAt:
                 item.createdAt || item.created_at || new Date().toISOString(),
               status: item.status || "PENDING",
               event: {
                 id: courseId,
-                title: item.event?.title || "دوره آموزشی",
-                slug: item.event?.slug || "",
-                date: item.event?.date || new Date().toISOString(),
-                price: item.event?.price || 0,
-                image: item.event?.image || "",
-                duration: item.event?.duration || "",
-                meetingLink: item.event?.meetingLink || "",
+                title: title,
+                slug: slug,
+                date: date,
+                price: price,
+                image: image,
+                duration: duration,
+                meetingLink: meetingLink,
               },
               course: {
                 id: courseId,
-                title: item.course?.title || "دوره آموزشی",
-                slug: item.course?.slug || "",
-                date: item.course?.date || new Date().toISOString(),
-                price: item.course?.price || 0,
-                image: item.course?.image || "",
-                duration: item.course?.duration || "",
-                meetingLink: item.course?.meetingLink || "",
+                title: title,
+                slug: slug,
+                date: date,
+                price: price,
+                image: image,
+                duration: duration,
+                meetingLink: meetingLink,
               },
             };
-          }),
+          },
         );
 
         const finalEnrollments = mappedEnrollments.filter(

@@ -11,7 +11,6 @@ export const paymentsAPI = {
    * 💳 ثبت رسید پرداخت کارت به کارت
    * POST /api/v1/payments/card-to-card
    */
-
   cardToCard: async (
     data: CardToCardPaymentRequest,
   ): Promise<{ message: string; status: string }> => {
@@ -38,8 +37,10 @@ export const paymentsAPI = {
       throw error;
     }
   },
+
   /**
-   *  تولید لینک پرداخت ربات بله
+   * 🤖 تولید لینک پرداخت ربات بله
+   * POST /api/v1/payments/ble/initiate
    */
   baleInitiate: async (
     data: BalePaymentRequest,
@@ -61,6 +62,7 @@ export const paymentsAPI = {
 
   /**
    * 📊 استعلام اطلاعات فاکتور توسط ربات
+   * GET /api/v1/payments/ble/checkout-info
    */
   baleCheckoutInfo: async (transactionId: string): Promise<any> => {
     try {
@@ -74,6 +76,30 @@ export const paymentsAPI = {
       return response.data;
     } catch (error: any) {
       console.error("❌ خطا در استعلام بله:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 📋 دریافت جزئیات پرداخت بر اساس enrollment
+   * GET /api/v1/payments/enrollment/{enrollmentId}
+   * این متد برای نمایش جزئیات پرداخت در مودال ادمین استفاده می‌شود
+   */
+  getPaymentByEnrollment: async (enrollmentId: string): Promise<any> => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await api.get(`/payments/enrollment/${enrollmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در دریافت جزئیات پرداخت ${enrollmentId}:`, error);
+
+      // اگر خطای 404 بود، یعنی پرداختی برای این enrollment وجود ندارد
+      if (error.response?.status === 404) {
+        return null;
+      }
+
       throw error;
     }
   },

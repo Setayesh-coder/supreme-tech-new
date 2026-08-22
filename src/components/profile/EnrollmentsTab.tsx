@@ -155,7 +155,7 @@ export function EnrollmentsTab({
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {/* ✅ دکمه پرداخت - هدایت به صفحه پرداخت */}
-                    // src/components/profile/EnrollmentsTab.tsx
+
                     {enrollment.status === "PENDING" &&
                       enrollment.paymentStatus !== "PAID" &&
                       !isWaitingVerify && (
@@ -207,7 +207,7 @@ export function EnrollmentsTab({
                       variant="white"
                       size="sm"
                       onClick={() =>
-                        navigate(`/events/${enrollment.event.slug}`)
+                        navigate(`/courses/${enrollment.event.slug}`)
                       }
                     >
                       جزئیات
