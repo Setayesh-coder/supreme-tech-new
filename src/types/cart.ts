@@ -26,10 +26,7 @@ export interface Cart {
     discount_amount: number;
     type: "PERCENT" | "FIXED";
   };
-}
-// src/types/cart.ts
-
-// ... سایر تایپ‌ها
+} // src/types/cart.ts
 
 export interface Order {
   id: string;
@@ -43,7 +40,7 @@ export interface Order {
   total_original_price: number;
   total_discount: number;
   total_payable: number;
-  status: "PENDING" | "PAID" | "FAILED" | "CANCELLED";
+  status: "pending" | "waiting_for_approval" | "paid" | "failed" | "cancelled";
   payment_method: "card_to_card" | "bale";
   tracking_code?: string;
   receipt_image_url?: string;

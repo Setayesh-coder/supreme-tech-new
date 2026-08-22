@@ -5,6 +5,7 @@ import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { ArrowRight, Upload, AlertCircle } from "lucide-react";
 import { paymentsAPI } from "../../lib/api/payment";
 import { uploadAPI } from "../../lib/api/upload";
+import { BankCard } from "../ui/BankCard";
 
 interface CardToCardPaymentProps {
   enrollmentId: string;
@@ -12,6 +13,12 @@ interface CardToCardPaymentProps {
   onSuccess: () => void;
   onBack: () => void;
 }
+
+// ✅ اطلاعات کارت بلو بانک
+const BANK_CARD_INFO = {
+  number: "6219 8619 2683 6163",
+  holderName: "محمد علیزاده",
+};
 
 export default function CardToCardPayment({
   enrollmentId,
@@ -45,7 +52,6 @@ export default function CardToCardPayment({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ اعتبارسنجی tracking_code - فقط اعداد
     const cleanTrackingCode = trackingCode.replace(/[^0-9]/g, "");
     if (!cleanTrackingCode || cleanTrackingCode.length < 5) {
       setError("کد پیگیری باید حداقل 5 عدد باشد (فقط اعداد انگلیسی)");
@@ -79,7 +85,6 @@ export default function CardToCardPayment({
         receipt_image_url: imageUrl,
       });
 
-      // ✅ بدون result - فقط await
       await paymentsAPI.cardToCard({
         enrollment_id: enrollmentId,
         tracking_code: cleanTrackingCode,
@@ -93,21 +98,11 @@ export default function CardToCardPayment({
       }, 2000);
     } catch (err: any) {
       console.error("❌ خطا در پرداخت کارت به کارت:", err);
-
-      if (err.response?.data?.detail) {
-        if (Array.isArray(err.response.data.detail)) {
-          const messages = err.response.data.detail
-            .map((d: any) => d.msg)
-            .join(", ");
-          setError(messages);
-        } else {
-          setError(err.response.data.detail);
-        }
-      } else if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError(err.message || "خطا در پرداخت کارت به کارت");
-      }
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          "خطا در پرداخت کارت به کارت",
+      );
     } finally {
       setLoading(false);
     }
@@ -123,6 +118,15 @@ export default function CardToCardPayment({
         بازگشت
       </button>
 
+      {/* ✅ کارت بلو بانک */}
+      <div className="flex justify-center px-4">
+        <BankCard
+          cardNumber={BANK_CARD_INFO.number}
+          cardHolderName={BANK_CARD_INFO.holderName}
+        />
+      </div>
+
+      {/* توضیحات و فرم */}
       <LiquidGlassCard
         className="p-4"
         borderRadius="16px"
@@ -142,14 +146,6 @@ export default function CardToCardPayment({
             <span>
               لطفاً پس از واریز مبلغ به حساب زیر، کد پیگیری و تصویر رسید را وارد
               کنید:
-              <br />
-              <span className="font-mono text-white">
-                شماره کارت: 1234-5678-9012-3456
-              </span>
-              <br />
-              <span className="font-mono text-white">
-                به نام: شرکت Supreme Tech
-              </span>
             </span>
           </p>
         </div>
@@ -163,7 +159,6 @@ export default function CardToCardPayment({
               type="text"
               value={trackingCode}
               onChange={(e) => {
-                // ✅ فقط اعداد انگلیسی
                 const value = e.target.value.replace(/[^0-9]/g, "");
                 setTrackingCode(value);
               }}

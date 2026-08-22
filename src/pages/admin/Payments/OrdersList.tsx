@@ -21,6 +21,7 @@ import {
   RefreshCw,
   CreditCard,
   Bot,
+  Timer,
 } from "lucide-react";
 
 interface OrderWithUser extends Order {
@@ -40,7 +41,6 @@ export default function OrdersList() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [processing, setProcessing] = useState<string | null>(null);
 
-  // ✅ State برای مودال جزئیات
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithUser | null>(
     null,
@@ -50,7 +50,6 @@ export default function OrdersList() {
     fetchOrders();
   }, []);
 
-  // ✅ تابع دریافت اطلاعات کاربر
   const fetchUserData = async (userId: string) => {
     try {
       const userData = await usersAPI.getById(userId);
@@ -120,33 +119,34 @@ export default function OrdersList() {
     }
   };
 
-  // ✅ تابع باز کردن مودال جزئیات با داده‌های کامل سفارش
   const handleViewDetails = (order: OrderWithUser) => {
     setSelectedOrder(order);
     setShowPaymentModal(true);
   };
 
-  // ✅ تابع تایید از مودال
   const handleConfirmFromModal = async (enrollmentId: string) => {
     await handleVerifyOrder(enrollmentId, true);
     setShowPaymentModal(false);
   };
 
-  // ✅ تابع رد از مودال
   const handleRejectFromModal = async (enrollmentId: string) => {
     await handleVerifyOrder(enrollmentId, false);
     setShowPaymentModal(false);
   };
 
+  // ✅ استفاده از toLowerCase برای تطابق با داده‌های بک‌اند
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PAID":
+    switch (status?.toLowerCase()) {
+      case "paid":
         return "text-green-400 bg-green-500/20 border-green-500/30";
-      case "PENDING":
+      case "waiting_for_approval":
+      case "waiting":
+        return "text-blue-400 bg-blue-500/20 border-blue-500/30";
+      case "pending":
         return "text-yellow-400 bg-yellow-500/20 border-yellow-500/30";
-      case "FAILED":
+      case "failed":
         return "text-red-400 bg-red-500/20 border-red-500/30";
-      case "CANCELLED":
+      case "cancelled":
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
       default:
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
@@ -154,29 +154,35 @@ export default function OrdersList() {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "PAID":
+    switch (status?.toLowerCase()) {
+      case "paid":
         return "پرداخت شده";
-      case "PENDING":
-        return "در انتظار تایید";
-      case "FAILED":
+      case "waiting_for_approval":
+      case "waiting":
+        return "در انتظار تایید ادمین";
+      case "pending":
+        return "در انتظار پرداخت";
+      case "failed":
         return "ناموفق";
-      case "CANCELLED":
+      case "cancelled":
         return "لغو شده";
       default:
-        return status;
+        return status || "نامشخص";
     }
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "PAID":
+    switch (status?.toLowerCase()) {
+      case "paid":
         return <CheckCircle className="w-4 h-4" />;
-      case "PENDING":
+      case "waiting_for_approval":
+      case "waiting":
+        return <Timer className="w-4 h-4" />;
+      case "pending":
         return <Clock className="w-4 h-4" />;
-      case "FAILED":
+      case "failed":
         return <XCircle className="w-4 h-4" />;
-      case "CANCELLED":
+      case "cancelled":
         return <XCircle className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;
@@ -190,7 +196,7 @@ export default function OrdersList() {
       case "bale":
         return "ربات بله";
       default:
-        return method;
+        return method || "نامشخص";
     }
   };
 
@@ -226,17 +232,17 @@ export default function OrdersList() {
   const filteredOrders = orders
     .filter((order) => {
       if (statusFilter === "all") return true;
-      return order.status === statusFilter;
+      return order.status?.toLowerCase() === statusFilter.toLowerCase();
     })
     .filter((order) => {
       if (!searchTerm) return true;
       const search = searchTerm.toLowerCase();
       return (
-        order.user.name.toLowerCase().includes(search) ||
-        order.user.email.toLowerCase().includes(search) ||
-        order.id.toLowerCase().includes(search) ||
+        order.user?.name?.toLowerCase().includes(search) ||
+        order.user?.email?.toLowerCase().includes(search) ||
+        order.id?.toLowerCase().includes(search) ||
         (order.enrollments || []).some((e) =>
-          e.course_title.toLowerCase().includes(search),
+          e.course_title?.toLowerCase().includes(search),
         )
       );
     });
@@ -295,21 +301,20 @@ export default function OrdersList() {
             className="bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           >
             <option value="all">همه سفارشات</option>
-            <option value="PENDING">⏳ در انتظار تایید</option>
-            <option value="PAID">✅ پرداخت شده</option>
-            <option value="FAILED">❌ ناموفق</option>
-            <option value="CANCELLED">🚫 لغو شده</option>
+            <option value="waiting_for_approval">⏳ در انتظار تایید</option>
+            <option value="paid">✅ پرداخت شده</option>
+            <option value="pending">💳 در انتظار پرداخت</option>
+            <option value="failed">❌ ناموفق</option>
+            <option value="cancelled">🚫 لغو شده</option>
           </select>
         </div>
 
-        {/* خطا */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl">
             ❌ {error}
           </div>
         )}
 
-        {/* لیست سفارشات */}
         {filteredOrders.length === 0 ? (
           <LiquidGlassCard
             className="p-12 text-center"
@@ -333,13 +338,17 @@ export default function OrdersList() {
         ) : (
           <div className="space-y-4">
             {filteredOrders.map((order) => {
-              const isPending = order.status === "PENDING";
+              // ✅ بررسی وضعیت برای نمایش دکمه‌ها
+              const isWaitingForApproval =
+                order.status?.toLowerCase() === "waiting_for_approval" ||
+                order.status?.toLowerCase() === "waiting";
+
               const statusColor = getStatusColor(order.status);
               const StatusIcon = getStatusIcon(order.status);
 
-              const userName = order.user.name;
-              const userEmail = order.user.email;
-              const userPhone = order.user.phone || "";
+              const userName = order.user?.name || "کاربر ناشناس";
+              const userEmail = order.user?.email || "ایمیل ثبت نشده";
+              const userPhone = order.user?.phone || "";
 
               const displayPrice =
                 order.total_payable || order.total_original_price || 0;
@@ -354,7 +363,6 @@ export default function OrdersList() {
                   glowIntensity="sm"
                 >
                   <div className="flex flex-col gap-4">
-                    {/* ردیف اول: اطلاعات اصلی */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
@@ -395,7 +403,6 @@ export default function OrdersList() {
                       </div>
                     </div>
 
-                    {/* ردیف دوم: جزئیات سفارش */}
                     <div className="flex flex-wrap items-center gap-4 text-sm">
                       <span className="flex items-center gap-1 text-gray-400">
                         <Wallet className="w-4 h-4" />
@@ -428,21 +435,20 @@ export default function OrdersList() {
                       )}
                     </div>
 
-                    {/* لیست دوره‌ها */}
                     <div className="flex flex-wrap gap-2">
                       {enrollments.map((enrollment) => (
                         <span
                           key={enrollment.id}
                           className="px-2 py-1 bg-white/5 rounded-lg text-xs text-gray-300"
                         >
-                          {enrollment.course_title}
+                          {enrollment.course_title || "دوره آموزشی"}
                         </span>
                       ))}
                     </div>
 
-                    {/* دکمه‌های اقدام */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
-                      {isPending && (
+                      {/* ✅ دکمه‌های تایید/رد فقط برای waiting_for_approval */}
+                      {isWaitingForApproval && (
                         <>
                           <GlassButton
                             variant="primary"
@@ -471,7 +477,6 @@ export default function OrdersList() {
                         </>
                       )}
 
-                      {/* ✅ دکمه جزئیات - باز کردن مودال */}
                       <GlassButton
                         variant="secondary"
                         size="sm"
@@ -493,7 +498,6 @@ export default function OrdersList() {
           </div>
         )}
 
-        {/* آمار */}
         {orders.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             <LiquidGlassCard
@@ -509,8 +513,14 @@ export default function OrdersList() {
               borderRadius="12px"
               blurIntensity="sm"
             >
-              <p className="text-2xl font-bold text-yellow-400">
-                {orders.filter((o) => o.status === "PENDING").length}
+              <p className="text-2xl font-bold text-blue-400">
+                {
+                  orders.filter(
+                    (o) =>
+                      o.status?.toLowerCase() === "waiting_for_approval" ||
+                      o.status?.toLowerCase() === "waiting",
+                  ).length
+                }
               </p>
               <p className="text-gray-400 text-sm">در انتظار تایید</p>
             </LiquidGlassCard>
@@ -520,7 +530,10 @@ export default function OrdersList() {
               blurIntensity="sm"
             >
               <p className="text-2xl font-bold text-green-400">
-                {orders.filter((o) => o.status === "PAID").length}
+                {
+                  orders.filter((o) => o.status?.toLowerCase() === "paid")
+                    .length
+                }
               </p>
               <p className="text-gray-400 text-sm">پرداخت شده</p>
             </LiquidGlassCard>
@@ -532,7 +545,9 @@ export default function OrdersList() {
               <p className="text-2xl font-bold text-red-400">
                 {
                   orders.filter(
-                    (o) => o.status === "FAILED" || o.status === "CANCELLED",
+                    (o) =>
+                      o.status?.toLowerCase() === "failed" ||
+                      o.status?.toLowerCase() === "cancelled",
                   ).length
                 }
               </p>
@@ -542,7 +557,6 @@ export default function OrdersList() {
         )}
       </div>
 
-      {/* ✅ مودال جزئیات پرداخت - با داده‌های کامل سفارش */}
       <PaymentDetailsModal
         isOpen={showPaymentModal}
         onClose={() => {
@@ -557,14 +571,13 @@ export default function OrdersList() {
                 created_at: selectedOrder.created_at,
                 status: selectedOrder.status,
                 paymentStatus:
-                  selectedOrder.status === "PENDING"
+                  selectedOrder.status?.toLowerCase() === "waiting_for_approval"
                     ? "WAITING_VERIFY"
-                    : selectedOrder.status === "PAID"
+                    : selectedOrder.status?.toLowerCase() === "paid"
                       ? "PAID"
                       : "PENDING",
                 course_id: selectedOrder.enrollments?.[0]?.course_id,
                 event_id: undefined,
-                // ✅ ارسال اطلاعات پرداخت از order
                 tracking_code: selectedOrder.tracking_code,
                 receipt_image_url: selectedOrder.receipt_image_url,
                 payment_method: selectedOrder.payment_method,
