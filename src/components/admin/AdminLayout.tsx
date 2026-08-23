@@ -60,7 +60,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     {
       path: "/admin/payments/orders",
       icon: <SaudiRiyal size={20} />,
-      label: "تراکنش ها",
+      label: "مدیریت سفارشات ها",
+    },
+    {
+      path: "/admin/coupons",
+      icon: <Ticket size={20} />,
+      label: "کدتخفیف ها",
     },
     { path: "/admin/blog", icon: <MessageSquare size={20} />, label: "وبلاگ" },
     { path: "/admin/hero", icon: <Image size={20} />, label: "اسلایدر" },

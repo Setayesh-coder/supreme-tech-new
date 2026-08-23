@@ -33,49 +33,80 @@ export interface CartItem {
 export const cartAPI = {
   /**
    * 📋 دریافت سبد خرید (آیتم‌های در انتظار پرداخت)
-   * GET /api/cart
+   * GET /api/v1/cart/
    */
-
-  getCart: async (): Promise<any> => {
+  getCart: async (): Promise<Cart> => {
     try {
       const response = await api.get("/cart/");
-      return response.data; // این می‌تواند آرایه یا آبجکت باشد
+      return response.data;
     } catch (error: any) {
       console.error("❌ خطا در دریافت سبد خرید:", error);
-      return []; // یا { items: [] }
+      // برگرداندن ساختار خالی با فرمت صحیح
+      return { items: [], total: 0, discount: 0, final_total: 0 };
     }
   },
 
   /**
    * 🎫 اعمال کد تخفیف
+   * POST /api/v1/cart/apply-coupon
    */
   applyCoupon: async (data: ApplyCouponRequest): Promise<Cart> => {
-    const token = localStorage.getItem("token") || "";
+    try {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        throw new Error("لطفاً ابتدا وارد حساب کاربری خود شوید");
+      }
 
-    if (!token) {
-      throw new Error("لطفاً ابتدا وارد حساب کاربری خود شوید");
+      const response = await api.post("/cart/apply-coupon", data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ خطا در اعمال کد تخفیف:", error);
+      throw error;
     }
-
-    const response = await api.post("/cart/apply-coupon", data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
   },
 
   /**
    * ❌ حذف کد تخفیف
+   * DELETE /api/v1/cart/remove-coupon
    */
   removeCoupon: async (data: RemoveCouponRequest): Promise<Cart> => {
-    const token = localStorage.getItem("token") || "";
+    try {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        throw new Error("لطفاً ابتدا وارد حساب کاربری خود شوید");
+      }
 
-    if (!token) {
-      throw new Error("لطفاً ابتدا وارد حساب کاربری خود شوید");
+      const response = await api.delete("/cart/remove-coupon", {
+        data,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ خطا در حذف کد تخفیف:", error);
+      throw error;
     }
+  },
 
-    const response = await api.delete("/cart/remove-coupon", {
-      data,
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+  /**
+   * 🗑️ حذف آیتم از سبد خرید
+   * DELETE /api/v1/cart/{id}
+   */
+  removeFromCart: async (id: string): Promise<{ message: string }> => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        throw new Error("لطفاً ابتدا وارد حساب کاربری خود شوید");
+      }
+
+      const response = await api.delete(`/cart/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ خطا در حذف از سبد خرید ${id}:`, error);
+      throw error;
+    }
   },
 };

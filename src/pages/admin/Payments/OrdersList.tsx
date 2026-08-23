@@ -164,6 +164,8 @@ export default function OrdersList() {
         return "در انتظار پرداخت";
       case "failed":
         return "ناموفق";
+      case "rejected":
+        return "رد کردن و پرداخت دوباره کاربر";
       case "cancelled":
         return "لغو شده";
       default:
@@ -183,6 +185,8 @@ export default function OrdersList() {
       case "failed":
         return <XCircle className="w-4 h-4" />;
       case "cancelled":
+        return <XCircle className="w-4 h-4" />;
+      case "rejected":
         return <XCircle className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;

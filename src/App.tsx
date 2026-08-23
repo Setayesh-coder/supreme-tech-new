@@ -56,6 +56,7 @@ import TicketCreateAdmin from "./components/admin/Tickets/TicketCreate";
 import TicketList from "./components/admin/Tickets/TicketList";
 import MessageList from "./components/admin/Messages/MessageList";
 import Help from "./pages/admin/Help";
+import CouponsManager from "./pages/admin/Copuns/CouponsManager";
 
 function App() {
   return (
@@ -89,12 +90,10 @@ function App() {
 
               <Route path="*" element={<NotFound />} />
             </Route>
-
             {/* ============================================================
               Admin
               ============================================================ */}
             <Route path="/admin/login" element={<AdminLogin />} />
-
             <Route
               path="/admin"
               element={
@@ -103,7 +102,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/admin/dashboard"
               element={
@@ -112,7 +110,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* بلاگ - فقط ادمین */}
             <Route
               path="/admin/blog"
@@ -138,7 +135,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* رویدادها - هر دو نقش */}
             <Route
               path="/admin/events"
@@ -172,13 +168,20 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* دوره‌ها */}
             <Route
               path="/admin/payments/orders"
               element={
                 <ProtectedRoute allowedRoles={["ADMIN"]}>
                   <OrdersList />
+                </ProtectedRoute>
+              }
+            />{" "}
+            <Route
+              path="/admin/coupons"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <CouponsManager />
                 </ProtectedRoute>
               }
             />
@@ -239,7 +242,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* کاربران - فقط ادمین */}
             <Route
               path="/admin/users"
@@ -249,7 +251,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* تیم - فقط ادمین */}
             <Route
               path="/admin/team"
@@ -259,7 +260,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* همکاران - فقط ادمین */}
             <Route
               path="/admin/partners"
@@ -285,7 +285,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* تیکت‌ها - هر دو نقش */}
             <Route
               path="/admin/tickets"
@@ -311,7 +310,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* پیام‌ها - فقط ادمین */}
             <Route
               path="/admin/messages"
@@ -321,7 +319,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* پروفایل ادمین - فقط ادمین */}
             <Route
               path="/admin/profile"
@@ -331,7 +328,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* تنظیمات - فقط ادمین */}
             <Route
               path="/admin/settings"
@@ -349,7 +345,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* Hero */}
             <Route
               path="/admin/hero"
@@ -375,7 +370,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

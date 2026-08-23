@@ -1,11 +1,12 @@
 // src/components/profile/CartTab.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { cartAPI } from "../../lib/api/cart";
-import { paymentsAPI } from "../../lib/api/payment";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import PaymentModal from "../payment/PaymentModal";
+import CardToCardPayment from "../payment/CardToCardPayment";
+import BalePayment from "../payment/BalePayment";
 import {
   ShoppingCart,
   CreditCard,
@@ -18,19 +19,12 @@ import {
   Zap,
   Ticket,
   X,
+  Bot,
+  Banknote,
+  Gift,
+  Percent,
+  CheckCircle,
 } from "lucide-react";
-
-// ✅ لیست کدهای تخفیف معتبر
-const VALID_COUPONS: Record<
-  string,
-  { type: "PERCENT" | "FIXED"; value: number }
-> = {
-  SUPREME10: { type: "PERCENT", value: 10 },
-  SUPREME20: { type: "PERCENT", value: 20 },
-  SUPREME50: { type: "PERCENT", value: 50 },
-  SUPREME100: { type: "FIXED", value: 100000 },
-  WELCOME: { type: "PERCENT", value: 15 },
-};
 
 interface CartTabProps {
   externalCart?: any[];
@@ -57,7 +51,6 @@ export function CartTab({
     externalLoading !== undefined ? externalLoading : internalLoading;
 
   const [processing, setProcessing] = useState(false);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -74,10 +67,19 @@ export function CartTab({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [showCardToCard, setShowCardToCard] = useState(false);
+  const [showBalePayment, setShowBalePayment] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    enrollmentId: string;
+    amount: number;
+    title: string;
+  } | null>(null);
+
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // ✅ دریافت داده‌های سبد خرید - از API سبد خرید
-  const fetchCart = async () => {
+  // ✅ دریافت داده‌های سبد خرید
+  const fetchCart = useCallback(async () => {
     if (!standalone || externalCart !== undefined) return;
 
     try {
@@ -123,20 +125,7 @@ export function CartTab({
     } finally {
       setInternalLoading(false);
     }
-  };
-
-  // ✅ محاسبه تخفیف
-  const calculateDiscount = (
-    total: number,
-    discount: typeof discountInfo,
-  ): number => {
-    if (!discount) return 0;
-    if (discount.type === "PERCENT") {
-      return (total * discount.value) / 100;
-    } else {
-      return Math.min(discount.value, total);
-    }
-  };
+  }, [standalone, externalCart, isLoggedIn]);
 
   // ✅ اعمال کد تخفیف
   const handleApplyCoupon = async () => {
@@ -151,41 +140,27 @@ export function CartTab({
 
     try {
       const code = couponCode.trim().toUpperCase();
-      const coupon = VALID_COUPONS[code];
 
-      if (!coupon) {
-        setError("❌ کد تخفیف نامعتبر است");
-        setTimeout(() => setError(""), 3000);
-        setApplyingCoupon(false);
-        return;
-      }
+      const result = await cartAPI.applyCoupon({ code });
+      console.log("✅ کد تخفیف اعمال شد:", result);
 
-      const total = cart.reduce(
-        (sum, item) => sum + (item.event?.price || 0),
-        0,
-      );
-      const discountAmount = calculateDiscount(total, {
-        code,
-        type: coupon.type,
-        value: coupon.value,
-        discount_amount: 0,
-        final_total: 0,
+      setDiscountInfo({
+        code: result.coupon?.code || code,
+        discount_amount: result.discount || 0,
+        final_total: result.final_total || 0,
+        type: result.coupon?.type || "PERCENT",
+        value: result.coupon?.discount_value || 0,
       });
 
-      const discountData = {
-        code,
-        type: coupon.type,
-        value: coupon.value,
-        discount_amount: discountAmount,
-        final_total: total - discountAmount,
-      };
-
-      setDiscountInfo(discountData);
       setSuccess(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
       setCouponCode("");
+
+      await refreshCart();
+
       setTimeout(() => setSuccess(""), 4000);
-    } catch (err) {
-      setError("❌ خطا در اعمال کد تخفیف");
+    } catch (err: any) {
+      console.error("❌ خطا در اعمال کد تخفیف:", err);
+      setError(err.response?.data?.detail || "❌ کد تخفیف نامعتبر است");
       setTimeout(() => setError(""), 3000);
     } finally {
       setApplyingCoupon(false);
@@ -193,27 +168,45 @@ export function CartTab({
   };
 
   // ✅ حذف کد تخفیف
-  const handleRemoveCoupon = () => {
-    setDiscountInfo(null);
-    setSuccess("✅ کد تخفیف با موفقیت حذف شد");
-    setTimeout(() => setSuccess(""), 3000);
+  const handleRemoveCoupon = async () => {
+    try {
+      await cartAPI.removeCoupon({ code: discountInfo?.code || "" });
+      setDiscountInfo(null);
+      setSuccess("✅ کد تخفیف با موفقیت حذف شد");
+
+      await refreshCart();
+
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error("❌ خطا در حذف کد تخفیف:", err);
+      setError("خطا در حذف کد تخفیف");
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  // ✅ تابع رفرش سبد خرید
+  const refreshCart = async () => {
+    if (standalone) {
+      await fetchCart();
+    }
+    if (onRefresh) {
+      onRefresh();
+    }
   };
 
   // ✅ حذف از سبد خرید
   const handleRemove = async (enrollmentId: string) => {
     if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
 
-    // اگر پراپ onRemoveFromCart وجود دارد، از آن استفاده کن
     if (onRemoveFromCart) {
       onRemoveFromCart(enrollmentId);
+      await refreshCart();
       return;
     }
 
-    // در غیر این صورت از منطق داخلی استفاده کن
     try {
       setProcessing(true);
 
-      // حذف از state داخلی
       if (standalone) {
         setInternalCart(
           cart.filter(
@@ -223,10 +216,7 @@ export function CartTab({
         );
       }
 
-      // اگر onRefresh وجود دارد، صدا بزن
-      if (onRefresh) {
-        onRefresh();
-      }
+      await refreshCart();
 
       setSuccess("✅ آیتم از سبد خرید حذف شد");
       setTimeout(() => setSuccess(""), 2000);
@@ -239,9 +229,8 @@ export function CartTab({
     }
   };
 
-  // ✅ پرداخت همه
-  // ✅ پرداخت همه - هر آیتم جداگانه پرداخت می‌شود
-  const handlePayAll = async () => {
+  // ✅ باز کردن مودال انتخاب روش پرداخت
+  const handleOpenPaymentMethodModal = () => {
     if (!isLoggedIn) {
       setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
       setTimeout(() => setError(""), 3000);
@@ -255,171 +244,56 @@ export function CartTab({
       0,
     );
 
-    const paymentMethod = confirm(
-      `💰 مبلغ قابل پرداخت: ${totalPrice.toLocaleString()} تومان\n` +
-        `📚 تعداد دوره‌ها: ${cart.length} دوره\n\n` +
-        `روش پرداخت را انتخاب کنید:\n` +
-        `• OK → پرداخت از طریق بله (پرداخت خودکار و سریع)\n` +
-        `• Cancel → پرداخت کارت به کارت (نیاز به تایید ادمین)`,
-    );
+    const enrollmentIds = cart
+      .map((item) => item.enrollment_id || item.id)
+      .filter(Boolean);
 
-    setProcessing(true);
-    setProcessingId("all");
-    setError("");
-    setSuccess("");
-
-    try {
-      // گرفتن همه enrollment_idها
-      const enrollmentIds = cart
-        .map((item) => item.enrollment_id || item.id)
-        .filter(Boolean);
-
-      if (enrollmentIds.length === 0) {
-        setError("❌ شناسه ثبت‌نام یافت نشد");
-        setProcessing(false);
-        setProcessingId(null);
-        return;
-      }
-
-      // ارسال همه enrollment_idها به صورت رشته با کاما
-      const enrollmentIdString = enrollmentIds.join(",");
-
-      if (paymentMethod) {
-        // 📌 پرداخت از طریق بله - همه با هم
-        const result = await paymentsAPI.baleInitiate({
-          enrollment_id: enrollmentIdString,
-          amount: totalPrice,
-          description: `پرداخت ${cart.length} دوره`,
-        });
-
-        if (result.payment_link) {
-          window.open(result.payment_link, "_blank");
-          setSuccess(`✅ لینک پرداخت بله برای ${cart.length} دوره باز شد!`);
-        } else {
-          setError("❌ لینک پرداخت دریافت نشد");
-        }
-      } else {
-        // 📌 پرداخت کارت به کارت
-        setSuccess(
-          `✅ لطفاً اطلاعات کارت به کارت را برای ${cart.length} دوره وارد کنید`,
-        );
-
-        // اگر مودال کارت به کارت دارید، اینجا باز کنید
-        // setShowCardToCardModal(true);
-      }
-
-      setTimeout(() => {
-        if (standalone) {
-          fetchCart();
-        } else if (onRefresh) {
-          onRefresh();
-        }
-        setSuccess("");
-      }, 3000);
-    } catch (err: any) {
-      console.error("❌ خطا در پرداخت:", err);
-      setError(
-        err.response?.data?.detail || err.message || "خطا در پردازش پرداخت‌ها",
-      );
-    } finally {
-      setProcessing(false);
-      setProcessingId(null);
-    }
-  };
-  // ✅ باز کردن مودال پرداخت
-  // ✅ باز کردن مودال پرداخت
-  const handleOpenPaymentModal = (enrollmentId: string) => {
-    if (!isLoggedIn) {
-      setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
-      setTimeout(() => setError(""), 3000);
+    if (enrollmentIds.length === 0) {
+      setError("❌ شناسه ثبت‌نام یافت نشد");
       return;
     }
 
-    const enrollment = cart.find(
-      (item) =>
-        item.id === enrollmentId ||
-        item.course_id === enrollmentId ||
-        item.eventId === enrollmentId ||
-        item.enrollment_id === enrollmentId,
-    );
+    const enrollmentIdString = enrollmentIds.join(",");
+    const courseTitle = cart.map((item) => item.event?.title).join(" - ");
 
-    if (enrollment) {
-      setSelectedEnrollment({
-        ...enrollment,
-        id: enrollment.enrollment_id || enrollment.id,
-      });
-      setShowPaymentModal(true);
+    setPaymentData({
+      enrollmentId: enrollmentIdString,
+      amount: totalPrice,
+      title: courseTitle || `پرداخت ${cart.length} دوره`,
+    });
+
+    setShowPaymentMethodModal(true);
+  };
+
+  // ✅ انتخاب روش پرداخت
+  const handleSelectPaymentMethod = (method: "bale" | "card") => {
+    setShowPaymentMethodModal(false);
+
+    if (method === "bale") {
+      setShowBalePayment(true);
     } else {
-      setError("❌ دوره مورد نظر یافت نشد");
-      setTimeout(() => setError(""), 3000);
+      setShowCardToCard(true);
     }
   };
 
-  // ✅ پرداخت از طریق مودال
-  // const handleModalPayment = async () => {
-  //   if (!selectedEnrollment) return;
-
-  //   try {
-  //     setProcessing(true);
-
-  //     // انتخاب روش پرداخت
-  //     const useBale = confirm(
-  //       `💰 مبلغ: ${selectedEnrollment.event?.price?.toLocaleString()} تومان\n` +
-  //         `📚 دوره: ${selectedEnrollment.event?.title}\n\n` +
-  //         `• OK → پرداخت از طریق بله\n` +
-  //         `• Cancel → پرداخت کارت به کارت`,
-  //     );
-
-  //     if (useBale) {
-  //       const result = await paymentsAPI.baleInitiate({
-  //         enrollment_id: selectedEnrollment.id,
-  //         amount: selectedEnrollment.event?.price || 0,
-  //         description: `پرداخت دوره ${selectedEnrollment.event?.title}`,
-  //       });
-
-  //       if (result.) {
-  //         window.open(result.payment_url, "_blank");
-  //         setSuccess(`✅ لینک پرداخت باز شد!`);
-  //       }
-  //     } else {
-  //       setSuccess(`✅ لطفاً اطلاعات کارت به کارت را وارد کنید`);
-  //     }
-
-  //     setShowPaymentModal(false);
-  //     setSelectedEnrollment(null);
-
-  //     setTimeout(() => {
-  //       if (standalone) {
-  //         fetchCart();
-  //       } else if (onRefresh) {
-  //         onRefresh();
-  //       }
-  //       setSuccess("");
-  //     }, 3000);
-  //   } catch (err: any) {
-  //     console.error("❌ خطا در پرداخت:", err);
-  //     setError(
-  //       err.response?.data?.detail || err.message || "خطا در پردازش پرداخت",
-  //     );
-  //   } finally {
-  //     setProcessing(false);
-  //   }
-  // };
   // ✅ بعد از پرداخت موفق
-  // CartTab.tsx - handlePaymentSuccess
-  const handlePaymentSuccess = () => {
-    setShowPaymentModal(false);
-    setSelectedEnrollment(null);
+  const handlePaymentSuccess = async () => {
+    setShowCardToCard(false);
+    setShowBalePayment(false);
+    setShowPaymentMethodModal(false);
+    setPaymentData(null);
 
-    // ✅ این خط باید اجرا شود
-    if (standalone) {
-      fetchCart(); // سبد خرید را به‌روزرسانی می‌کند
-    } else if (onRefresh) {
-      onRefresh(); // fetchProfile را صدا می‌زند
-    }
+    await refreshCart();
 
     setSuccess("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
     setTimeout(() => setSuccess(""), 5000);
+  };
+
+  // ✅ بازگشت از پرداخت
+  const handlePaymentBack = () => {
+    setShowCardToCard(false);
+    setShowBalePayment(false);
+    setPaymentData(null);
   };
 
   // ✅ بارگذاری اولیه
@@ -427,34 +301,7 @@ export function CartTab({
     if (standalone) {
       fetchCart();
     }
-  }, [standalone]);
-
-  // ✅ بررسی پارامتر payment از URL
-  useEffect(() => {
-    if (!standalone) return;
-
-    const params = new URLSearchParams(window.location.search);
-    const paymentId = params.get("payment");
-
-    if (paymentId && paymentId !== "undefined" && paymentId !== "null") {
-      const enrollment = cart.find(
-        (item) =>
-          item.id === paymentId ||
-          item.course_id === paymentId ||
-          item.eventId === paymentId ||
-          item.enrollment_id === paymentId,
-      );
-
-      if (enrollment) {
-        setSelectedEnrollment(enrollment);
-        setShowPaymentModal(true);
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, "", newUrl);
-      } else {
-        setError("دوره مورد نظر برای پرداخت یافت نشد");
-      }
-    }
-  }, [cart, standalone]);
+  }, [standalone, fetchCart]);
 
   const formatPrice = (price: number) => {
     if (price === 0) return "رایگان";
@@ -473,6 +320,34 @@ export function CartTab({
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
+      </div>
+    );
+  }
+
+  // ✅ اگر پرداخت کارت به کارت نمایش داده شود
+  if (showCardToCard && paymentData) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <CardToCardPayment
+          enrollmentId={paymentData.enrollmentId}
+          amount={paymentData.amount}
+          onSuccess={handlePaymentSuccess}
+          onBack={handlePaymentBack}
+        />
+      </div>
+    );
+  }
+
+  // ✅ اگر پرداخت بله نمایش داده شود
+  if (showBalePayment && paymentData) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <BalePayment
+          enrollmentId={paymentData.enrollmentId}
+          amount={paymentData.amount}
+          onSuccess={handlePaymentSuccess}
+          onBack={handlePaymentBack}
+        />
       </div>
     );
   }
@@ -530,95 +405,61 @@ export function CartTab({
             </h2>
 
             <div className="space-y-3">
-              {cart.map((item) => {
-                const isProcessing = processingId === item.id;
-
-                return (
-                  <LiquidGlassCard
-                    key={item.id}
-                    className="p-4 hover:bg-white/5 transition-all duration-300"
-                    borderRadius="14px"
-                    blurIntensity="sm"
-                    glowIntensity="sm"
-                  >
-                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                      <div className="w-full md:w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
-                        {item.event?.image ? (
-                          <img
-                            src={item.event.image}
-                            alt={item.event.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <ShoppingCart className="w-6 h-6 text-white/20" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-white truncate">
-                          {item.event?.title || "دوره آموزشی"}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {item.event?.date
-                              ? new Date(item.event.date).toLocaleDateString(
-                                  "fa-IR",
-                                )
-                              : "نامشخص"}
-                          </span>
-                          <span className="flex items-center gap-1 text-blue-400 font-medium">
-                            <Wallet className="w-3 h-3" />
-                            {formatPrice(item.event?.price || 0)}
-                          </span>
+              {cart.map((item) => (
+                <LiquidGlassCard
+                  key={item.id}
+                  className="p-4 hover:bg-white/5 transition-all duration-300"
+                  borderRadius="14px"
+                  blurIntensity="sm"
+                  glowIntensity="sm"
+                >
+                  <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                    <div className="w-full md:w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
+                      {item.event?.image ? (
+                        <img
+                          src={item.event.image}
+                          alt={item.event.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ShoppingCart className="w-6 h-6 text-white/20" />
                         </div>
-                      </div>
+                      )}
+                    </div>
 
-                      <div className="flex items-center gap-2 w-full md:w-auto">
-                        {isLoggedIn ? (
-                          <>
-                            <GlassButton
-                              variant="primary"
-                              size="sm"
-                              loading={isProcessing}
-                              disabled={isProcessing || processing}
-                              icon={<CreditCard className="w-4 h-4" />}
-                              iconPosition="left"
-                              onClick={() => handleOpenPaymentModal(item.id)}
-                              className="flex-1 md:flex-none"
-                            >
-                              پرداخت
-                            </GlassButton>
-                            <button
-                              onClick={() => handleRemove(item.id)}
-                              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all duration-300"
-                              disabled={processing}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <GlassButton
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setError(
-                                "❌ برای پرداخت باید وارد حساب کاربری خود شوید",
-                              );
-                              setTimeout(() => setError(""), 3000);
-                            }}
-                            className="flex-1 md:flex-none"
-                          >
-                            برای پرداخت وارد شوید
-                          </GlassButton>
-                        )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-white truncate">
+                        {item.event?.title || "دوره آموزشی"}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {item.event?.date
+                            ? new Date(item.event.date).toLocaleDateString(
+                                "fa-IR",
+                              )
+                            : "نامشخص"}
+                        </span>
+                        <span className="flex items-center gap-1 text-blue-400 font-medium">
+                          <Wallet className="w-3 h-3" />
+                          {formatPrice(item.event?.price || 0)}
+                        </span>
                       </div>
                     </div>
-                  </LiquidGlassCard>
-                );
-              })}
+
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                      <button
+                        onClick={() => handleRemove(item.id)}
+                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all duration-300 w-full md:w-auto"
+                        disabled={processing}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </LiquidGlassCard>
+              ))}
             </div>
           </LiquidGlassCard>
 
@@ -632,59 +473,81 @@ export function CartTab({
             {/* Coupon Section */}
             <div className="mb-4 pb-4 border-b border-white/10">
               <div className="flex items-center gap-2 mb-3">
-                <Ticket className="w-4 h-4 text-blue-400" />
+                <div className="p-1.5 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg">
+                  <Gift className="w-5 h-5 text-purple-400" />
+                </div>
                 <h3 className="text-sm font-medium text-white">کد تخفیف</h3>
+                {discountInfo && (
+                  <span className="mr-auto text-xs text-green-400 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    اعمال شده
+                  </span>
+                )}
               </div>
 
               {discountInfo ? (
-                <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-                  <div>
-                    <span className="text-green-400 font-bold font-mono">
-                      {discountInfo.code}
-                    </span>
-                    <span className="text-sm text-gray-400 mr-2">
-                      (
-                      {discountInfo.type === "PERCENT"
-                        ? `${discountInfo.value}%`
-                        : `${discountInfo.value.toLocaleString()} تومان`}{" "}
-                      تخفیف)
-                    </span>
-                    <span className="text-xs text-green-400 mr-2">
-                      ({formatPrice(discountInfo.discount_amount)})
-                    </span>
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 p-4">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/5 rounded-full translate-x-8 -translate-y-8" />
+                  <div className="absolute bottom-0 left-0 w-16 h-16 bg-emerald-500/5 rounded-full -translate-x-6 translate-y-6" />
+                  <div className="relative flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-500/20 rounded-lg">
+                        <Percent className="w-5 h-5 text-green-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400 font-bold font-mono text-lg">
+                            {discountInfo.code}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            (
+                            {discountInfo.type === "PERCENT"
+                              ? `${discountInfo.value}% تخفیف`
+                              : `${discountInfo.value.toLocaleString()} تومان تخفیف`}
+                            )
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formatPrice(discountInfo.discount_amount)} از مبلغ کل
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleRemoveCoupon}
+                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors"
+                      title="حذف کد تخفیف"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={handleRemoveCoupon}
-                    className="p-1 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="کد تخفیف را وارد کنید..."
-                    className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500"
-                    disabled={applyingCoupon}
-                  />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 relative">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Ticket className="w-4 h-4 text-gray-500" />
+                    </div>
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="کد تخفیف را وارد کنید..."
+                      className="w-full px-4 py-2.5 pr-10 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      disabled={applyingCoupon}
+                    />
+                  </div>
                   <GlassButton
                     variant="primary"
                     size="sm"
                     loading={applyingCoupon}
                     onClick={handleApplyCoupon}
-                    disabled={applyingCoupon}
+                    disabled={applyingCoupon || !couponCode.trim()}
+                    className="sm:w-auto w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
                   >
-                    اعمال
+                    {applyingCoupon ? "در حال بررسی..." : "اعمال کد"}
                   </GlassButton>
                 </div>
               )}
-              <p className="text-xs text-gray-500 mt-2">
-                💡 کدهای معتبر: SUPREME10, SUPREME20, SUPREME50, SUPREME100,
-                WELCOME
-              </p>
             </div>
 
             {/* Price Calculation */}
@@ -739,10 +602,10 @@ export function CartTab({
                     )
                   }
                   iconPosition="left"
-                  onClick={handlePayAll}
-                  className="w-full md:w-auto"
+                  onClick={handleOpenPaymentMethodModal}
+                  className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
                 >
-                  {isFree ? "تایید و ثبت‌نام رایگان" : "پرداخت همه"}
+                  {isFree ? "تایید و ثبت‌نام رایگان" : "انتخاب روش پرداخت"}
                 </GlassButton>
               ) : (
                 <GlassButton
@@ -777,6 +640,87 @@ export function CartTab({
             </button>
           </div>
         </>
+      )}
+
+      {/* مودال انتخاب روش پرداخت */}
+      {showPaymentMethodModal && paymentData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <LiquidGlassCard
+            className="w-full max-w-md p-6 relative"
+            borderRadius="24px"
+            blurIntensity="xl"
+            glowIntensity="md"
+          >
+            <button
+              onClick={() => {
+                setShowPaymentMethodModal(false);
+                setPaymentData(null);
+              }}
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-8 h-8 text-blue-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                انتخاب روش پرداخت
+              </h2>
+              <p className="text-gray-400 text-sm mt-1">
+                مبلغ قابل پرداخت: {formatPrice(paymentData.amount)}
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                {cart.length} دوره برای ثبت‌نام
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSelectPaymentMethod("bale")}
+                className="w-full p-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-xl transition-all duration-300 flex items-center gap-4 group"
+              >
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-6 h-6 text-green-400" />
+                </div>
+                <div className="flex-1 text-right">
+                  <h3 className="text-white font-semibold group-hover:text-green-400 transition-colors">
+                    پرداخت از طریق بله
+                  </h3>
+                  <p className="text-gray-400 text-xs">
+                    پرداخت خودکار و سریع از طریق ربات بله
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-green-400 transition-colors" />
+              </button>
+
+              <button
+                onClick={() => handleSelectPaymentMethod("card")}
+                className="w-full p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl transition-all duration-300 flex items-center gap-4 group"
+              >
+                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <Banknote className="w-6 h-6 text-blue-400" />
+                </div>
+                <div className="flex-1 text-right">
+                  <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
+                    پرداخت کارت به کارت
+                  </h3>
+                  <p className="text-gray-400 text-xs">
+                    واریز به شماره کارت و ارسال رسید
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
+              </button>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <p className="text-xs text-gray-500 text-center">
+                🔒 تمامی پرداخت‌ها با امنیت بالا انجام می‌شود
+              </p>
+            </div>
+          </LiquidGlassCard>
+        </div>
       )}
 
       {/* Payment Modal */}

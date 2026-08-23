@@ -16,6 +16,9 @@ import {
   Star,
   Award,
   ListSortAscending,
+  ShoppingCart,
+  Timer,
+  Lock,
 } from "lucide-react";
 
 interface Course {
@@ -33,6 +36,7 @@ interface Course {
   isFeatured: boolean;
   sessions?: Session[];
   userEnrolled?: boolean;
+  enrollmentStatus?: "PENDING" | "WAITING" | "CONFIRMED" | "CANCELLED";
   instructor_name?: string;
   image?: string;
   duration?: string;
@@ -74,30 +78,38 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
   const [success, setSuccess] = useState("");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
 
-  // ✅ State برای مودال پیش‌ثبت‌نام
   const [showPreRegister, setShowPreRegister] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [selectedCourseTitle, setSelectedCourseTitle] = useState<string>("");
 
-  // ✅ بررسی آیا کاربر لاگین است
   const isLoggedIn = !!localStorage.getItem("token");
 
   useEffect(() => {
     fetchCourses();
   }, [eventId]);
 
-  // ✅ بررسی ثبت‌نام کاربر از بک‌اند
-  const checkUserEnrollment = async (courseId: string): Promise<boolean> => {
-    if (!isLoggedIn) return false;
+  // ✅ بررسی ثبت‌نام کاربر از بک‌اند با وضعیت
+  const checkUserEnrollment = async (
+    courseId: string,
+  ): Promise<{ enrolled: boolean; status?: string }> => {
+    if (!isLoggedIn) return { enrolled: false };
 
     try {
       const enrollments = await enrollmentsAPI.getMyEnrollments();
-      return enrollments.some(
+      const found = enrollments.find(
         (e: any) => e.course_id === courseId || e.eventId === courseId,
       );
+
+      if (found) {
+        return {
+          enrolled: true,
+          status: found.status,
+        };
+      }
+      return { enrolled: false };
     } catch (error) {
       console.error("❌ خطا در بررسی ثبت‌نام:", error);
-      return false;
+      return { enrolled: false };
     }
   };
 
@@ -114,10 +126,9 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
 
       const fetchedCourses = data.items || [];
 
-      // ✅ دریافت وضعیت ثبت‌نام برای هر دوره از بک‌اند
       const coursesWithEnrollment: Course[] = await Promise.all(
         fetchedCourses.map(async (course: any) => {
-          const userEnrolled = await checkUserEnrollment(course.id);
+          const { enrolled, status } = await checkUserEnrollment(course.id);
           return {
             ...course,
             image: course.cover_image,
@@ -128,7 +139,8 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
             enrolledCount: course.enrolledCount || 0,
             isFeatured: course.isFeatured || false,
             level: course.level || undefined,
-            userEnrolled: userEnrolled,
+            userEnrolled: enrolled,
+            enrollmentStatus: status as any,
             sessions: course.sessions || [],
             endDate: course.endDate || undefined,
           };
@@ -144,7 +156,6 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     }
   };
 
-  // ✅ باز کردن مودال پیش‌ثبت‌نام
   const handleOpenPreRegister = (courseId: string, courseTitle: string) => {
     if (!isLoggedIn) {
       alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
@@ -157,7 +168,6 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     setShowPreRegister(true);
   };
 
-  // ✅ تابع بعد از ثبت موفق - فقط از بک‌اند استفاده می‌کند
   const handlePreRegisterSuccess = async (
     courseId: string,
     courseTitle: string,
@@ -165,27 +175,24 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     setEnrolling(courseId);
 
     try {
-      // ✅ دوباره از بک‌اند بررسی کن
-      const userEnrolled = await checkUserEnrollment(courseId);
+      const { enrolled, status } = await checkUserEnrollment(courseId);
 
-      // ✅ به‌روزرسانی لیست دوره‌ها
       setCourses(
         courses.map((c) =>
           c.id === courseId
             ? {
                 ...c,
-                userEnrolled: userEnrolled,
+                userEnrolled: enrolled,
+                enrollmentStatus: status as any,
                 enrolledCount: (c.enrolledCount || 0) + 1,
               }
             : c,
         ),
       );
 
-      // ✅ نمایش پیام موفقیت
       setSuccess(`✅ دوره "${courseTitle}" به سبد خرید اضافه شد!`);
       setTimeout(() => setSuccess(""), 5000);
 
-      // ✅ بستن مودال
       setShowPreRegister(false);
     } catch (error) {
       console.error("❌ خطا در به‌روزرسانی:", error);
@@ -195,7 +202,6 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     }
   };
 
-  // ✅ تابع رفتن به سبد خرید
   const goToCart = () => {
     navigate("/cart");
   };
@@ -267,6 +273,11 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
           const isPast =
             course.endDate && new Date(course.endDate) < new Date();
 
+          // ✅ وضعیت‌های ثبت‌نام
+          const isPending = course.enrollmentStatus === "PENDING";
+          const isWaiting = course.enrollmentStatus === "WAITING";
+          const isConfirmed = course.enrollmentStatus === "CONFIRMED";
+
           return (
             <LiquidGlassCard
               key={course.id}
@@ -276,7 +287,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
               glowIntensity="sm"
               onClick={() => handleCourseClick(course.slug)}
             >
-              {/* ===== تصویر ===== */}
+              {/* تصویر */}
               {course.image && (
                 <div className="w-full h-40 flex-shrink-0 overflow-hidden rounded-lg mb-4">
                   <img
@@ -290,7 +301,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                 </div>
               )}
 
-              {/* ===== محتوای اصلی ===== */}
+              {/* محتوای اصلی */}
               <div className="flex-1 flex flex-col">
                 {/* عنوان */}
                 <div className="flex justify-between items-start mb-2">
@@ -344,17 +355,29 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                   </div>
                 </div>
 
-                {/* ===== قیمت و دکمه ===== */}
+                {/* قیمت و دکمه */}
                 <div className="mt-auto pt-3">
                   {/* قیمت و وضعیت */}
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-bold text-white">
                       {formatPrice(course.price)}
                     </span>
-                    {course.userEnrolled ? (
+
+                    {/* ✅ نمایش وضعیت ثبت‌نام */}
+                    {isConfirmed ? (
                       <span className="text-green-400 text-sm flex items-center gap-1">
                         <CheckCircle size={16} />
-                        ثبت‌نام شده
+                        ثبت‌نام نهایی
+                      </span>
+                    ) : isWaiting ? (
+                      <span className="text-yellow-400 text-sm flex items-center gap-1">
+                        <Timer size={16} />
+                        در انتظار تایید
+                      </span>
+                    ) : isPending ? (
+                      <span className="text-blue-400 text-sm flex items-center gap-1">
+                        <ShoppingCart size={16} />
+                        در سبد خرید
                       </span>
                     ) : isPast ? (
                       <span className="text-gray-500 text-sm">پایان یافته</span>
@@ -363,7 +386,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                     ) : null}
                   </div>
 
-                  {/* ✅ دکمه پیش‌ثبت‌نام */}
+                  {/* ✅ دکمه‌های مختلف بر اساس وضعیت */}
                   {!course.userEnrolled && !isPast && !isFull && (
                     <div onClick={(e) => e.stopPropagation()}>
                       <GlassButton
@@ -390,8 +413,35 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                     </div>
                   )}
 
-                  {/* دکمه مشاهده جلسات */}
-                  {course.userEnrolled && (
+                  {/* ✅ در سبد خرید - نمایش دکمه مشاهده سبد خرید */}
+                  {isPending && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <GlassButton
+                        variant="primary"
+                        size="sm"
+                        fullWidth
+                        onClick={goToCart}
+                        icon={<ShoppingCart className="w-4 h-4" />}
+                        iconPosition="left"
+                        className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/30"
+                      >
+                        مشاهده سبد خرید
+                      </GlassButton>
+                    </div>
+                  )}
+
+                  {/* ✅ در انتظار تایید ادمین */}
+                  {isWaiting && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center">
+                      <p className="text-yellow-400 text-xs flex items-center justify-center gap-1">
+                        <Timer size={14} />
+                        در انتظار تایید ادمین
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ✅ ثبت‌نام نهایی - نمایش دکمه مشاهده جلسات */}
+                  {isConfirmed && (
                     <div onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => toggleExpand(course.id)}
@@ -402,8 +452,8 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                     </div>
                   )}
 
-                  {/* جلسات دوره */}
-                  {isExpanded && course.userEnrolled && (
+                  {/* جلسات دوره - فقط برای ثبت‌نام نهایی */}
+                  {isExpanded && isConfirmed && (
                     <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
                       <h5 className="text-sm font-medium text-gray-300 mb-3">
                         جلسات دوره
@@ -413,7 +463,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                           return (
                             <div
                               key={session.id}
-                              className="bg-white/5 rounded-lg p-3 space-y-2"
+                              className="bg-white/5 rounded-lg p-3 space-y-2 hover:bg-white/10 transition-colors"
                             >
                               <div className="flex justify-between items-start">
                                 <h6 className="text-sm text-white">
@@ -429,6 +479,18 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                                 <p className="text-xs text-gray-400">
                                   {session.description}
                                 </p>
+                              )}
+                              {session.meetingLink && (
+                                <a
+                                  href={session.meetingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Lock size={12} />
+                                  ورود به جلسه
+                                </a>
                               )}
                             </div>
                           );
@@ -447,7 +509,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
         })}
       </div>
 
-      {/* ✅ مودال پیش‌ثبت‌نام */}
+      {/* مودال پیش‌ثبت‌نام */}
       <CoursePreRegisterModal
         isOpen={showPreRegister}
         onClose={() => setShowPreRegister(false)}

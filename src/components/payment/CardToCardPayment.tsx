@@ -146,6 +146,7 @@ export default function CardToCardPayment({
             <span>
               لطفاً پس از واریز مبلغ به حساب زیر، کد پیگیری و تصویر رسید را وارد
               کنید:
+             
             </span>
           </p>
         </div>

@@ -25,34 +25,8 @@ export interface Cart {
     code: string;
     discount_amount: number;
     type: "PERCENT" | "FIXED";
+    discount_value?: number;
   };
-} // src/types/cart.ts
-
-export interface Order {
-  id: string;
-  user_id: string;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-  };
-  total_original_price: number;
-  total_discount: number;
-  total_payable: number;
-  status: "pending" | "waiting_for_approval" | "paid" | "failed" | "cancelled";
-  payment_method: "card_to_card" | "bale";
-  tracking_code?: string;
-  receipt_image_url?: string;
-  transaction_id?: string;
-  enrollments: {
-    id: string;
-    course_id: string;
-    course_title: string;
-    status: string;
-  }[];
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ApplyCouponRequest {
@@ -89,6 +63,33 @@ export interface BalePaymentRequest {
 }
 
 export interface BalePaymentResponse {
-  payment_link: string;
+  payment_url: string;
   transaction_id: string;
+}
+
+export interface Order {
+  id: string;
+  user_id: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  total_original_price: number;
+  total_discount: number;
+  total_payable: number;
+  status: "pending" | "waiting_for_approval" | "paid" | "failed" | "cancelled";
+  payment_method: "card_to_card" | "bale";
+  tracking_code?: string;
+  receipt_image_url?: string;
+  transaction_id?: string;
+  enrollments: {
+    id: string;
+    course_id: string;
+    course_title: string;
+    status: string;
+  }[];
+  created_at: string;
+  updated_at: string;
 }

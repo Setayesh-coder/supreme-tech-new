@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { coursesAPI } from "../../lib/api/courses";
-import { enrollmentsAPI } from "../../lib/api/enrollments"; 
+import { enrollmentsAPI } from "../../lib/api/enrollments";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
@@ -22,6 +22,9 @@ import {
   Download,
   BookOpen,
   ShoppingBag,
+  ShoppingCart,
+  Timer,
+  Lock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
@@ -49,6 +52,7 @@ interface Course {
   prerequisites?: string[];
   sessions?: Session[];
   userEnrolled?: boolean;
+  enrollmentStatus?: "PENDING" | "WAITING" | "CONFIRMED" | "CANCELLED";
   event?: {
     id: string;
     title: string;
@@ -123,23 +127,32 @@ export default function CourseDetail() {
   const [imageError, setImageError] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState(true);
 
-  // ✅ State برای مودال پیش‌ثبت‌نام
   const [showPreRegister, setShowPreRegister] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
 
-  // ✅ تابع بررسی ثبت‌نام از بک‌اند
-  const checkUserEnrollment = async (courseId: string): Promise<boolean> => {
+  // ✅ بررسی وضعیت ثبت‌نام از بک‌اند
+  const checkUserEnrollment = async (
+    courseId: string,
+  ): Promise<{ enrolled: boolean; status?: string }> => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return false;
+      if (!token) return { enrolled: false };
 
       const enrollments = await enrollmentsAPI.getMyEnrollments();
-      return enrollments.some(
+      const found = enrollments.find(
         (e: any) => e.course_id === courseId || e.eventId === courseId,
       );
+
+      if (found) {
+        return {
+          enrolled: true,
+          status: found.status, // ✅ استفاده از status
+        };
+      }
+      return { enrolled: false };
     } catch (error) {
       console.error("❌ خطا در بررسی ثبت‌نام:", error);
-      return false;
+      return { enrolled: false };
     }
   };
 
@@ -155,10 +168,10 @@ export default function CourseDetail() {
         const foundCourse = await coursesAPI.getBySlug(slug);
 
         if (foundCourse) {
-          // ✅ بررسی ثبت‌نام از بک‌اند
-          const userEnrolled = await checkUserEnrollment(foundCourse.id);
+          const { enrolled, status } = await checkUserEnrollment(
+            foundCourse.id,
+          );
 
-          // ✅ نگاشت داده‌ها به تایپ Course
           const mappedCourse: Course = {
             ...foundCourse,
             description: foundCourse.description || "",
@@ -170,7 +183,8 @@ export default function CourseDetail() {
             enrolledCount: (foundCourse as any).enrolledCount || 0,
             isFeatured: (foundCourse as any).isFeatured || false,
             level: (foundCourse as any).level || undefined,
-            userEnrolled: userEnrolled,
+            userEnrolled: enrolled,
+            enrollmentStatus: status as any,
             sessions: (foundCourse as any).sessions || [],
             event: (foundCourse as any).event
               ? {
@@ -194,7 +208,6 @@ export default function CourseDetail() {
     fetchCourse();
   }, [slug]);
 
-  // ✅ تابع باز کردن مودال پیش‌ثبت‌نام
   const handleOpenPreRegister = () => {
     if (!course) return;
 
@@ -209,28 +222,28 @@ export default function CourseDetail() {
     setShowPreRegister(true);
   };
 
-  // ✅ تابع بعد از ثبت موفق - فقط از بک‌اند استفاده می‌کند
   const handlePreRegisterSuccess = async () => {
     if (!course) return;
 
     try {
-      // ✅ دوباره از بک‌اند دریافت کن تا وضعیت به‌روز شود
-      const userEnrolled = await checkUserEnrollment(course.id);
-
-      // ✅ به‌روزرسانی وضعیت دوره با داده‌های بک‌اند
+      const { enrolled, status } = await checkUserEnrollment(course.id);
       setCourse({
         ...course,
-        userEnrolled: userEnrolled,
+        userEnrolled: enrolled,
+        enrollmentStatus: status as any,
         enrolledCount: (course.enrolledCount || 0) + 1,
       });
 
-      // ✅ نمایش پیام موفقیت
       alert(
         "✅ پیش‌ثبت‌نام با موفقیت انجام شد! دوره به سبد خرید شما اضافه شد.",
       );
     } catch (error) {
       console.error("❌ خطا در به‌روزرسانی وضعیت:", error);
     }
+  };
+
+  const goToCart = () => {
+    navigate("/cart");
   };
 
   if (loading) {
@@ -267,6 +280,10 @@ export default function CourseDetail() {
     course.capacity > 0;
   const isPast = course.endDate && new Date(course.endDate) < new Date();
   const isActive = course.is_active && !isPast;
+
+  const isPending = course.enrollmentStatus === "PENDING";
+  const isWaiting = course.enrollmentStatus === "WAITING";
+  const isConfirmed = course.enrollmentStatus === "CONFIRMED";
 
   return (
     <section className="py-6 px-3 md:py-12 md:px-6 relative overflow-hidden min-h-screen">
@@ -431,7 +448,7 @@ export default function CourseDetail() {
               </LiquidGlassCard>
             </motion.div>
 
-            {course.userEnrolled && (
+            {(isConfirmed || isWaiting) && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -449,6 +466,12 @@ export default function CourseDetail() {
                       <h2 className="text-lg md:text-xl font-bold text-white">
                         جلسات دوره
                       </h2>
+                      {isWaiting && (
+                        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Timer className="w-3 h-3" />
+                          در انتظار تایید
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => setExpandedSessions(!expandedSessions)}
@@ -467,10 +490,14 @@ export default function CourseDetail() {
                           new Date(session.date).toDateString() ===
                           new Date().toDateString();
 
+                        const isLocked = isWaiting;
+
                         return (
                           <div
                             key={session.id}
-                            className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors"
+                            className={`bg-white/5 rounded-lg p-4 transition-colors ${
+                              isLocked ? "opacity-60" : "hover:bg-white/10"
+                            }`}
                           >
                             <div className="flex justify-between items-start">
                               <div>
@@ -481,6 +508,9 @@ export default function CourseDetail() {
                                   <h4 className="text-sm font-medium text-white">
                                     {session.title}
                                   </h4>
+                                  {isLocked && (
+                                    <Lock className="w-3 h-3 text-gray-500" />
+                                  )}
                                 </div>
                                 {session.description && (
                                   <p className="text-xs text-gray-400 mt-1">
@@ -488,7 +518,12 @@ export default function CourseDetail() {
                                   </p>
                                 )}
                               </div>
-                              {session.isCompleted ? (
+                              {isLocked ? (
+                                <span className="text-gray-500 text-xs flex items-center gap-1">
+                                  <Lock size={12} />
+                                  پس از تایید
+                                </span>
+                              ) : session.isCompleted ? (
                                 <span className="text-green-400 text-xs flex items-center gap-1">
                                   <CheckCircle size={12} />
                                   برگزار شده
@@ -514,63 +549,77 @@ export default function CourseDetail() {
                               {session.time && <span>⏰ {session.time}</span>}
                             </div>
 
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {session.isCompleted && session.meetingLink && (
-                                <a
-                                  href={session.meetingLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1 rounded-full transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <PlayCircle size={12} />
-                                  ورود به جلسه
-                                </a>
-                              )}
-
-                              {isSessionPast && session.archiveLink && (
-                                <a
-                                  href={session.archiveLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1 rounded-full transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <FileArchive size={12} />
-                                  آرشیو جلسه
-                                </a>
-                              )}
-
-                              {session.files && session.files.length > 0 && (
-                                <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                                  <FileText size={12} />
-                                  {session.files.length} فایل
-                                </span>
-                              )}
-                            </div>
-
-                            {session.files && session.files.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {session.files.map((file) => (
+                            {!isLocked && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {session.isCompleted && session.meetingLink && (
                                   <a
-                                    key={file.id}
-                                    href={file.url}
+                                    href={session.meetingLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors"
+                                    className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1 rounded-full transition-colors"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <Download size={12} />
-                                    {file.name}
-                                    {file.size && (
-                                      <span className="text-gray-500 text-[10px]">
-                                        ({Math.round(file.size / 1024)} KB)
-                                      </span>
-                                    )}
+                                    <PlayCircle size={12} />
+                                    ورود به جلسه
                                   </a>
-                                ))}
+                                )}
+
+                                {isSessionPast && session.archiveLink && (
+                                  <a
+                                    href={session.archiveLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1 rounded-full transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <FileArchive size={12} />
+                                    آرشیو جلسه
+                                  </a>
+                                )}
+
+                                {session.files && session.files.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                                    <FileText size={12} />
+                                    {session.files.length} فایل
+                                  </span>
+                                )}
                               </div>
                             )}
+
+                            {isLocked &&
+                              session.files &&
+                              session.files.length > 0 && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  <FileText size={12} className="inline mr-1" />
+                                  {session.files.length} فایل (پس از تایید قابل
+                                  مشاهده است)
+                                </div>
+                              )}
+
+                            {!isLocked &&
+                              session.files &&
+                              session.files.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {session.files.map((file) => (
+                                    <a
+                                      key={file.id}
+                                      href={file.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Download size={12} />
+                                      {file.name}
+                                      {file.size && (
+                                        <span className="text-gray-500 text-[10px]">
+                                          ({Math.round(file.size / 1024)} KB)
+                                        </span>
+                                      )}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                           </div>
                         );
                       })}
@@ -612,10 +661,20 @@ export default function CourseDetail() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">وضعیت</span>
-                  {course.userEnrolled ? (
+                  {isConfirmed ? (
                     <span className="text-green-400 flex items-center gap-1">
                       <CheckCircle size={16} />
-                      ثبت‌نام شده
+                      ثبت‌نام نهایی
+                    </span>
+                  ) : isWaiting ? (
+                    <span className="text-yellow-400 flex items-center gap-1">
+                      <Timer size={16} />
+                      در انتظار تایید
+                    </span>
+                  ) : isPending ? (
+                    <span className="text-blue-400 flex items-center gap-1">
+                      <ShoppingCart size={16} />
+                      در سبد خرید
                     </span>
                   ) : isPast ? (
                     <span className="text-gray-500">به پایان رسیده</span>
@@ -667,13 +726,50 @@ export default function CourseDetail() {
                 </div>
               )}
 
-              {course.userEnrolled && (
+              {isPending && (
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <GlassButton
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    onClick={goToCart}
+                    icon={<ShoppingCart className="w-5 h-5" />}
+                    iconPosition="left"
+                    className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/30"
+                  >
+                    مشاهده سبد خرید
+                  </GlassButton>
+                </div>
+              )}
+
+              {isWaiting && (
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-center">
+                    <p className="text-yellow-400 text-sm flex items-center justify-center gap-2">
+                      <Timer size={16} />
+                      در انتظار تایید ادمین
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      پس از تایید، جلسات دوره فعال می‌شوند
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {isConfirmed && (
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
                     <p className="text-green-400 text-sm flex items-center justify-center gap-2">
                       <CheckCircle size={16} />
-                      شما در این دوره ثبت‌نام کرده‌اید
+                      ثبت‌نام نهایی شده
                     </p>
+                    <button
+                      onClick={() => setExpandedSessions(!expandedSessions)}
+                      className="text-blue-400 hover:text-blue-300 text-xs mt-1 flex items-center justify-center gap-1 mx-auto"
+                    >
+                      <Video size={14} />
+                      {expandedSessions ? "بستن جلسات" : "مشاهده جلسات"}
+                    </button>
                   </div>
                 </div>
               )}
@@ -705,7 +801,6 @@ export default function CourseDetail() {
         </div>
       </div>
 
-      {/* ✅ مودال پیش‌ثبت‌نام */}
       <CoursePreRegisterModal
         isOpen={showPreRegister}
         onClose={() => setShowPreRegister(false)}
