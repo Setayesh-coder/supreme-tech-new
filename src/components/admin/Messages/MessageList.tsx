@@ -1,9 +1,9 @@
-// src/pages/admin/Messages/MessageList.tsx
+// src/components/admin/Messages/MessageList.tsx
 import { useState, useEffect } from "react";
 import { AdminLayout } from "../AdminLayout";
 import { LiquidGlassCard } from "../../ui/LiquidGlassCard";
 import { GlassButton } from "../../ui/GlassButton";
-import { messagesAPI } from "../../../lib/api/messages";
+import { messagesAPI, type Message } from "../../../lib/api/messages";
 import {
   Mail,
   Check,
@@ -16,48 +16,64 @@ import {
   Phone,
   Calendar,
   Send,
+  AlertCircle,
 } from "lucide-react";
 
-interface Message {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  subject: string;
-  message: string;
+// ✅ تایپ‌های محلی برای UI
+interface MessageUI extends Message {
+  // تبدیل is_read به boolean برای راحتی
   isRead: boolean;
   isReplied: boolean;
-  createdAt: string;
-  userId?: string;
 }
 
 export default function MessageList() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageUI | null>(
+    null,
+  );
   const [showDetail, setShowDetail] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [page]);
 
+  // ✅ دریافت پیام‌ها با صفحه‌بندی و فیلتر
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const data = await messagesAPI.getAll();
-      setMessages(data);
-    } catch (err) {
-      setError("خطا در دریافت پیام‌ها");
-      console.error(err);
+      setError("");
+
+      const response = await messagesAPI.getAll({
+        page,
+        size: limit,
+      });
+
+      // تبدیل داده‌های API به فرمت UI
+      const mappedMessages = response.items.map((msg) => ({
+        ...msg,
+        isRead: msg.is_read || false,
+        isReplied: !!msg.reply, // اگر reply وجود داشته باشد، پاسخ داده شده است
+      }));
+
+      setMessages(mappedMessages);
+      setTotal(response.total);
+    } catch (err: any) {
+      console.error("❌ خطا در دریافت پیام‌ها:", err);
+      setError(err.response?.data?.detail || "خطا در دریافت پیام‌ها");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ علامت‌گذاری به عنوان خوانده شده
   const handleMarkAsRead = async (id: string) => {
     try {
       await messagesAPI.markAsRead(id);
@@ -72,6 +88,7 @@ export default function MessageList() {
     }
   };
 
+  // ✅ علامت‌گذاری به عنوان پاسخ داده شده
   const handleMarkAsReplied = async (id: string) => {
     try {
       await messagesAPI.markAsReplied(id);
@@ -86,6 +103,7 @@ export default function MessageList() {
     }
   };
 
+  // ✅ حذف پیام
   const handleDelete = async (id: string) => {
     if (!confirm("آیا از حذف این پیام مطمئن هستید؟")) return;
     try {
@@ -100,7 +118,8 @@ export default function MessageList() {
     }
   };
 
-  const handleViewMessage = (message: Message) => {
+  // ✅ مشاهده جزئیات پیام
+  const handleViewMessage = (message: MessageUI) => {
     setSelectedMessage(message);
     setShowDetail(true);
     if (!message.isRead) {
@@ -108,27 +127,15 @@ export default function MessageList() {
     }
   };
 
-  const handleReplyByEmail = (message: Message) => {
-    const email = message.email || "info@supremetech.ir";
-    const subject = `پاسخ به: ${message.subject}`;
-    const body = `سلام ${message.name}\n\nبا تشکر از پیام شما.\n\nمتن پیام شما:\n"${message.message}"\n\n---\n\nپاسخ:\n`;
-
-    window.open(
-      `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
-      "_blank",
-    );
-  };
-
-  //  تابع ارسال پاسخ (از طریق مودال)
+  // ✅ ارسال پاسخ
   const handleSendReply = async () => {
     if (!selectedMessage || !replyText.trim()) return;
 
     setSendingReply(true);
     try {
       // ارسال پاسخ به API
-      await messagesAPI.sendReply(selectedMessage.id, {
+      await messagesAPI.reply(selectedMessage.id, {
         reply: replyText,
-        to: selectedMessage.email || selectedMessage.phone,
       });
 
       // علامت پاسخ داده شده
@@ -144,12 +151,38 @@ export default function MessageList() {
       setReplyText("");
       setShowReplyModal(false);
       alert("✅ پاسخ با موفقیت ارسال شد!");
+
+      // رفرش لیست
+      await fetchMessages();
     } catch (error) {
       console.error("❌ خطا:", error);
       alert("خطا در ارسال پاسخ");
     } finally {
       setSendingReply(false);
     }
+  };
+
+  // ✅ دریافت وضعیت نمایشی
+  const getStatusInfo = (message: MessageUI) => {
+    if (message.isReplied) {
+      return {
+        label: "پاسخ داده شده",
+        color: "bg-green-500/20 text-green-400",
+        icon: <Check className="w-3 h-3" />,
+      };
+    }
+    if (message.isRead) {
+      return {
+        label: "خوانده شده",
+        color: "bg-blue-500/20 text-blue-400",
+        icon: <Check className="w-3 h-3" />,
+      };
+    }
+    return {
+      label: "در انتظار",
+      color: "bg-yellow-500/20 text-yellow-400",
+      icon: <AlertCircle className="w-3 h-3" />,
+    };
   };
 
   if (loading) {
@@ -170,11 +203,16 @@ export default function MessageList() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-white"><Mail/> پیام‌ها</h1>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Mail className="w-6 h-6 text-blue-400" />
+              پیام‌ها
+            </h1>
             <p className="text-white/60 text-sm">
               {unreadCount > 0
                 ? `${unreadCount} پیام خوانده نشده`
                 : "همه پیام‌ها خوانده شده"}
+              <span className="mx-2">•</span>
+              {total} پیام کل
             </p>
           </div>
           <GlassButton
@@ -190,7 +228,7 @@ export default function MessageList() {
 
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl">
-            {error}
+            ❌ {error}
           </div>
         )}
 
@@ -203,45 +241,74 @@ export default function MessageList() {
                 <p>هیچ پیامی وجود ندارد</p>
               </div>
             ) : (
-              messages.map((message) => (
-                <LiquidGlassCard
-                  key={message.id}
-                  className={`p-4 cursor-pointer transition-all duration-200 ${
-                    !message.isRead ? "border-blue-500/30" : ""
-                  }`}
-                  borderRadius="12px"
-                  blurIntensity="sm"
-                  glowIntensity="sm"
-                  onClick={() => handleViewMessage(message)}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-white truncate">
-                          {message.subject}
-                        </h3>
-                        {!message.isRead && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />
-                        )}
-                        {message.isReplied && (
-                          <span className="text-xs text-green-400 shrink-0">
-                            <Check/> پاسخ داده شده
+              messages.map((message) => {
+                const status = getStatusInfo(message);
+                return (
+                  <LiquidGlassCard
+                    key={message.id}
+                    className={`p-4 cursor-pointer transition-all duration-200 ${
+                      !message.isRead ? "border-blue-500/30" : ""
+                    }`}
+                    borderRadius="12px"
+                    blurIntensity="sm"
+                    glowIntensity="sm"
+                    onClick={() => handleViewMessage(message)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-white truncate">
+                            {message.project_type}
+                          </h3>
+                          {!message.isRead && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0 animate-pulse" />
+                          )}
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${status.color} flex items-center gap-1 shrink-0`}
+                          >
+                            {status.icon}
+                            {status.label}
                           </span>
+                        </div>
+                        <p className="text-sm text-gray-400 truncate">
+                          {message.name} • {message.phone}
+                        </p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {message.project_description.substring(0, 80)}...
+                        </p>
+                      </div>
+                      <div className="text-xs text-gray-500 shrink-0">
+                        {new Date(message.created_at).toLocaleDateString(
+                          "fa-IR",
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 truncate">
-                        {message.name} • {message.phone}
-                      </p>
-                      <p className="text-sm text-gray-500 truncate">
-                        {message.message.substring(0, 80)}...
-                      </p>
                     </div>
-                    <div className="text-xs text-gray-500 shrink-0">
-                      {new Date(message.createdAt).toLocaleDateString("fa-IR")}
-                    </div>
-                  </div>
-                </LiquidGlassCard>
-              ))
+                  </LiquidGlassCard>
+                );
+              })
+            )}
+
+            {/* صفحه‌بندی */}
+            {total > limit && (
+              <div className="flex justify-center gap-2 mt-4">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 bg-white/10 rounded-lg text-white/60 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  قبلی
+                </button>
+                <span className="px-3 py-1 text-white/60">
+                  صفحه {page} از {Math.ceil(total / limit)}
+                </span>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= Math.ceil(total / limit)}
+                  className="px-3 py-1 bg-white/10 rounded-lg text-white/60 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  بعدی
+                </button>
+              </div>
             )}
           </div>
 
@@ -256,7 +323,7 @@ export default function MessageList() {
               >
                 <div className="flex justify-between items-start mb-4">
                   <h2 className="text-xl font-bold text-white">
-                    {selectedMessage.subject}
+                    {selectedMessage.project_type}
                   </h2>
                   <button
                     onClick={() => {
@@ -288,7 +355,7 @@ export default function MessageList() {
                   <div className="flex items-center gap-2 text-white/50">
                     <Calendar size={16} />
                     <span>
-                      {new Date(selectedMessage.createdAt).toLocaleString(
+                      {new Date(selectedMessage.created_at).toLocaleString(
                         "fa-IR",
                       )}
                     </span>
@@ -297,8 +364,27 @@ export default function MessageList() {
 
                 {/* متن پیام */}
                 <div className="text-gray-300 leading-relaxed whitespace-pre-wrap mb-4">
-                  {selectedMessage.message}
+                  {selectedMessage.project_description}
                 </div>
+
+                {/* پاسخ موجود */}
+                {selectedMessage.reply && (
+                  <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+                    <p className="text-green-400 text-sm font-medium mb-1">
+                      پاسخ ارسال شده:
+                    </p>
+                    <p className="text-gray-300 text-sm whitespace-pre-wrap">
+                      {selectedMessage.reply}
+                    </p>
+                    {selectedMessage.replied_at && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(selectedMessage.replied_at).toLocaleString(
+                          "fa-IR",
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* وضعیت */}
                 <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -318,7 +404,7 @@ export default function MessageList() {
                   )}
                 </div>
 
-                {/*  دکمه‌ها */}
+                {/* دکمه‌ها */}
                 <div className="flex flex-wrap gap-2">
                   {!selectedMessage.isRead && (
                     <GlassButton
@@ -332,26 +418,15 @@ export default function MessageList() {
                     </GlassButton>
                   )}
 
-                  {/*  دکمه پاسخ با ایمیل (mailto) */}
-                  <GlassButton
-                    variant="secondary"
-                    size="sm"
-                    icon={<Reply size={16} />}
-                    iconPosition="left"
-                    onClick={() => handleReplyByEmail(selectedMessage)}
-                  >
-                    پاسخ با ایمیل
-                  </GlassButton>
-
-                  {/*  دکمه باز کردن مودال پاسخ */}
                   <GlassButton
                     variant="success"
                     size="sm"
                     icon={<Reply size={16} />}
                     iconPosition="left"
                     onClick={() => setShowReplyModal(true)}
+                    disabled={selectedMessage.isReplied}
                   >
-                    ارسال پاسخ
+                    {selectedMessage.isReplied ? "پاسخ داده شد" : "ارسال پاسخ"}
                   </GlassButton>
 
                   {!selectedMessage.isReplied && (
@@ -394,7 +469,7 @@ export default function MessageList() {
         </div>
       </div>
 
-      {/* 🔥 مودال پاسخ */}
+      {/* مودال پاسخ */}
       {showReplyModal && selectedMessage && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="max-w-lg w-full">
@@ -405,7 +480,8 @@ export default function MessageList() {
               glowIntensity="lg"
             >
               <h2 className="text-xl font-bold text-white mb-4 text-center">
-                <Send/> ارسال پاسخ
+                <Send className="w-6 h-6 inline-block ml-2" />
+                ارسال پاسخ
               </h2>
               <p className="text-gray-400 text-sm text-center mb-4">
                 پاسخ خود را برای "{selectedMessage.name}" ارسال کنید
@@ -443,7 +519,7 @@ export default function MessageList() {
                     className="flex-1"
                     loading={sendingReply}
                     onClick={handleSendReply}
-                    disabled={!replyText.trim()}
+                    disabled={!replyText.trim() || sendingReply}
                   >
                     ارسال پاسخ
                   </GlassButton>

@@ -1,6 +1,7 @@
+// src/pages/Contact.tsx
 import { useState } from "react";
-import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import { GlassButton } from "../ui/GlassButton";
+import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
+import { GlassButton } from "../../components/ui/GlassButton";
 import { Mail, Phone, MapPin, Send, Copy, MessageCircle } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { messagesAPI } from "../../lib/api/messages";
@@ -54,13 +55,18 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      await messagesAPI.create({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        subject: formData.project_type || "درخواست همکاری",
-        message: formData.project_description,
-      });
+      // ✅ ارسال با فیلدهای جدید
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        project_type: formData.project_type.trim() || "درخواست همکاری",
+        project_description: formData.project_description.trim(),
+      };
+
+      console.log("📤 ارسال داده به سرور:", payload);
+
+      await messagesAPI.create(payload);
 
       setSuccess("✅ پیام شما با موفقیت ارسال شد!");
       setFormData({
@@ -73,9 +79,51 @@ export default function Contact() {
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error(" خطا:", err);
-      setError(err.response?.data?.error || "خطا در ارسال پیام");
-      setTimeout(() => setError(""), 3000);
+      console.error("❌ خطا:", err);
+
+      let errorMessage = "خطا در ارسال پیام";
+
+      if (err.response) {
+        console.log("📥 پاسخ سرور:", {
+          status: err.response.status,
+          data: err.response.data,
+        });
+
+        if (err.response.status === 422) {
+          const detail = err.response.data?.detail;
+
+          if (Array.isArray(detail)) {
+            const errorMessages = detail.map((d: any) => {
+              const field = d.loc?.[1] || d.loc?.[0] || "فیلد";
+              const fieldNames: Record<string, string> = {
+                name: "نام",
+                email: "ایمیل",
+                phone: "شماره تماس",
+                project_type: "نوع پروژه",
+                project_description: "توضیحات پروژه",
+              };
+              const persianField = fieldNames[field] || field;
+              return `${persianField}: ${d.msg}`;
+            });
+            errorMessage = errorMessages.join(" • ");
+          } else if (typeof detail === "string") {
+            errorMessage = detail;
+          } else {
+            errorMessage =
+              "داده‌های وارد شده معتبر نیستند. لطفاً همه فیلدها را بررسی کنید.";
+          }
+        } else {
+          errorMessage =
+            err.response.data?.detail ||
+            err.response.data?.message ||
+            err.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(`❌ ${errorMessage}`);
+      setTimeout(() => setError(""), 6000);
     } finally {
       setIsSubmitting(false);
     }
@@ -84,7 +132,8 @@ export default function Contact() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -120,8 +169,8 @@ export default function Contact() {
         </div>
 
         {error && (
-          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-center">
-            {error}
+          <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl mb-4 text-center">
+            <div className="text-sm leading-relaxed">{error}</div>
           </div>
         )}
         {success && (
@@ -138,7 +187,7 @@ export default function Contact() {
             glowIntensity="md"
             className="p-8"
           >
-            <h3 className="text-2xl font-bold text-white mb-16 text-center">
+            <h3 className="text-2xl font-bold text-white mb-6 text-center">
               فرم تماس سریع
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -149,7 +198,7 @@ export default function Contact() {
                     value={formData.name}
                     onChange={handleChange}
                     type="text"
-                    placeholder="نام و نام خانوادگی"
+                    placeholder="نام و نام خانوادگی *"
                     required
                     className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -160,7 +209,7 @@ export default function Contact() {
                     value={formData.email}
                     onChange={handleChange}
                     type="email"
-                    placeholder="ایمیل"
+                    placeholder="ایمیل *"
                     required
                     className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -173,7 +222,7 @@ export default function Contact() {
                     value={formData.phone}
                     onChange={handleChange}
                     type="tel"
-                    placeholder="شماره تماس"
+                    placeholder="شماره تماس *"
                     dir="rtl"
                     required
                     className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -181,11 +230,11 @@ export default function Contact() {
                 </div>
                 <div>
                   <input
-                    name="projectType"
+                    name="project_type"
                     value={formData.project_type}
                     onChange={handleChange}
                     type="text"
-                    placeholder="نوع پروژه"
+                    placeholder="نوع پروژه *"
                     required
                     className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                   />
@@ -193,11 +242,11 @@ export default function Contact() {
               </div>
               <div>
                 <textarea
-                  name="description"
+                  name="project_description"
                   value={formData.project_description}
                   onChange={handleChange}
                   rows={4}
-                  placeholder="توضیحات پروژه"
+                  placeholder="توضیحات پروژه *"
                   required
                   className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                 />
@@ -218,6 +267,7 @@ export default function Contact() {
 
           {/* اطلاعات تماس + شبکه‌های اجتماعی */}
           <div className="space-y-6">
+            {/* ایمیل */}
             <LiquidGlassCard
               blurIntensity="lg"
               borderRadius="24px"
@@ -246,6 +296,7 @@ export default function Contact() {
               </div>
             </LiquidGlassCard>
 
+            {/* تلفن */}
             <LiquidGlassCard
               blurIntensity="lg"
               borderRadius="24px"
@@ -272,7 +323,7 @@ export default function Contact() {
               </div>
             </LiquidGlassCard>
 
-            {/* 🔥 اینستاگرام */}
+            {/* اینستاگرام */}
             {settings?.instagram_url && (
               <a
                 href={settings.instagram_url}
@@ -295,9 +346,9 @@ export default function Contact() {
                         اینستاگرام
                       </h4>
                       <p className="text-gray-400 text-xs">
-                        {loading
-                          ? "..."
-                          : settings?.instagram_url || "@supremetech"}
+                        {settings.instagram_url
+                          .replace(/^https?:\/\/(www\.)?/, "")
+                          .slice(0, 30)}
                       </p>
                     </div>
                     <Send className="w-4 h-4 text-gray-500 group-hover:text-pink-400 transition rotate-45" />
@@ -306,7 +357,7 @@ export default function Contact() {
               </a>
             )}
 
-            {/* 🔥 کانال تلگرام */}
+            {/* کانال تلگرام */}
             {settings?.telegram_url && (
               <a
                 href={settings.telegram_url}
@@ -329,9 +380,10 @@ export default function Contact() {
                         کانال تلگرام
                       </h4>
                       <p className="text-gray-400 text-xs">
-                        {loading
-                          ? "..."
-                          : settings?.telegram_url || "@SupremeTech_co"}
+                        {settings.telegram_url.replace(
+                          /^https?:\/\/(t\.me\/)/,
+                          "@",
+                        )}
                       </p>
                     </div>
                     <Send className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition rotate-45" />
@@ -340,7 +392,7 @@ export default function Contact() {
               </a>
             )}
 
-            {/* 🔥 تلگرام پشتیبانی */}
+            {/* پشتیبانی تلگرام */}
             {settings?.telegram_support_url && (
               <a
                 href={settings.telegram_support_url}
@@ -363,10 +415,10 @@ export default function Contact() {
                         پشتیبانی تلگرام
                       </h4>
                       <p className="text-gray-400 text-xs">
-                        {loading
-                          ? "..."
-                          : settings?.telegram_support_url ||
-                            "@SupremeTech_support"}
+                        {settings.telegram_support_url.replace(
+                          /^https?:\/\/(t\.me\/)/,
+                          "@",
+                        )}
                       </p>
                     </div>
                     <Send className="w-4 h-4 text-gray-500 group-hover:text-cyan-400 transition rotate-45" />
@@ -400,7 +452,7 @@ export default function Contact() {
                     <p className="text-gray-400 text-xs leading-relaxed">
                       {loading
                         ? "..."
-                        : settings?.address_link ||
+                        : settings?.address ||
                           "تهران، بزرگراه اشرفی اصفهانی، بالاتر از میدان پونک، مجتمع نیایش"}
                     </p>
                   </div>

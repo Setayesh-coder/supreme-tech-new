@@ -1,4 +1,4 @@
-
+// src/components/profile/TicketsTab.tsx
 import { useState } from "react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
@@ -14,17 +14,21 @@ import {
   Trash2,
   Send,
   X,
+  RefreshCw,
 } from "lucide-react";
-import { type Ticket as TicketType, type TicketMessage } from "../../lib/api/tickets";
+import {
+  type Ticket as TicketType,
+  type TicketMessage,
+  ticketsAPI,
+} from "../../lib/api/tickets";
 
 interface TicketsTabProps {
   tickets: TicketType[];
   loading: boolean;
-  navigate: (path: string) => void;
   onCreateTicket: () => void;
-  onViewTicket: (id: string) => void;
+  onViewTicket?: (id: string) => void;
   onDeleteTicket: (id: string) => void;
-  onSendMessage?: (ticketId: string, message: string) => Promise<void>;
+  onRefresh?: () => void;
 }
 
 export function TicketsTab({
@@ -32,12 +36,14 @@ export function TicketsTab({
   loading,
   onCreateTicket,
   onDeleteTicket,
-  onSendMessage,
+  onRefresh,
 }: TicketsTabProps) {
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
 
   const getStatusLabel = (status: string) => {
     const labels: Record<
@@ -89,37 +95,82 @@ export function TicketsTab({
     });
   };
 
-  const handleViewTicket = (ticket: TicketType) => {
-    setSelectedTicket(ticket);
-    setShowDetail(true);
+  // ✅ دریافت پیام‌های تیکت از سرور
+  const fetchTicketMessages = async (ticketId: string) => {
+    setMessagesLoading(true);
+    try {
+      const ticket = await ticketsAPI.getById(ticketId);
+      setTicketMessages(ticket.messages || []);
+      return ticket;
+    } catch (err) {
+      console.error("❌ خطا در دریافت پیام‌ها:", err);
+      return null;
+    } finally {
+      setMessagesLoading(false);
+    }
   };
 
+  // ✅ مشاهده تیکت
+  const handleViewTicket = async (ticket: TicketType) => {
+    setSelectedTicket(ticket);
+    setShowDetail(true);
+    setReply("");
+
+    // دریافت پیام‌های تیکت
+    const updatedTicket = await fetchTicketMessages(ticket.id);
+    if (updatedTicket) {
+      setSelectedTicket(updatedTicket);
+    }
+  };
+
+  // ✅ ارسال پیام جدید
   const handleSendMessage = async () => {
-    if (!reply.trim() || !selectedTicket || !onSendMessage) return;
+    if (!reply.trim() || !selectedTicket) return;
 
     setSending(true);
     try {
-      await onSendMessage(selectedTicket.id, reply);
-      setReply("");
-      
-      // ایجاد پیام جدید با ساختار صحیح
-      const newMessage: TicketMessage = {
-        id: Date.now().toString(),
-        ticket_id: selectedTicket.id,
-        sender_id: "user",
-        message: reply,
-        created_at: new Date().toISOString(),
-      };
-      
-      setSelectedTicket({
-        ...selectedTicket,
-        messages: [...(selectedTicket.messages || []), newMessage],
+      // ارسال پیام به سرور
+      const newMessage = await ticketsAPI.addMessage(selectedTicket.id, reply);
+      console.log("✅ پیام ارسال شد:", newMessage);
+
+      // ✅ به‌روزرسانی لیست پیام‌ها با پیام جدید
+      setTicketMessages((prev) => [...prev, newMessage]);
+
+      // ✅ به‌روزرسانی تیکت انتخاب شده
+      setSelectedTicket((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...(prev.messages || []), newMessage],
+        };
       });
+
+      setReply("");
+
+      // رفرش لیست تیکت‌ها
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (err) {
-      alert("خطا در ارسال پیام");
+      console.error("❌ خطا در ارسال پیام:", err);
+      alert("خطا در ارسال پیام. لطفاً دوباره تلاش کنید.");
     } finally {
       setSending(false);
     }
+  };
+
+  // ✅ بستن مودال و پاک کردن state
+  const handleCloseDetail = () => {
+    setShowDetail(false);
+    setSelectedTicket(null);
+    setTicketMessages([]);
+    setReply("");
+  };
+
+  // ✅ رفرش دستی پیام‌ها
+  const handleRefreshMessages = async () => {
+    if (!selectedTicket) return;
+    await fetchTicketMessages(selectedTicket.id);
   };
 
   if (loading) {
@@ -153,15 +204,28 @@ export function TicketsTab({
               ({tickets.length})
             </span>
           </h2>
-          <GlassButton
-            variant="primary"
-            size="sm"
-            icon={<Plus className="w-4 h-4" />}
-            iconPosition="left"
-            onClick={onCreateTicket}
-          >
-            تیکت جدید
-          </GlassButton>
+          <div className="flex gap-2">
+            {onRefresh && (
+              <GlassButton
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className="w-4 h-4" />}
+                iconPosition="left"
+                onClick={onRefresh}
+              >
+                بروزرسانی
+              </GlassButton>
+            )}
+            <GlassButton
+              variant="primary"
+              size="sm"
+              icon={<Plus className="w-4 h-4" />}
+              iconPosition="left"
+              onClick={onCreateTicket}
+            >
+              تیکت جدید
+            </GlassButton>
+          </div>
         </div>
 
         {tickets.length === 0 ? (
@@ -219,6 +283,13 @@ export function TicketsTab({
                             {ticket.department}
                           </span>
                         )}
+                        {/* تعداد پیام‌ها */}
+                        {ticket.messages && ticket.messages.length > 0 && (
+                          <span className="flex items-center gap-1 text-blue-400">
+                            <Send className="w-3 h-3" />
+                            {ticket.messages.length} پیام
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -267,8 +338,14 @@ export function TicketsTab({
 
       {/* مودال جزئیات تیکت */}
       {showDetail && selectedTicket && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleCloseDetail}
+        >
+          <div
+            className="max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <LiquidGlassCard
               className="p-6"
               borderRadius="24px"
@@ -276,11 +353,11 @@ export function TicketsTab({
               glowIntensity="md"
             >
               <div className="flex justify-between items-start mb-4">
-                <div>
+                <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white">
                     {selectedTicket.title}
                   </h2>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-sm text-white/40">
                       #{selectedTicket.id.slice(0, 8)}
                     </span>
@@ -290,18 +367,26 @@ export function TicketsTab({
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowDetail(false);
-                    setSelectedTicket(null);
-                  }}
-                  className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X size={24} className="text-white/60" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {onRefresh && (
+                    <button
+                      onClick={handleRefreshMessages}
+                      className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                      title="بروزرسانی پیام‌ها"
+                    >
+                      <RefreshCw className="w-5 h-5 text-white/60 hover:text-white" />
+                    </button>
+                  )}
+                  <button
+                    onClick={handleCloseDetail}
+                    className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X size={24} className="text-white/60" />
+                  </button>
+                </div>
               </div>
 
-              <div className="text-xs text-gray-500 flex gap-4 mb-4 pb-4 border-b border-white/10">
+              <div className="text-xs text-gray-500 flex gap-4 mb-4 pb-4 border-b border-white/10 flex-wrap">
                 <span
                   className={`px-2 py-1 rounded-full ${getStatusLabel(selectedTicket.status).color} bg-white/5`}
                 >
@@ -321,12 +406,16 @@ export function TicketsTab({
 
               {/* پیام‌ها */}
               <div className="space-y-3 max-h-60 overflow-y-auto mb-4 bg-white/5 rounded-xl p-4">
-                {!selectedTicket.messages || selectedTicket.messages.length === 0 ? (
+                {messagesLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                  </div>
+                ) : ticketMessages.length === 0 ? (
                   <p className="text-center text-white/40 text-sm py-4">
                     هنوز پیامی ارسال نشده است
                   </p>
                 ) : (
-                  selectedTicket.messages.map((msg) => {
+                  ticketMessages.map((msg) => {
                     const isAdmin = msg.sender_id !== selectedTicket.creator_id;
                     return (
                       <div
@@ -337,7 +426,9 @@ export function TicketsTab({
                             : "bg-white/5 mr-auto max-w-[80%]"
                         }`}
                       >
-                        <p className="text-white text-sm">{msg.message}</p>
+                        <p className="text-white text-sm break-words">
+                          {msg.message}
+                        </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-white/30">
                             {isAdmin ? "👤 پشتیبانی" : "👤 شما"}
@@ -361,7 +452,10 @@ export function TicketsTab({
                     onChange={(e) => setReply(e.target.value)}
                     placeholder="پیام خود را بنویسید..."
                     className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !e.shiftKey && handleSendMessage()
+                    }
+                    disabled={sending}
                   />
                   <GlassButton
                     variant="primary"
@@ -370,7 +464,7 @@ export function TicketsTab({
                     icon={<Send className="w-4 h-4" />}
                     iconPosition="left"
                     onClick={handleSendMessage}
-                    disabled={!reply.trim()}
+                    disabled={!reply.trim() || sending}
                   >
                     ارسال
                   </GlassButton>
