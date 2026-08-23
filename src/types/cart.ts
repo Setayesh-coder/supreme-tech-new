@@ -63,7 +63,7 @@ export interface BalePaymentRequest {
 }
 
 export interface BalePaymentResponse {
-  payment_url: string;
+  payment_link: string;
   transaction_id: string;
 }
 
