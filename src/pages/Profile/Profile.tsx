@@ -7,6 +7,7 @@ import {
   type Enrollment as APIEnrollment,
 } from "../../lib/api/enrollments";
 import { cartAPI } from "../../lib/api/cart";
+import { useCart } from "../../hooks/useCart";
 // import { coursesAPI } from "../../lib/api/courses";
 import { ticketsAPI, type Ticket } from "../../lib/api/tickets";
 import { messagesAPI } from "../../lib/api/messages";
@@ -218,6 +219,12 @@ export default function Profile() {
   const handleCartClick = () => {
     navigate("/cart");
   };
+  const {
+    cart: hookCart,
+    loading: hookLoading,
+    // refetch: refetchCart,
+    // isCartValid,
+  } = useCart();
 
   // ============== توابع ==============
   const fetchTickets = async () => {
@@ -925,14 +932,13 @@ export default function Profile() {
 
             {activeTab === "cart" && (
               <CartTab
-                externalCart={cart}
-                externalLoading={loading}
+                externalCart={hookCart}
+                externalLoading={hookLoading}
                 onRefresh={fetchProfile}
                 standalone={false}
                 onRemoveFromCart={handleRemoveFromCart}
               />
             )}
-
             {activeTab === "tickets" && (
               <TicketsTab
                 tickets={tickets}

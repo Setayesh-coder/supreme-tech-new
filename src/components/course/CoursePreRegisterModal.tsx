@@ -92,7 +92,9 @@ export default function CoursePreRegisterModal({
         goal: formData.goal?.trim() || "",
         referral_source: formData.referral_source?.trim() || "",
       });
-
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("cartUpdated"));
+      }
       console.log("✅ پاسخ سرور:", response);
 
       // ✅ موفقیت - فقط notify می‌کنیم
