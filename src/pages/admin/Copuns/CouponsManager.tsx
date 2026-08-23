@@ -4,6 +4,7 @@ import { couponsAPI } from "../../../lib/api/coupons";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
+import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
 import {
   Plus,
   Loader2,
@@ -19,19 +20,24 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  CheckCircle,
+  MinusCircle,
 } from "lucide-react";
 
-interface Coupon {
-  id: string;
+import type { Coupon } from "../../../types/cart";
+
+interface CouponFormData {
   code: string;
   description?: string;
   discount_type: "PERCENT" | "FIXED";
   discount_value: number;
   max_uses: number;
-  used_count: number;
-  is_active: boolean;
   expires_at: string;
-  created_at: string;
+  min_order_amount?: number;
+  max_discount_amount?: number;
+  max_uses_per_user?: number;
+  allowed_courses?: string;
+  allowed_phones?: string;
 }
 
 export default function CouponsManager() {
@@ -41,13 +47,18 @@ export default function CouponsManager() {
   const [success, setSuccess] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CouponFormData>({
     code: "",
     description: "",
-    discount_type: "PERCENT" as "PERCENT" | "FIXED",
+    discount_type: "PERCENT",
     discount_value: 0,
     max_uses: 1,
     expires_at: "",
+    min_order_amount: 0,
+    max_discount_amount: 0,
+    max_uses_per_user: 1,
+    allowed_courses: "",
+    allowed_phones: "",
   });
   const [filter, setFilter] = useState({
     search: "",
@@ -83,7 +94,21 @@ export default function CouponsManager() {
     setIsProcessing(true);
 
     try {
-      await couponsAPI.create(formData);
+      const createData = {
+        code: formData.code,
+        description: formData.description || undefined,
+        discount_type: formData.discount_type,
+        discount_value: formData.discount_value,
+        max_uses: formData.max_uses,
+        expires_at: formData.expires_at,
+        min_order_amount: formData.min_order_amount || 0,
+        max_discount_amount: formData.max_discount_amount || 0,
+        max_uses_per_user: formData.max_uses_per_user || 1,
+        allowed_courses: formData.allowed_courses || "",
+        allowed_phones: formData.allowed_phones || "",
+      };
+
+      await couponsAPI.create(createData);
       setSuccess("✅ کد تخفیف با موفقیت ایجاد شد!");
       setShowCreateModal(false);
       resetForm();
@@ -161,6 +186,11 @@ export default function CouponsManager() {
       discount_value: 0,
       max_uses: 1,
       expires_at: "",
+      min_order_amount: 0,
+      max_discount_amount: 0,
+      max_uses_per_user: 1,
+      allowed_courses: "",
+      allowed_phones: "",
     });
   };
 
@@ -169,6 +199,7 @@ export default function CouponsManager() {
   }, [filter]);
 
   const formatPrice = (price: number) => {
+    if (price === 0) return "رایگان";
     return `${price.toLocaleString()} تومان`;
   };
 
@@ -178,11 +209,28 @@ export default function CouponsManager() {
       year: "numeric",
       month: "long",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const isExpired = (expiresAt: string) => {
     return new Date(expiresAt) < new Date();
+  };
+
+  const getCouponStatus = (coupon: Coupon) => {
+    if (!coupon.is_active)
+      return { label: "غیرفعال", color: "bg-gray-500/20 text-gray-400" };
+    if (isExpired(coupon.expires_at))
+      return { label: "منقضی شده", color: "bg-red-500/20 text-red-400" };
+    if (coupon.used_count >= coupon.max_uses)
+      return { label: "مصرف شده", color: "bg-yellow-500/20 text-yellow-400" };
+    return { label: "فعال", color: "bg-green-500/20 text-green-400" };
+  };
+
+  // ✅ تبدیل تاریخ شمسی به میلادی برای ارسال به سرور (با استفاده از PersianDatePicker)
+  const handleDateChange = (date: string) => {
+    setFormData({ ...formData, expires_at: date });
   };
 
   return (
@@ -196,7 +244,7 @@ export default function CouponsManager() {
               مدیریت کدهای تخفیف
             </h2>
             <p className="text-gray-400 text-sm mt-1">
-              ایجاد، ویرایش و مدیریت کدهای تخفیف
+              ایجاد و مدیریت کدهای تخفیف
             </p>
           </div>
 
@@ -276,7 +324,7 @@ export default function CouponsManager() {
           </div>
         </LiquidGlassCard>
 
-        {/* Coupons List */}
+        {/* Coupons List - دو ستونه */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
@@ -305,8 +353,9 @@ export default function CouponsManager() {
             </div>
           </LiquidGlassCard>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {coupons.map((coupon) => {
+              const status = getCouponStatus(coupon);
               const expired = isExpired(coupon.expires_at);
               const canUse =
                 coupon.is_active &&
@@ -322,30 +371,26 @@ export default function CouponsManager() {
                   glowIntensity="sm"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-lg font-bold font-mono text-white">
                           {coupon.code}
                         </h3>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            coupon.is_active && !expired
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}
+                          className={`text-xs px-2 py-0.5 rounded-full ${status.color}`}
                         >
-                          {coupon.is_active && !expired ? "فعال" : "غیرفعال"}
+                          {status.label}
                         </span>
                       </div>
 
                       {coupon.description && (
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-gray-400 mt-1 truncate">
                           {coupon.description}
                         </p>
                       )}
 
                       <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
-                        <span className="flex items-center gap-1 text-blue-400">
+                        <span className="flex items-center gap-1 text-blue-400 font-medium">
                           {coupon.discount_type === "PERCENT" ? (
                             <Percent className="w-3 h-3" />
                           ) : (
@@ -367,6 +412,26 @@ export default function CouponsManager() {
                         </span>
                       </div>
 
+                      {/* اطلاعات اضافی */}
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {coupon.min_order_amount > 0 && (
+                          <span className="text-gray-500 bg-white/5 px-2 py-0.5 rounded">
+                            حداقل: {formatPrice(coupon.min_order_amount)}
+                          </span>
+                        )}
+                        {coupon.max_discount_amount > 0 && (
+                          <span className="text-gray-500 bg-white/5 px-2 py-0.5 rounded">
+                            حداکثر تخفیف:{" "}
+                            {formatPrice(coupon.max_discount_amount)}
+                          </span>
+                        )}
+                        <span className="text-gray-500 bg-white/5 px-2 py-0.5 rounded">
+                          {coupon.discount_type === "PERCENT"
+                            ? "درصدی"
+                            : "مبلغ ثابت"}
+                        </span>
+                      </div>
+
                       {expired && (
                         <div className="mt-2 flex items-center gap-1 text-red-400 text-xs">
                           <AlertCircle className="w-3 h-3" />
@@ -382,7 +447,7 @@ export default function CouponsManager() {
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 flex-shrink-0 mr-2">
                       <button
                         onClick={() =>
                           handleToggleStatus(coupon.id, !coupon.is_active)
@@ -417,13 +482,23 @@ export default function CouponsManager() {
                       ایجاد: {formatDate(coupon.created_at)}
                     </span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
+                      className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
                         canUse
                           ? "bg-green-500/20 text-green-400"
                           : "bg-red-500/20 text-red-400"
                       }`}
                     >
-                      {canUse ? "قابل استفاده" : "غیرقابل استفاده"}
+                      {canUse ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          قابل استفاده
+                        </>
+                      ) : (
+                        <>
+                          <MinusCircle className="w-3 h-3" />
+                          غیرقابل استفاده
+                        </>
+                      )}
                     </span>
                   </div>
                 </LiquidGlassCard>
@@ -436,7 +511,7 @@ export default function CouponsManager() {
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
             <LiquidGlassCard
-              className="w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto"
               borderRadius="24px"
               blurIntensity="xl"
               glowIntensity="md"
@@ -464,117 +539,245 @@ export default function CouponsManager() {
               </div>
 
               <form onSubmit={handleCreate} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    کد تخفیف *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        code: e.target.value.toUpperCase().replace(/\s/g, ""),
-                      })
-                    }
-                    placeholder="مثال: SUPREME50"
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors uppercase"
-                    required
-                  />
-                </div>
+                {/* دو ستونه کردن فرم */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* ستون اول */}
+                  <div className="space-y-4">
+                    {/* کد تخفیف */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        کد تخفیف *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.code}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            code: e.target.value
+                              .toUpperCase()
+                              .replace(/\s/g, ""),
+                          })
+                        }
+                        placeholder="مثال: SUPREME50"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors uppercase"
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    توضیحات
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="توضیحات کد تخفیف..."
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
+                    {/* نوع تخفیف */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        نوع تخفیف *
+                      </label>
+                      <select
+                        value={formData.discount_type}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            discount_type: e.target.value as
+                              | "PERCENT"
+                              | "FIXED",
+                          })
+                        }
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        required
+                      >
+                        <option value="PERCENT">درصدی (%)</option>
+                        <option value="FIXED">مبلغ ثابت (تومان)</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    نوع تخفیف *
-                  </label>
-                  <select
-                    value={formData.discount_type}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        discount_type: e.target.value as "PERCENT" | "FIXED",
-                      })
-                    }
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                    required
-                  >
-                    <option value="PERCENT">درصدی (%)</option>
-                    <option value="FIXED">مبلغ ثابت (تومان)</option>
-                  </select>
-                </div>
+                    {/* مقدار تخفیف */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        مقدار تخفیف *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={formData.discount_value}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              discount_value: Number(e.target.value),
+                            })
+                          }
+                          placeholder={
+                            formData.discount_type === "PERCENT"
+                              ? "مثال: 50"
+                              : "مثال: 100000"
+                          }
+                          className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                          required
+                          min="0"
+                        />
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+                          {formData.discount_type === "PERCENT" ? "%" : "تومان"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.discount_type === "PERCENT"
+                          ? "مقدار تخفیف به صورت درصد"
+                          : "مقدار تخفیف به صورت مبلغ ثابت"}
+                      </p>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    مقدار تخفیف *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.discount_value}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        discount_value: Number(e.target.value),
-                      })
-                    }
-                    placeholder={
-                      formData.discount_type === "PERCENT"
-                        ? "مثال: 50"
-                        : "مثال: 100000"
-                    }
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                    required
-                    min="0"
-                  />
-                </div>
+                    {/* تعداد دفعات استفاده */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        تعداد دفعات استفاده *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.max_uses}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            max_uses: Number(e.target.value),
+                          })
+                        }
+                        placeholder="مثال: 100"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                        required
+                        min="1"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    تعداد دفعات استفاده *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.max_uses}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        max_uses: Number(e.target.value),
-                      })
-                    }
-                    placeholder="مثال: 100"
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                    required
-                    min="1"
-                  />
-                </div>
+                    {/* تاریخ انقضا با PersianDatePicker */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        تاریخ انقضا *
+                      </label>
+                      <PersianDatePicker
+                        value={formData.expires_at}
+                        onChange={handleDateChange}
+                        placeholder="انتخاب تاریخ"
+                        includeTime={true}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    تاریخ انقضا *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.expires_at}
-                    onChange={(e) =>
-                      setFormData({ ...formData, expires_at: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                    required
-                  />
+                  {/* ستون دوم */}
+                  <div className="space-y-4">
+                    {/* توضیحات */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        توضیحات
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="توضیحات کد تخفیف..."
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* حداقل مبلغ سفارش */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        حداقل مبلغ سفارش
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.min_order_amount}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            min_order_amount: Number(e.target.value),
+                          })
+                        }
+                        placeholder="مثال: 100000"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* حداکثر مبلغ تخفیف */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        حداکثر مبلغ تخفیف
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.max_discount_amount}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            max_discount_amount: Number(e.target.value),
+                          })
+                        }
+                        placeholder="مثال: 50000"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* تعداد دفعات استفاده برای هر کاربر */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        تعداد استفاده برای هر کاربر
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.max_uses_per_user}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            max_uses_per_user: Number(e.target.value),
+                          })
+                        }
+                        placeholder="مثال: 1"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                        min="1"
+                      />
+                    </div>
+
+                    {/* دوره‌های مجاز */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        دوره‌های مجاز
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.allowed_courses}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            allowed_courses: e.target.value,
+                          })
+                        }
+                        placeholder="آیدی‌ها با کاما جدا شوند"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* شماره‌های مجاز */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-1">
+                        شماره‌های مجاز
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.allowed_phones}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            allowed_phones: e.target.value,
+                          })
+                        }
+                        placeholder="شماره‌ها با کاما جدا شوند"
+                        className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {error && (

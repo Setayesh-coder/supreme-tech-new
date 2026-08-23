@@ -24,8 +24,10 @@ import {
   Gift,
   Percent,
   CheckCircle,
+  RefreshCw,
 } from "lucide-react";
 
+// ✅ Interface برای props
 interface CartTabProps {
   externalCart?: any[];
   externalLoading?: boolean;
@@ -33,6 +35,21 @@ interface CartTabProps {
   standalone?: boolean;
   onRemoveFromCart?: (id: string) => void;
 }
+
+// ✅ تایپ برای خلاصه سبد خرید
+interface CartSummary {
+  total_original_price: number;
+  total_courses_discount: number;
+  coupon_code?: string;
+  coupon_discount?: number;
+  total_payable?: number;
+}
+
+// ✅ تایپ برای پاسخ سبد خرید
+// interface CartResponse {
+//   items: any[];
+//   summary?: CartSummary; // ✅ optional چون ممکن است وجود نداشته باشد
+// }
 
 export function CartTab({
   externalCart,
@@ -53,6 +70,7 @@ export function CartTab({
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [couponCode, setCouponCode] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -87,7 +105,7 @@ export function CartTab({
         if (showLoading) setInternalLoading(true);
         setError("");
 
-        const cartData = await cartAPI.getCart();
+        const cartData = (await cartAPI.getCart()) as any; // ✅ استفاده از as any
         console.log("🛒 سبد خرید به‌روزرسانی شد:", cartData);
 
         const items = cartData.items || [];
@@ -109,23 +127,32 @@ export function CartTab({
 
         setInternalCart(mappedCart);
 
-        // ✅ اگر discountInfo وجود دارد، قیمت‌ها را دوباره محاسبه کن
-        if (discountInfo) {
-          const total = mappedCart.reduce(
-            (sum, item) => sum + (item.event?.price || 0),
-            0,
-          );
-          const discountAmount = calculateDiscount(total, discountInfo);
-          setDiscountInfo({
-            ...discountInfo,
-            discount_amount: discountAmount,
-            final_total: total - discountAmount,
-          });
+        // ✅ اگر discountInfo وجود دارد، از اطلاعات سرور به‌روزرسانی کن
+        if (discountInfo && cartData.summary) {
+          const summary = cartData.summary as CartSummary;
+          if (summary.coupon_code) {
+            const isPercent =
+              summary.coupon_discount && summary.total_original_price > 0
+                ? (summary.coupon_discount / summary.total_original_price) * 100
+                : 0;
+
+            setDiscountInfo({
+              code: summary.coupon_code,
+              discount_amount: summary.coupon_discount || 0,
+              final_total:
+                summary.total_payable || summary.total_original_price || 0,
+              type: isPercent > 0 && isPercent < 100 ? "PERCENT" : "FIXED",
+              value:
+                isPercent > 0 && isPercent < 100
+                  ? Math.round(isPercent)
+                  : summary.coupon_discount || 0,
+            });
+          }
         }
 
         return mappedCart;
       } catch (err) {
-        console.error(" خطا در به‌روزرسانی سبد خرید:", err);
+        console.error("❌ خطا در به‌روزرسانی سبد خرید:", err);
         setError("خطا در به‌روزرسانی سبد خرید");
         return [];
       } finally {
@@ -141,19 +168,6 @@ export function CartTab({
     await refreshCart(true);
   }, [standalone, externalCart, refreshCart]);
 
-  // ✅ محاسبه تخفیف
-  const calculateDiscount = (
-    total: number,
-    discount: typeof discountInfo,
-  ): number => {
-    if (!discount) return 0;
-    if (discount.type === "PERCENT") {
-      return (total * discount.value) / 100;
-    } else {
-      return Math.min(discount.value, total);
-    }
-  };
-
   // ✅ اعمال کد تخفیف
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -168,29 +182,58 @@ export function CartTab({
     try {
       const code = couponCode.trim().toUpperCase();
 
+      // 1. اعمال کد تخفیف
       const result = await cartAPI.applyCoupon({ code });
-      console.log(" کد تخفیف اعمال شد:", result);
+      console.log("✅ کد تخفیف اعمال شد:", result);
 
-      setDiscountInfo({
-        code: result.coupon?.code || code,
-        discount_amount: result.discount || 0,
-        final_total: result.final_total || 0,
-        type: result.coupon?.type || "PERCENT",
-        value: result.coupon?.discount_value || 0,
-      });
+      // 2. دریافت سبد خرید به‌روز شده
+      const cartData = (await cartAPI.getCart()) as any;
+      console.log("🛒 سبد خرید به‌روزرسانی شد:", cartData);
 
-      setSuccess(` کد تخفیف "${code}" با موفقیت اعمال شد!`);
+      // 3. استخراج اطلاعات تخفیف از summary
+      const summary = (cartData.summary || {}) as CartSummary;
+
+      // 4. تنظیم discountInfo با اطلاعات واقعی از سرور
+      if (summary.coupon_code) {
+        const isPercent =
+          summary.coupon_discount && summary.total_original_price > 0
+            ? (summary.coupon_discount / summary.total_original_price) * 100
+            : 0;
+
+        setDiscountInfo({
+          code: summary.coupon_code,
+          discount_amount: summary.coupon_discount || 0,
+          final_total:
+            summary.total_payable || summary.total_original_price || 0,
+          type: isPercent > 0 && isPercent < 100 ? "PERCENT" : "FIXED",
+          value:
+            isPercent > 0 && isPercent < 100
+              ? Math.round(isPercent)
+              : summary.coupon_discount || 0,
+        });
+      } else {
+        // fallback: اگر در summary نبود، از result استفاده کن
+        setDiscountInfo({
+          code: result.coupon?.code || code,
+          discount_amount: result.discount || 0,
+          final_total: result.final_total || 0,
+          type: result.coupon?.type || "PERCENT",
+          value: result.coupon?.discount_value || 0,
+        });
+      }
+
+      setSuccess(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
       setCouponCode("");
 
-      // ✅ رفرش سبد خرید بعد از اعمال کد تخفیف
+      // 5. رفرش سبد خرید
       await refreshCart(false);
 
       if (onRefresh) onRefresh();
 
       setTimeout(() => setSuccess(""), 4000);
     } catch (err: any) {
-      console.error(" خطا در اعمال کد تخفیف:", err);
-      setError(err.response?.data?.detail || " کد تخفیف نامعتبر است");
+      console.error("❌ خطا در اعمال کد تخفیف:", err);
+      setError(err.response?.data?.detail || "❌ کد تخفیف نامعتبر است");
       setTimeout(() => setError(""), 3000);
     } finally {
       setApplyingCoupon(false);
@@ -202,16 +245,15 @@ export function CartTab({
     try {
       await cartAPI.removeCoupon({ code: discountInfo?.code || "" });
       setDiscountInfo(null);
-      setSuccess(" کد تخفیف با موفقیت حذف شد");
+      setSuccess("✅ کد تخفیف با موفقیت حذف شد");
 
-      // ✅ رفرش سبد خرید بعد از حذف کد تخفیف
       await refreshCart(false);
 
       if (onRefresh) onRefresh();
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error(" خطا در حذف کد تخفیف:", err);
+      console.error("❌ خطا در حذف کد تخفیف:", err);
       setError("خطا در حذف کد تخفیف");
       setTimeout(() => setError(""), 3000);
     }
@@ -224,28 +266,39 @@ export function CartTab({
     setProcessing(true);
 
     try {
-      // ✅ حذف از سبد خرید
       if (onRemoveFromCart) {
         await onRemoveFromCart(enrollmentId);
       } else {
-        // حذف از سبد خرید از طریق API
         await cartAPI.removeFromCart(enrollmentId);
       }
 
-      setSuccess(" آیتم از سبد خرید حذف شد");
-
-      // ✅ رفرش سبد خرید بعد از حذف آیتم
+      setSuccess("✅ آیتم از سبد خرید حذف شد");
       await refreshCart(false);
 
       if (onRefresh) onRefresh();
 
       setTimeout(() => setSuccess(""), 2000);
     } catch (err: any) {
-      console.error(" خطا در حذف آیتم:", err);
+      console.error("❌ خطا در حذف آیتم:", err);
       setError(err.response?.data?.detail || "خطا در حذف آیتم");
       setTimeout(() => setError(""), 3000);
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // ✅ رفرش دستی
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshCart(true);
+      setSuccess("✅ سبد خرید به‌روزرسانی شد");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError("خطا در به‌روزرسانی سبد خرید");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -256,24 +309,38 @@ export function CartTab({
     setShowPaymentMethodModal(false);
     setPaymentData(null);
 
-    // ✅ رفرش سبد خرید بعد از پرداخت
     await refreshCart(false);
 
     if (onRefresh) onRefresh();
 
-    setSuccess(" پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
+    setSuccess("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
     setTimeout(() => setSuccess(""), 5000);
   };
 
   // ✅ باز کردن مودال انتخاب روش پرداخت
-  const handleOpenPaymentMethodModal = () => {
+  const handleOpenPaymentMethodModal = async () => {
     if (!isLoggedIn) {
-      setError(" لطفاً ابتدا وارد حساب کاربری خود شوید");
+      setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
       setTimeout(() => setError(""), 3000);
       return;
     }
 
     if (cart.length === 0) return;
+
+    try {
+      const cartData = (await cartAPI.getCart()) as any;
+      if (!cartData.items || cartData.items.length === 0) {
+        setError("❌ سبد خرید شما خالی یا منقضی شده است");
+        await refreshCart(true);
+        setTimeout(() => setError(""), 3000);
+        return;
+      }
+    } catch (err) {
+      console.error("❌ خطا در بررسی سبد خرید:", err);
+      setError("❌ خطا در بررسی سبد خرید");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
 
     const totalPrice = cart.reduce(
       (sum, item) => sum + (item.event?.price || 0),
@@ -285,7 +352,7 @@ export function CartTab({
       .filter(Boolean);
 
     if (enrollmentIds.length === 0) {
-      setError(" شناسه ثبت‌نام یافت نشد");
+      setError("❌ شناسه ثبت‌نام یافت نشد");
       return;
     }
 
@@ -345,13 +412,15 @@ export function CartTab({
     );
   }
 
-  // ✅ اگر پرداخت کارت به کارت نمایش داده شود
   if (showCardToCard && paymentData) {
     return (
       <div className="max-w-lg mx-auto">
         <CardToCardPayment
           enrollmentId={paymentData.enrollmentId}
-          amount={paymentData.amount}
+          amount={paymentData.amount} // مبلغ نهایی با تخفیف
+          originalAmount={totalPrice} // قیمت اصلی بدون تخفیف
+          discountAmount={discountAmount} // مبلغ تخفیف
+          couponCode={discountInfo?.code} // کد تخفیف
           onSuccess={handlePaymentSuccess}
           onBack={handlePaymentBack}
         />
@@ -375,9 +444,23 @@ export function CartTab({
 
   return (
     <div className="space-y-4">
+      {/* دکمه رفرش دستی */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+        >
+          <RefreshCw
+            className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+          />
+          {isRefreshing ? "در حال به‌روزرسانی..." : "به‌روزرسانی"}
+        </button>
+      </div>
+
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-center text-sm">
-          <X /> {error}
+          <X className="inline w-4 h-4 ml-1" /> {error}
         </div>
       )}
       {success && (
@@ -633,7 +716,7 @@ export function CartTab({
                   variant="secondary"
                   size="lg"
                   onClick={() => {
-                    setError(" برای پرداخت باید وارد حساب کاربری خود شوید");
+                    setError("❌ برای پرداخت باید وارد حساب کاربری خود شوید");
                     setTimeout(() => setError(""), 3000);
                   }}
                   className="w-full md:w-auto"

@@ -10,6 +10,9 @@ import { BankCard } from "../ui/BankCard";
 interface CardToCardPaymentProps {
   enrollmentId: string;
   amount: number;
+  originalAmount?: number; // ✅ اضافه کردن قیمت اصلی
+  discountAmount?: number; // ✅ اضافه کردن مبلغ تخفیف
+  couponCode?: string; // ✅ اضافه کردن کد تخفیف
   onSuccess: () => void;
   onBack: () => void;
 }
@@ -23,6 +26,9 @@ const BANK_CARD_INFO = {
 export default function CardToCardPayment({
   enrollmentId,
   amount,
+  originalAmount,
+  discountAmount = 0,
+  couponCode,
   onSuccess,
   onBack,
 }: CardToCardPaymentProps) {
@@ -69,12 +75,12 @@ export default function CardToCardPayment({
     setUploadProgress(0);
 
     try {
-      console.log(" آپلود تصویر رسید...");
+      console.log("📤 آپلود تصویر رسید...");
       const uploadResult = await uploadAPI.uploadImage(
         receiptImage,
         "receipts",
       );
-      console.log(" تصویر آپلود شد:", uploadResult);
+      console.log("✅ تصویر آپلود شد:", uploadResult);
       setUploadProgress(50);
 
       const imageUrl = uploadResult.url;
@@ -83,21 +89,26 @@ export default function CardToCardPayment({
         enrollment_id: enrollmentId,
         tracking_code: cleanTrackingCode,
         receipt_image_url: imageUrl,
+        amount: amount, // ✅ ارسال مبلغ نهایی با تخفیف
+        original_amount: originalAmount,
+        discount_amount: discountAmount,
+        coupon_code: couponCode,
       });
 
       await paymentsAPI.cardToCard({
         enrollment_id: enrollmentId,
         tracking_code: cleanTrackingCode,
         receipt_image_url: imageUrl,
+        amount: amount, // ✅ ارسال مبلغ نهایی
       });
 
       setUploadProgress(100);
-      setSuccess(" پرداخت کارت به کارت با موفقیت ثبت شد!");
+      setSuccess("✅ پرداخت کارت به کارت با موفقیت ثبت شد!");
       setTimeout(() => {
         onSuccess();
       }, 2000);
     } catch (err: any) {
-      console.error(" خطا در پرداخت کارت به کارت:", err);
+      console.error("❌ خطا در پرداخت کارت به کارت:", err);
       setError(
         err.response?.data?.detail ||
           err.message ||
@@ -107,6 +118,14 @@ export default function CardToCardPayment({
       setLoading(false);
     }
   };
+
+  const formatPrice = (price: number) => {
+    if (price === 0) return "رایگان";
+    return `${price.toLocaleString()} تومان`;
+  };
+
+  // ✅ محاسبه تخفیف اعمال شده
+  const hasDiscount = discountAmount > 0;
 
   return (
     <div className="space-y-4">
@@ -136,9 +155,35 @@ export default function CardToCardPayment({
         <h3 className="text-white font-bold mb-2 text-center">
           پرداخت کارت به کارت
         </h3>
-        <p className="text-gray-400 text-sm text-center mb-4">
-          مبلغ: {amount.toLocaleString()} تومان
-        </p>
+
+        {/* ✅ نمایش قیمت با تخفیف */}
+        <div className="text-center mb-4">
+          {hasDiscount ? (
+            <>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-gray-400 text-sm line-through">
+                  {formatPrice(originalAmount || amount)}
+                </span>
+                <span className="text-green-400 text-sm font-medium">
+                  -{formatPrice(discountAmount)}
+                </span>
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {formatPrice(amount)}
+              </div>
+              {couponCode && (
+                <div className="text-xs text-green-400 mt-1">
+                  ✅ کد تخفیف: {couponCode}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-2xl font-bold text-white">
+              {formatPrice(amount)}
+            </div>
+          )}
+          <p className="text-gray-400 text-xs mt-1">مبلغ قابل پرداخت</p>
+        </div>
 
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
           <p className="text-yellow-400 text-xs flex items-start gap-2">
