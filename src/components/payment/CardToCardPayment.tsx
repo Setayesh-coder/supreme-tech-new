@@ -69,12 +69,12 @@ export default function CardToCardPayment({
     setUploadProgress(0);
 
     try {
-      console.log("🔄 آپلود تصویر رسید...");
+      console.log(" آپلود تصویر رسید...");
       const uploadResult = await uploadAPI.uploadImage(
         receiptImage,
         "receipts",
       );
-      console.log("✅ تصویر آپلود شد:", uploadResult);
+      console.log(" تصویر آپلود شد:", uploadResult);
       setUploadProgress(50);
 
       const imageUrl = uploadResult.url;
@@ -92,12 +92,12 @@ export default function CardToCardPayment({
       });
 
       setUploadProgress(100);
-      setSuccess("✅ پرداخت کارت به کارت با موفقیت ثبت شد!");
+      setSuccess(" پرداخت کارت به کارت با موفقیت ثبت شد!");
       setTimeout(() => {
         onSuccess();
       }, 2000);
     } catch (err: any) {
-      console.error("❌ خطا در پرداخت کارت به کارت:", err);
+      console.error(" خطا در پرداخت کارت به کارت:", err);
       setError(
         err.response?.data?.detail ||
           err.message ||
@@ -144,9 +144,8 @@ export default function CardToCardPayment({
           <p className="text-yellow-400 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>
-              لطفاً پس از واریز مبلغ به حساب زیر، کد پیگیری و تصویر رسید را وارد
+              لطفاً پس از واریز مبلغ به حساب، کد پیگیری و تصویر رسید را وارد
               کنید:
-             
             </span>
           </p>
         </div>
@@ -183,8 +182,8 @@ export default function CardToCardPayment({
               />
               {receiptImage && (
                 <p className="text-green-400 text-xs mt-1">
-                  ✅ {receiptImage.name} (
-                  {(receiptImage.size / 1024).toFixed(1)} KB)
+                  {receiptImage.name} ({(receiptImage.size / 1024).toFixed(1)}{" "}
+                  KB)
                 </p>
               )}
             </div>

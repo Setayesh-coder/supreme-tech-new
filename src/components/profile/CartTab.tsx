@@ -78,54 +78,81 @@ export function CartTab({
 
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // ✅ دریافت داده‌های سبد خرید
+  // ✅ تابع رفرش سبد خرید
+  const refreshCart = useCallback(
+    async (showLoading: boolean = true) => {
+      if (!isLoggedIn) return;
+
+      try {
+        if (showLoading) setInternalLoading(true);
+        setError("");
+
+        const cartData = await cartAPI.getCart();
+        console.log("🛒 سبد خرید به‌روزرسانی شد:", cartData);
+
+        const items = cartData.items || [];
+        const mappedCart = items.map((item: any) => ({
+          id: item.enrollment_id,
+          enrollment_id: item.enrollment_id,
+          course_id: item.course_id,
+          event: {
+            id: item.course_id,
+            title: item.course_title || "دوره آموزشی",
+            slug: item.course_slug || "",
+            date: item.created_at || new Date().toISOString(),
+            price: item.discounted_price || item.original_price || 0,
+            image: item.course_image || "",
+            duration: "",
+            meetingLink: "",
+          },
+        }));
+
+        setInternalCart(mappedCart);
+
+        // ✅ اگر discountInfo وجود دارد، قیمت‌ها را دوباره محاسبه کن
+        if (discountInfo) {
+          const total = mappedCart.reduce(
+            (sum, item) => sum + (item.event?.price || 0),
+            0,
+          );
+          const discountAmount = calculateDiscount(total, discountInfo);
+          setDiscountInfo({
+            ...discountInfo,
+            discount_amount: discountAmount,
+            final_total: total - discountAmount,
+          });
+        }
+
+        return mappedCart;
+      } catch (err) {
+        console.error(" خطا در به‌روزرسانی سبد خرید:", err);
+        setError("خطا در به‌روزرسانی سبد خرید");
+        return [];
+      } finally {
+        if (showLoading) setInternalLoading(false);
+      }
+    },
+    [isLoggedIn, discountInfo],
+  );
+
+  // ✅ دریافت داده‌های سبد خرید (بارگذاری اولیه)
   const fetchCart = useCallback(async () => {
     if (!standalone || externalCart !== undefined) return;
+    await refreshCart(true);
+  }, [standalone, externalCart, refreshCart]);
 
-    try {
-      setInternalLoading(true);
-      setError("");
-
-      let cartData: any = { items: [], summary: {} };
-
-      if (isLoggedIn) {
-        try {
-          cartData = await cartAPI.getCart();
-          console.log("🛒 سبد خرید از API:", cartData);
-        } catch (err) {
-          console.error("❌ خطا در دریافت سبد خرید:", err);
-          cartData = { items: [], summary: {} };
-        }
-      }
-
-      const items = cartData.items || [];
-      console.log("📋 آیتم‌های خام سبد خرید:", items);
-
-      const mappedCart = items.map((item: any) => ({
-        id: item.enrollment_id,
-        enrollment_id: item.enrollment_id,
-        course_id: item.course_id,
-        event: {
-          id: item.course_id,
-          title: item.course_title || "دوره آموزشی",
-          slug: item.course_slug || "",
-          date: item.created_at || new Date().toISOString(),
-          price: item.discounted_price || item.original_price || 0,
-          image: item.course_image || "",
-          duration: "",
-          meetingLink: "",
-        },
-      }));
-
-      console.log("✅ سبد خرید نهایی:", mappedCart);
-      setInternalCart(mappedCart);
-    } catch (err) {
-      console.error("❌ خطا:", err);
-      setError("خطا در دریافت سبد خرید");
-    } finally {
-      setInternalLoading(false);
+  // ✅ محاسبه تخفیف
+  const calculateDiscount = (
+    total: number,
+    discount: typeof discountInfo,
+  ): number => {
+    if (!discount) return 0;
+    if (discount.type === "PERCENT") {
+      return (total * discount.value) / 100;
+    } else {
+      return Math.min(discount.value, total);
     }
-  }, [standalone, externalCart, isLoggedIn]);
+  };
 
   // ✅ اعمال کد تخفیف
   const handleApplyCoupon = async () => {
@@ -142,7 +169,7 @@ export function CartTab({
       const code = couponCode.trim().toUpperCase();
 
       const result = await cartAPI.applyCoupon({ code });
-      console.log("✅ کد تخفیف اعمال شد:", result);
+      console.log(" کد تخفیف اعمال شد:", result);
 
       setDiscountInfo({
         code: result.coupon?.code || code,
@@ -152,15 +179,18 @@ export function CartTab({
         value: result.coupon?.discount_value || 0,
       });
 
-      setSuccess(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
+      setSuccess(` کد تخفیف "${code}" با موفقیت اعمال شد!`);
       setCouponCode("");
 
-      await refreshCart();
+      // ✅ رفرش سبد خرید بعد از اعمال کد تخفیف
+      await refreshCart(false);
+
+      if (onRefresh) onRefresh();
 
       setTimeout(() => setSuccess(""), 4000);
     } catch (err: any) {
-      console.error("❌ خطا در اعمال کد تخفیف:", err);
-      setError(err.response?.data?.detail || "❌ کد تخفیف نامعتبر است");
+      console.error(" خطا در اعمال کد تخفیف:", err);
+      setError(err.response?.data?.detail || " کد تخفیف نامعتبر است");
       setTimeout(() => setError(""), 3000);
     } finally {
       setApplyingCoupon(false);
@@ -172,25 +202,18 @@ export function CartTab({
     try {
       await cartAPI.removeCoupon({ code: discountInfo?.code || "" });
       setDiscountInfo(null);
-      setSuccess("✅ کد تخفیف با موفقیت حذف شد");
+      setSuccess(" کد تخفیف با موفقیت حذف شد");
 
-      await refreshCart();
+      // ✅ رفرش سبد خرید بعد از حذف کد تخفیف
+      await refreshCart(false);
+
+      if (onRefresh) onRefresh();
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error("❌ خطا در حذف کد تخفیف:", err);
+      console.error(" خطا در حذف کد تخفیف:", err);
       setError("خطا در حذف کد تخفیف");
       setTimeout(() => setError(""), 3000);
-    }
-  };
-
-  // ✅ تابع رفرش سبد خرید
-  const refreshCart = async () => {
-    if (standalone) {
-      await fetchCart();
-    }
-    if (onRefresh) {
-      onRefresh();
     }
   };
 
@@ -198,30 +221,27 @@ export function CartTab({
   const handleRemove = async (enrollmentId: string) => {
     if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
 
-    if (onRemoveFromCart) {
-      onRemoveFromCart(enrollmentId);
-      await refreshCart();
-      return;
-    }
+    setProcessing(true);
 
     try {
-      setProcessing(true);
-
-      if (standalone) {
-        setInternalCart(
-          cart.filter(
-            (item) =>
-              item.id !== enrollmentId && item.enrollment_id !== enrollmentId,
-          ),
-        );
+      // ✅ حذف از سبد خرید
+      if (onRemoveFromCart) {
+        await onRemoveFromCart(enrollmentId);
+      } else {
+        // حذف از سبد خرید از طریق API
+        await cartAPI.removeFromCart(enrollmentId);
       }
 
-      await refreshCart();
+      setSuccess(" آیتم از سبد خرید حذف شد");
 
-      setSuccess("✅ آیتم از سبد خرید حذف شد");
+      // ✅ رفرش سبد خرید بعد از حذف آیتم
+      await refreshCart(false);
+
+      if (onRefresh) onRefresh();
+
       setTimeout(() => setSuccess(""), 2000);
     } catch (err: any) {
-      console.error("❌ خطا در حذف آیتم:", err);
+      console.error(" خطا در حذف آیتم:", err);
       setError(err.response?.data?.detail || "خطا در حذف آیتم");
       setTimeout(() => setError(""), 3000);
     } finally {
@@ -229,10 +249,26 @@ export function CartTab({
     }
   };
 
+  // ✅ بعد از پرداخت موفق
+  const handlePaymentSuccess = async () => {
+    setShowCardToCard(false);
+    setShowBalePayment(false);
+    setShowPaymentMethodModal(false);
+    setPaymentData(null);
+
+    // ✅ رفرش سبد خرید بعد از پرداخت
+    await refreshCart(false);
+
+    if (onRefresh) onRefresh();
+
+    setSuccess(" پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
+    setTimeout(() => setSuccess(""), 5000);
+  };
+
   // ✅ باز کردن مودال انتخاب روش پرداخت
   const handleOpenPaymentMethodModal = () => {
     if (!isLoggedIn) {
-      setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
+      setError(" لطفاً ابتدا وارد حساب کاربری خود شوید");
       setTimeout(() => setError(""), 3000);
       return;
     }
@@ -249,7 +285,7 @@ export function CartTab({
       .filter(Boolean);
 
     if (enrollmentIds.length === 0) {
-      setError("❌ شناسه ثبت‌نام یافت نشد");
+      setError(" شناسه ثبت‌نام یافت نشد");
       return;
     }
 
@@ -265,7 +301,6 @@ export function CartTab({
     setShowPaymentMethodModal(true);
   };
 
-  // ✅ انتخاب روش پرداخت
   const handleSelectPaymentMethod = (method: "bale" | "card") => {
     setShowPaymentMethodModal(false);
 
@@ -276,20 +311,6 @@ export function CartTab({
     }
   };
 
-  // ✅ بعد از پرداخت موفق
-  const handlePaymentSuccess = async () => {
-    setShowCardToCard(false);
-    setShowBalePayment(false);
-    setShowPaymentMethodModal(false);
-    setPaymentData(null);
-
-    await refreshCart();
-
-    setSuccess("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
-    setTimeout(() => setSuccess(""), 5000);
-  };
-
-  // ✅ بازگشت از پرداخت
   const handlePaymentBack = () => {
     setShowCardToCard(false);
     setShowBalePayment(false);
@@ -356,7 +377,7 @@ export function CartTab({
     <div className="space-y-4">
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-center text-sm">
-          ❌ {error}
+          <X /> {error}
         </div>
       )}
       {success && (
@@ -612,7 +633,7 @@ export function CartTab({
                   variant="secondary"
                   size="lg"
                   onClick={() => {
-                    setError("❌ برای پرداخت باید وارد حساب کاربری خود شوید");
+                    setError(" برای پرداخت باید وارد حساب کاربری خود شوید");
                     setTimeout(() => setError(""), 3000);
                   }}
                   className="w-full md:w-auto"

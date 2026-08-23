@@ -43,6 +43,11 @@ export interface Coupon {
   description?: string;
   discount_type: "PERCENT" | "FIXED";
   discount_value: number;
+  max_discount_amount: number;
+  min_order_amount: number;
+  max_uses_per_user: number;
+  allowed_courses: string;
+  allowed_phones: string;
   max_uses: number;
   used_count: number;
   expires_at: string;
