@@ -18,6 +18,7 @@ import {
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { paymentsAPI } from "../../lib/api/payment";
+import { toast } from "../../hooks/use-toast";
 
 interface PaymentDetailsModalProps {
   isOpen: boolean;
@@ -95,7 +96,7 @@ export default function PaymentDetailsModal({
       const details = await paymentsAPI.getPaymentByEnrollment(enrollment.id);
       setPaymentDetails(details);
     } catch (err: any) {
-      console.error("❌ خطا در دریافت جزئیات پرداخت:", err);
+      toast.error(" خطا در دریافت جزئیات پرداخت:", err);
       // اگر API خطا داد، از داده‌های موجود استفاده کن
       setPaymentDetails({
         id: enrollment.id,
@@ -231,7 +232,7 @@ export default function PaymentDetailsModal({
             </div>
           ) : error ? (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm">
-              ❌ {error}
+              {error}
             </div>
           ) : (
             <div className="space-y-4">

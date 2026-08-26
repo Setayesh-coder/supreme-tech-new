@@ -6,6 +6,7 @@ import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { Plus, Edit, Trash2, Loader2, Search } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface TeamMember {
   id: string;
@@ -49,15 +50,16 @@ export default function TeamList() {
     try {
       // ✅ فقط یک پارامتر (id)
       await teamAPI.delete(id);
-      setMembers(members.filter(m => m.id !== id));
+      setMembers(members.filter((m) => m.id !== id));
     } catch (err) {
-      alert("خطا در حذف عضو");
+      toast.error("خطا در حذف عضو");
     }
   };
 
-  const filteredMembers = members.filter(m =>
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.role.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredMembers = members.filter(
+    (m) =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.role.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading) {
@@ -76,11 +78,17 @@ export default function TeamList() {
       <div className="p-4 md:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">مدیریت تیم</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              مدیریت تیم
+            </h1>
             <p className="text-gray-400 text-sm mt-1">مدیریت اعضای تیم</p>
           </div>
           <Link to="/admin/team/create">
-            <GlassButton variant="primary" icon={<Plus className="w-4 h-4" />} iconPosition="left">
+            <GlassButton
+              variant="primary"
+              icon={<Plus className="w-4 h-4" />}
+              iconPosition="left"
+            >
               عضو جدید
             </GlassButton>
           </Link>
@@ -106,7 +114,11 @@ export default function TeamList() {
         )}
 
         {filteredMembers.length === 0 ? (
-          <LiquidGlassCard className="p-12 text-center" borderRadius="16px" blurIntensity="sm">
+          <LiquidGlassCard
+            className="p-12 text-center"
+            borderRadius="16px"
+            blurIntensity="sm"
+          >
             <div className="text-6xl mb-4">👥</div>
             <h3 className="text-xl font-bold text-white mb-2">عضوی یافت نشد</h3>
             <p className="text-gray-400">هنوز عضوی به تیم اضافه نشده است</p>
@@ -114,20 +126,47 @@ export default function TeamList() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredMembers.map((member) => (
-              <LiquidGlassCard key={member.id} className="p-4" borderRadius="16px" blurIntensity="sm" glowIntensity="sm">
+              <LiquidGlassCard
+                key={member.id}
+                className="p-4"
+                borderRadius="16px"
+                blurIntensity="sm"
+                glowIntensity="sm"
+              >
                 {member.avatar && (
-                  <img src={member.avatar} alt={member.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover" />
+                  <img
+                    src={member.avatar}
+                    alt={member.name}
+                    className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
+                  />
                 )}
-                <h3 className="text-lg font-bold text-white text-center">{member.name}</h3>
-                <p className="text-gray-400 text-sm text-center">{member.role}</p>
-                {member.isFounder && <p className="text-yellow-400 text-xs text-center">⭐ بنیان‌گذار</p>}
+                <h3 className="text-lg font-bold text-white text-center">
+                  {member.name}
+                </h3>
+                <p className="text-gray-400 text-sm text-center">
+                  {member.role}
+                </p>
+                {member.isFounder && (
+                  <p className="text-yellow-400 text-xs text-center">
+                    ⭐ بنیان‌گذار
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
                   <Link to={`/admin/team/edit/${member.id}`} className="flex-1">
-                    <GlassButton variant="secondary" size="sm" fullWidth icon={<Edit className="w-4 h-4" />} iconPosition="left">
+                    <GlassButton
+                      variant="secondary"
+                      size="sm"
+                      fullWidth
+                      icon={<Edit className="w-4 h-4" />}
+                      iconPosition="left"
+                    >
                       ویرایش
                     </GlassButton>
                   </Link>
-                  <button onClick={() => handleDelete(member.id)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg">
+                  <button
+                    onClick={() => handleDelete(member.id)}
+                    className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

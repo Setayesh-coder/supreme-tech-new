@@ -5,6 +5,7 @@ import { GlassButton } from "../../components/ui/GlassButton";
 import { Mail, Phone, MapPin, Send, Copy, MessageCircle } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { messagesAPI } from "../../lib/api/messages";
+import { toast } from "../../hooks/use-toast";
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (
@@ -42,9 +43,9 @@ export default function Contact() {
   const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      alert(`${type} با موفقیت کپی شد!`);
+      toast.success(`${type} با موفقیت کپی شد!`);
     } catch (err) {
-      alert("خطا در کپی کردن");
+      toast.error("خطا در کپی کردن");
     }
   };
 

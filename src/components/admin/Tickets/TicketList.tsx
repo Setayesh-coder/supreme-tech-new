@@ -18,6 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { AdminLayout } from "../AdminLayout";
+import { toast } from "../../../hooks/use-toast";
 
 export default function TicketList() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -36,7 +37,8 @@ export default function TicketList() {
     try {
       setLoading(true);
       const data = await ticketsAPI.getAll();
-      setTickets(data || []);
+      setTickets([]);
+      return data;
     } catch (err) {
       console.error(" خطا:", err);
       setError("خطا در دریافت تیکت‌ها");
@@ -51,7 +53,7 @@ export default function TicketList() {
       await ticketsAPI.delete(id);
       setTickets(tickets.filter((t) => t.id !== id));
     } catch (err) {
-      alert("خطا در حذف تیکت");
+      toast.error("خطا در حذف تیکت");
     }
   };
 
@@ -61,7 +63,7 @@ export default function TicketList() {
       setSelectedTicket(data);
       setShowDetail(true);
     } catch (err) {
-      alert("خطا در دریافت اطلاعات تیکت");
+      toast.error("خطا در دریافت اطلاعات تیکت");
     }
   };
 
@@ -78,7 +80,7 @@ export default function TicketList() {
 
       await fetchTickets();
     } catch (err) {
-      alert("خطا در ارسال پیام");
+      toast.error("خطا در ارسال پیام");
     } finally {
       setSending(false);
     }

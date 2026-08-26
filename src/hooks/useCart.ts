@@ -23,8 +23,11 @@ interface UseCartReturn {
   cart: CartItem[];
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>; // ✅ تغییر به Promise<void>
+  refetch: () => Promise<void>;
   isCartValid: boolean;
+  // ✅ اضافه کردن توابع جدید
+  addToCart: (courseId: string) => Promise<void>;
+  removeFromCart: (enrollmentId: string) => Promise<void>;
 }
 
 export function useCart(): UseCartReturn {
@@ -70,8 +73,6 @@ export function useCart(): UseCartReturn {
 
       setCart(mappedCart);
       setIsCartValid(true);
-
-      // ✅ فقط state رو به‌روزرسانی کن، چیزی برنگردون
     } catch (err: any) {
       console.error("❌ خطا در دریافت سبد خرید:", err);
 
@@ -92,17 +93,72 @@ export function useCart(): UseCartReturn {
     }
   }, []);
 
+  // ✅ تابع افزودن به سبد خرید
+  const addToCart = useCallback(
+    async (courseId: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. افزودن به سبد خرید
+        await cartAPI.addToCart(courseId);
+        console.log(`✅ دوره ${courseId} به سبد خرید اضافه شد`);
+
+        // 2. دریافت مجدد سبد خرید
+        await fetchCart();
+
+        // 3. ارسال رویداد به‌روزرسانی
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("cartUpdated"));
+        }
+      } catch (err: any) {
+        console.error("❌ خطا در افزودن به سبد خرید:", err);
+        setError(err.response?.data?.detail || "خطا در افزودن به سبد خرید");
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchCart],
+  );
+
+  // ✅ تابع حذف از سبد خرید
+  const removeFromCart = useCallback(
+    async (enrollmentId: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. حذف از سبد خرید
+        await cartAPI.removeFromCart(enrollmentId);
+        console.log(`✅ آیتم ${enrollmentId} از سبد خرید حذف شد`);
+
+        // 2. دریافت مجدد سبد خرید
+        await fetchCart();
+
+        // 3. ارسال رویداد به‌روزرسانی
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("cartUpdated"));
+        }
+      } catch (err: any) {
+        console.error("❌ خطا در حذف از سبد خرید:", err);
+        setError(err.response?.data?.detail || "خطا در حذف از سبد خرید");
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchCart],
+  );
+
   // ✅ دریافت سبد خرید در فواصل زمانی منظم (Polling)
   useEffect(() => {
-    let intervalId: number; // ✅ تغییر نوع به number
+    let intervalId: number;
 
     if (typeof window !== "undefined") {
-      // بارگذاری اولیه
       fetchCart();
 
-      // هر 30 ثانیه یکبار بررسی کن
       intervalId = window.setInterval(() => {
-        // ✅ استفاده از window.setInterval
         console.log("🔄 بررسی خودکار سبد خرید...");
         fetchCart();
       }, 30000);
@@ -110,7 +166,7 @@ export function useCart(): UseCartReturn {
 
     return () => {
       if (intervalId) {
-        window.clearInterval(intervalId); // ✅ استفاده از window.clearInterval
+        window.clearInterval(intervalId);
       }
     };
   }, [fetchCart]);
@@ -149,7 +205,9 @@ export function useCart(): UseCartReturn {
     cart,
     loading,
     error,
-    refetch: fetchCart, // ✅ fetchCart الان Promise<void> برمی‌گردونه
+    refetch: fetchCart,
     isCartValid,
+    addToCart, // ✅ اضافه کردن
+    removeFromCart, // ✅ اضافه کردن
   };
 }

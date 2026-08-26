@@ -24,6 +24,7 @@ import {
   // Check,
   Timer,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 // ✅ تایپ کاربر
 interface User {
@@ -127,10 +128,10 @@ export default function CourseEnrollments() {
     try {
       await enrollmentsAPI.updateStatus(enrollmentId, "CONFIRMED");
       await fetchData();
-      alert("✅ پرداخت با موفقیت تایید شد!");
+      toast.success(" پرداخت با موفقیت تایید شد!");
     } catch (err) {
       console.error("❌ خطا در تایید پرداخت:", err);
-      alert("❌ خطا در تایید پرداخت");
+      toast.error(" خطا در تایید پرداخت");
     } finally {
       setUpdating(null);
     }
@@ -144,10 +145,10 @@ export default function CourseEnrollments() {
     try {
       await enrollmentsAPI.updateStatus(enrollmentId, "CANCELLED");
       await fetchData();
-      alert("❌ پرداخت با موفقیت رد شد!");
+      toast.success(" پرداخت با موفقیت رد شد!");
     } catch (err) {
       console.error("❌ خطا در رد پرداخت:", err);
-      alert("❌ خطا در رد پرداخت");
+      toast.error(" خطا در رد پرداخت");
     } finally {
       setUpdating(null);
     }
@@ -422,7 +423,7 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              alert("📥 قابلیت خروجی گرفتن در حال توسعه است...");
+              toast.info(" قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
             خروجی Excel

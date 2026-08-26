@@ -8,6 +8,7 @@ import { eventsAPI, generateSlug } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
 import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
 import { Upload, X, Loader2, ArrowLeft } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function EventCreate() {
   const navigate = useNavigate();
@@ -123,10 +124,10 @@ export default function EventCreate() {
       // console.log("📤 ارسال داده:", eventData);
 
       await eventsAPI.create(eventData);
-      alert("✅ رویداد با موفقیت ایجاد شد!");
+      toast.success(" رویداد با موفقیت ایجاد شد!");
       navigate("/admin/events");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      toast.error("❌ خطا:", err);
 
       let errorMessage = "خطا در ایجاد رویداد";
       if (err.response?.data?.detail) {

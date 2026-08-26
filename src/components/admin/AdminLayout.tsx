@@ -16,6 +16,7 @@ import {
   Image,
   Building2,
   SaudiRiyal,
+  Send,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -79,6 +80,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       path: "/admin/employees",
       icon: <Briefcase size={20} />,
       label: "کارمندان",
+    },
+    {
+      path: "/admin/messages",
+      icon: <Send size={20} />,
+      label: "پیام ها",
     },
     { path: "/admin/tickets", icon: <Ticket size={20} />, label: "تیکت‌ها" },
     { path: "/admin/settings", icon: <Settings size={20} />, label: "تنظیمات" },

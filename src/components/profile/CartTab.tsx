@@ -7,6 +7,7 @@ import { GlassButton } from "../ui/GlassButton";
 import PaymentModal from "../payment/PaymentModal";
 import CardToCardPayment from "../payment/CardToCardPayment";
 import BalePayment from "../payment/BalePayment";
+import { toast } from "../../hooks/use-toast";
 import {
   ShoppingCart,
   CreditCard,
@@ -27,6 +28,62 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+// ✅ کامپوننت Confirm Dialog
+const ConfirmDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmText = "تأیید",
+  cancelText = "انصراف",
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <LiquidGlassCard
+        className="p-6 max-w-md w-full mx-4"
+        borderRadius="24px"
+        blurIntensity="xl"
+        glowIntensity="md"
+      >
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-gray-400 text-sm mb-6">{description}</p>
+        <div className="flex gap-3">
+          <GlassButton
+            variant="secondary"
+            size="md"
+            fullWidth
+            onClick={onClose}
+          >
+            {cancelText}
+          </GlassButton>
+          <GlassButton
+            variant="danger"
+            size="md"
+            fullWidth
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+          >
+            {confirmText}
+          </GlassButton>
+        </div>
+      </LiquidGlassCard>
+    </div>
+  );
+};
+
 // ✅ Interface برای props
 interface CartTabProps {
   externalCart?: any[];
@@ -44,12 +101,6 @@ interface CartSummary {
   coupon_discount?: number;
   total_payable?: number;
 }
-
-// ✅ تایپ برای پاسخ سبد خرید
-// interface CartResponse {
-//   items: any[];
-//   summary?: CartSummary; // ✅ optional چون ممکن است وجود نداشته باشد
-// }
 
 export function CartTab({
   externalCart,
@@ -69,8 +120,11 @@ export function CartTab({
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ✅ State برای Confirm Dialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const [couponCode, setCouponCode] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -105,7 +159,7 @@ export function CartTab({
         if (showLoading) setInternalLoading(true);
         setError("");
 
-        const cartData = (await cartAPI.getCart()) as any; // ✅ استفاده از as any
+        const cartData = (await cartAPI.getCart()) as any;
         console.log("🛒 سبد خرید به‌روزرسانی شد:", cartData);
 
         const items = cartData.items || [];
@@ -127,7 +181,6 @@ export function CartTab({
 
         setInternalCart(mappedCart);
 
-        // ✅ اگر discountInfo وجود دارد، از اطلاعات سرور به‌روزرسانی کن
         if (discountInfo && cartData.summary) {
           const summary = cartData.summary as CartSummary;
           if (summary.coupon_code) {
@@ -168,32 +221,27 @@ export function CartTab({
     await refreshCart(true);
   }, [standalone, externalCart, refreshCart]);
 
-  // ✅ اعمال کد تخفیف
+  // ✅ اعمال کد تخفیف با Toast
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      setError("لطفاً کد تخفیف را وارد کنید");
+      toast.warning("لطفاً کد تخفیف را وارد کنید");
       return;
     }
 
     setApplyingCoupon(true);
     setError("");
-    setSuccess("");
 
     try {
       const code = couponCode.trim().toUpperCase();
 
-      // 1. اعمال کد تخفیف
       const result = await cartAPI.applyCoupon({ code });
       console.log("✅ کد تخفیف اعمال شد:", result);
 
-      // 2. دریافت سبد خرید به‌روز شده
       const cartData = (await cartAPI.getCart()) as any;
       console.log("🛒 سبد خرید به‌روزرسانی شد:", cartData);
 
-      // 3. استخراج اطلاعات تخفیف از summary
       const summary = (cartData.summary || {}) as CartSummary;
 
-      // 4. تنظیم discountInfo با اطلاعات واقعی از سرور
       if (summary.coupon_code) {
         const isPercent =
           summary.coupon_discount && summary.total_original_price > 0
@@ -212,7 +260,6 @@ export function CartTab({
               : summary.coupon_discount || 0,
         });
       } else {
-        // fallback: اگر در summary نبود، از result استفاده کن
         setDiscountInfo({
           code: result.coupon?.code || code,
           discount_amount: result.discount || 0,
@@ -222,87 +269,80 @@ export function CartTab({
         });
       }
 
-      setSuccess(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
+      toast.success(`✅ کد تخفیف "${code}" با موفقیت اعمال شد!`);
       setCouponCode("");
 
-      // 5. رفرش سبد خرید
       await refreshCart(false);
-
       if (onRefresh) onRefresh();
-
-      setTimeout(() => setSuccess(""), 4000);
     } catch (err: any) {
       console.error("❌ خطا در اعمال کد تخفیف:", err);
-      setError(err.response?.data?.detail || "❌ کد تخفیف نامعتبر است");
-      setTimeout(() => setError(""), 3000);
+      toast.error(err.response?.data?.detail || "❌ کد تخفیف نامعتبر است");
     } finally {
       setApplyingCoupon(false);
     }
   };
 
-  // ✅ حذف کد تخفیف
+  // ✅ حذف کد تخفیف با Toast
   const handleRemoveCoupon = async () => {
     try {
       await cartAPI.removeCoupon({ code: discountInfo?.code || "" });
       setDiscountInfo(null);
-      setSuccess("✅ کد تخفیف با موفقیت حذف شد");
+
+      toast.success("✅ کد تخفیف با موفقیت حذف شد");
 
       await refreshCart(false);
-
       if (onRefresh) onRefresh();
-
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error("❌ خطا در حذف کد تخفیف:", err);
-      setError("خطا در حذف کد تخفیف");
-      setTimeout(() => setError(""), 3000);
+      toast.error("خطا در حذف کد تخفیف");
     }
   };
 
-  // ✅ حذف از سبد خرید
-  const handleRemove = async (enrollmentId: string) => {
-    if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
+  // ✅ باز کردن دیالوگ تایید حذف
+  const handleRemoveClick = (enrollmentId: string) => {
+    setDeleteTargetId(enrollmentId);
+    setShowConfirmDialog(true);
+  };
+
+  // ✅ تایید حذف از سبد خرید با Toast
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
 
     setProcessing(true);
 
     try {
       if (onRemoveFromCart) {
-        await onRemoveFromCart(enrollmentId);
+        await onRemoveFromCart(deleteTargetId);
       } else {
-        await cartAPI.removeFromCart(enrollmentId);
+        await cartAPI.removeFromCart(deleteTargetId);
       }
 
-      setSuccess("✅ آیتم از سبد خرید حذف شد");
+      toast.success("✅ آیتم از سبد خرید حذف شد");
       await refreshCart(false);
-
       if (onRefresh) onRefresh();
-
-      setTimeout(() => setSuccess(""), 2000);
     } catch (err: any) {
       console.error("❌ خطا در حذف آیتم:", err);
-      setError(err.response?.data?.detail || "خطا در حذف آیتم");
-      setTimeout(() => setError(""), 3000);
+      toast.error(err.response?.data?.detail || "خطا در حذف آیتم");
     } finally {
       setProcessing(false);
+      setDeleteTargetId(null);
     }
   };
 
-  // ✅ رفرش دستی
+  // ✅ رفرش دستی با Toast
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
       await refreshCart(true);
-      setSuccess("✅ سبد خرید به‌روزرسانی شد");
-      setTimeout(() => setSuccess(""), 3000);
+      toast.success("✅ سبد خرید به‌روزرسانی شد");
     } catch (err) {
-      setError("خطا در به‌روزرسانی سبد خرید");
-      setTimeout(() => setError(""), 3000);
+      toast.error("خطا در به‌روزرسانی سبد خرید");
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // ✅ بعد از پرداخت موفق
+  // ✅ بعد از پرداخت موفق با Toast
   const handlePaymentSuccess = async () => {
     setShowCardToCard(false);
     setShowBalePayment(false);
@@ -310,18 +350,15 @@ export function CartTab({
     setPaymentData(null);
 
     await refreshCart(false);
-
     if (onRefresh) onRefresh();
 
-    setSuccess("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
-    setTimeout(() => setSuccess(""), 5000);
+    toast.success("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
   };
 
   // ✅ باز کردن مودال انتخاب روش پرداخت
   const handleOpenPaymentMethodModal = async () => {
     if (!isLoggedIn) {
-      setError("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
-      setTimeout(() => setError(""), 3000);
+      toast.error("❌ لطفاً ابتدا وارد حساب کاربری خود شوید");
       return;
     }
 
@@ -330,15 +367,13 @@ export function CartTab({
     try {
       const cartData = (await cartAPI.getCart()) as any;
       if (!cartData.items || cartData.items.length === 0) {
-        setError("❌ سبد خرید شما خالی یا منقضی شده است");
+        toast.warning("❌ سبد خرید شما خالی یا منقضی شده است");
         await refreshCart(true);
-        setTimeout(() => setError(""), 3000);
         return;
       }
     } catch (err) {
       console.error("❌ خطا در بررسی سبد خرید:", err);
-      setError("❌ خطا در بررسی سبد خرید");
-      setTimeout(() => setError(""), 3000);
+      toast.error("❌ خطا در بررسی سبد خرید");
       return;
     }
 
@@ -352,7 +387,7 @@ export function CartTab({
       .filter(Boolean);
 
     if (enrollmentIds.length === 0) {
-      setError("❌ شناسه ثبت‌نام یافت نشد");
+      toast.error("❌ شناسه ثبت‌نام یافت نشد");
       return;
     }
 
@@ -417,10 +452,10 @@ export function CartTab({
       <div className="max-w-lg mx-auto">
         <CardToCardPayment
           enrollmentId={paymentData.enrollmentId}
-          amount={paymentData.amount} // مبلغ نهایی با تخفیف
-          originalAmount={totalPrice} // قیمت اصلی بدون تخفیف
-          discountAmount={discountAmount} // مبلغ تخفیف
-          couponCode={discountInfo?.code} // کد تخفیف
+          amount={paymentData.amount}
+          originalAmount={totalPrice}
+          discountAmount={discountAmount}
+          couponCode={discountInfo?.code}
           onSuccess={handlePaymentSuccess}
           onBack={handlePaymentBack}
         />
@@ -428,7 +463,6 @@ export function CartTab({
     );
   }
 
-  // ✅ اگر پرداخت بله نمایش داده شود
   if (showBalePayment && paymentData) {
     return (
       <div className="max-w-lg mx-auto">
@@ -461,11 +495,6 @@ export function CartTab({
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-center text-sm">
           <X className="inline w-4 h-4 ml-1" /> {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl text-center text-sm animate-in fade-in duration-300">
-          {success}
         </div>
       )}
 
@@ -554,7 +583,7 @@ export function CartTab({
 
                     <div className="flex items-center gap-2 w-full md:w-auto">
                       <button
-                        onClick={() => handleRemove(item.id)}
+                        onClick={() => handleRemoveClick(item.id)}
                         className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all duration-300 w-full md:w-auto"
                         disabled={processing}
                       >
@@ -716,8 +745,9 @@ export function CartTab({
                   variant="secondary"
                   size="lg"
                   onClick={() => {
-                    setError("❌ برای پرداخت باید وارد حساب کاربری خود شوید");
-                    setTimeout(() => setError(""), 3000);
+                    toast.error(
+                      "❌ برای پرداخت باید وارد حساب کاربری خود شوید",
+                    );
                   }}
                   className="w-full md:w-auto"
                 >
@@ -841,6 +871,20 @@ export function CartTab({
           onSuccess={handlePaymentSuccess}
         />
       )}
+
+      {/* ✅ Confirm Dialog */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setDeleteTargetId(null);
+        }}
+        onConfirm={confirmDelete}
+        title="حذف از سبد خرید"
+        description="آیا از حذف این آیتم از سبد خرید مطمئن هستید؟"
+        confirmText="حذف"
+        cancelText="انصراف"
+      />
     </div>
   );
 }

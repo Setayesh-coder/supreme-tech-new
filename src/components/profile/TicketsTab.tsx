@@ -21,6 +21,7 @@ import {
   type TicketMessage,
   ticketsAPI,
 } from "../../lib/api/tickets";
+import { toast } from "../../hooks/use-toast";
 
 interface TicketsTabProps {
   tickets: TicketType[];
@@ -152,8 +153,8 @@ export function TicketsTab({
         onRefresh();
       }
     } catch (err) {
-      console.error("❌ خطا در ارسال پیام:", err);
-      alert("خطا در ارسال پیام. لطفاً دوباره تلاش کنید.");
+      console.error(" خطا در ارسال پیام:", err);
+      toast.error("خطا در ارسال پیام. لطفاً دوباره تلاش کنید.");
     } finally {
       setSending(false);
     }

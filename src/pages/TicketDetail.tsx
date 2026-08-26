@@ -12,6 +12,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { toast } from "../hooks/use-toast";
 
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +53,7 @@ export default function TicketDetail() {
       setTicket(updated);
       setReply("");
     } catch (err) {
-      alert("خطا در ارسال پیام");
+      toast.error("خطا در ارسال پیام");
     } finally {
       setSending(false);
     }

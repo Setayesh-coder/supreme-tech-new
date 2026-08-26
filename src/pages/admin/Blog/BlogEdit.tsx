@@ -8,6 +8,7 @@ import { BlogEditor } from "../../../components/admin/BlogEditor";
 import { blogAPI } from "../../../lib/api/blog";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Upload, Loader2, Plus } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function BlogEdit() {
   const { id } = useParams<{ id: string }>();
@@ -157,7 +158,7 @@ export default function BlogEdit() {
       await blogAPI.update(id!, postData);
 
       // ✅ پیام موفقیت
-      alert("✅ پست با موفقیت ویرایش شد!");
+      toast.success(" پست با موفقیت ویرایش شد!");
       navigate("/admin/blog");
     } catch (err: any) {
       console.error("❌ خطا:", err);

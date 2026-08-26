@@ -57,10 +57,12 @@ import TicketList from "./components/admin/Tickets/TicketList";
 import MessageList from "./components/admin/Messages/MessageList";
 import Help from "./pages/admin/Help";
 import CouponsManager from "./pages/admin/Copuns/CouponsManager";
+import { Toaster } from "./components/ui/Toaster";
 
 function App() {
   return (
     <HelmetProvider>
+      <Toaster />
       <SettingsProvider>
         <BrowserRouter>
           <Routes>
@@ -68,6 +70,7 @@ function App() {
               عمومی (با Layout)
               ============================================================ */}
             <Route element={<Layout />}>
+              {" "}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -83,11 +86,9 @@ function App() {
               <Route path="/events/:slug" element={<EventDetail />} />
               <Route path="/courses/:slug" element={<CourseDetail />} />
               <Route path="/access-denied" element={<AccessDenied />} />
-
               {/* 🔥 مسیرهای تیکت برای کاربران عادی */}
               <Route path="/tickets/create" element={<TicketCreate />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
-
               <Route path="*" element={<NotFound />} />
             </Route>
             {/* ============================================================

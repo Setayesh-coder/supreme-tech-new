@@ -5,6 +5,7 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
+import { toast } from "../../../hooks/use-toast";
 import {
   Plus,
   Loader2,
@@ -26,6 +27,62 @@ import {
 
 import type { Coupon } from "../../../types/cart";
 
+// ✅ کامپوننت Confirm Dialog
+const ConfirmDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmText = "تأیید",
+  cancelText = "انصراف",
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <LiquidGlassCard
+        className="p-6 max-w-md w-full mx-4"
+        borderRadius="24px"
+        blurIntensity="xl"
+        glowIntensity="md"
+      >
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-gray-400 text-sm mb-6">{description}</p>
+        <div className="flex gap-3">
+          <GlassButton
+            variant="secondary"
+            size="md"
+            fullWidth
+            onClick={onClose}
+          >
+            {cancelText}
+          </GlassButton>
+          <GlassButton
+            variant="danger"
+            size="md"
+            fullWidth
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+          >
+            {confirmText}
+          </GlassButton>
+        </div>
+      </LiquidGlassCard>
+    </div>
+  );
+};
+
 interface CouponFormData {
   code: string;
   description?: string;
@@ -44,7 +101,6 @@ export default function CouponsManager() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState<CouponFormData>({
@@ -64,6 +120,13 @@ export default function CouponsManager() {
     search: "",
     is_active: undefined as boolean | undefined,
   });
+
+  // ✅ State برای Confirm Dialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    code: string;
+  } | null>(null);
 
   // ✅ دریافت لیست کدهای تخفیف
   const fetchCoupons = async () => {
@@ -90,7 +153,6 @@ export default function CouponsManager() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
     setIsProcessing(true);
 
     try {
@@ -109,18 +171,18 @@ export default function CouponsManager() {
       };
 
       await couponsAPI.create(createData);
-      setSuccess("✅ کد تخفیف با موفقیت ایجاد شد!");
+
+      toast.success("✅ کد تخفیف با موفقیت ایجاد شد!");
       setShowCreateModal(false);
       resetForm();
       await fetchCoupons();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error("❌ خطا در ایجاد کد تخفیف:", err);
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
-        setError(detail.map((d: any) => d.msg).join(", "));
+        toast.error(detail.map((d: any) => d.msg).join(", "));
       } else {
-        setError(detail || "خطا در ایجاد کد تخفیف");
+        toast.error(detail || "خطا در ایجاد کد تخفیف");
       }
     } finally {
       setIsProcessing(false);
@@ -130,51 +192,52 @@ export default function CouponsManager() {
   // ✅ تغییر وضعیت کد تخفیف
   const handleToggleStatus = async (couponId: string, isActive: boolean) => {
     setError("");
-    setSuccess("");
     setIsProcessing(true);
 
     try {
       await couponsAPI.updateStatus(couponId, isActive);
-      setSuccess(`✅ کد تخفیف ${isActive ? "فعال" : "غیرفعال"} شد!`);
+      toast.success(`✅ کد تخفیف ${isActive ? "فعال" : "غیرفعال"} شد!`);
       await fetchCoupons();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error("❌ خطا در تغییر وضعیت:", err);
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
-        setError(detail.map((d: any) => d.msg).join(", "));
+        toast.error(detail.map((d: any) => d.msg).join(", "));
       } else {
-        setError(detail || "خطا در تغییر وضعیت کد تخفیف");
+        toast.error(detail || "خطا در تغییر وضعیت کد تخفیف");
       }
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // ✅ حذف/غیرفعال کردن کد تخفیف
-  const handleDelete = async (couponId: string, code: string) => {
-    if (!window.confirm(`آیا از غیرفعال کردن کد تخفیف "${code}" مطمئن هستید؟`))
-      return;
+  // ✅ باز کردن دیالوگ تایید حذف
+  const handleDeleteClick = (couponId: string, code: string) => {
+    setDeleteTarget({ id: couponId, code });
+    setShowConfirmDialog(true);
+  };
 
-    setError("");
-    setSuccess("");
+  // ✅ تایید حذف/غیرفعال کردن کد تخفیف
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
     setIsProcessing(true);
 
     try {
-      await couponsAPI.delete(couponId);
-      setSuccess(`✅ کد تخفیف "${code}" با موفقیت غیرفعال شد!`);
+      await couponsAPI.delete(deleteTarget.id);
+      toast.success(`✅ کد تخفیف "${deleteTarget.code}" با موفقیت غیرفعال شد!`);
       await fetchCoupons();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error("❌ خطا در غیرفعال کردن کد تخفیف:", err);
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
-        setError(detail.map((d: any) => d.msg).join(", "));
+        toast.error(detail.map((d: any) => d.msg).join(", "));
       } else {
-        setError(detail || "خطا در غیرفعال کردن کد تخفیف");
+        toast.error(detail || "خطا در غیرفعال کردن کد تخفیف");
       }
     } finally {
       setIsProcessing(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -228,7 +291,6 @@ export default function CouponsManager() {
     return { label: "فعال", color: "bg-green-500/20 text-green-400" };
   };
 
-  // ✅ تبدیل تاریخ شمسی به میلادی برای ارسال به سرور (با استفاده از PersianDatePicker)
   const handleDateChange = (date: string) => {
     setFormData({ ...formData, expires_at: date });
   };
@@ -262,15 +324,10 @@ export default function CouponsManager() {
           </GlassButton>
         </div>
 
-        {/* Error & Success Messages */}
+        {/* Error */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-center text-sm">
             ❌ {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl text-center text-sm animate-in fade-in duration-300">
-            {success}
           </div>
         )}
 
@@ -463,7 +520,9 @@ export default function CouponsManager() {
                         )}
                       </button>
                       <button
-                        onClick={() => handleDelete(coupon.id, coupon.code)}
+                        onClick={() =>
+                          handleDeleteClick(coupon.id, coupon.code)
+                        }
                         className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                         title="غیرفعال کردن کد تخفیف"
                         disabled={isProcessing}
@@ -815,6 +874,20 @@ export default function CouponsManager() {
           </div>
         )}
       </div>
+
+      {/* ✅ Confirm Dialog */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={confirmDelete}
+        title="غیرفعال کردن کد تخفیف"
+        description={`آیا از غیرفعال کردن کد تخفیف "${deleteTarget?.code}" مطمئن هستید؟`}
+        confirmText="غیرفعال کردن"
+        cancelText="انصراف"
+      />
     </AdminLayout>
   );
 }

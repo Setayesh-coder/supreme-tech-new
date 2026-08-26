@@ -17,6 +17,7 @@ import {
   BookOpen,
   X,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function BlogListAdmin() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -48,7 +49,7 @@ export default function BlogListAdmin() {
       await blogAPI.delete(id);
       setPosts(posts.filter((p) => p.id !== id));
     } catch (err) {
-      alert("خطا در حذف پست");
+      toast.error("خطا در حذف پست");
     }
   };
 

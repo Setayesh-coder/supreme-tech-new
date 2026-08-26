@@ -7,6 +7,7 @@ import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import ShareButton from "../../components/ui/ShareButton";
+import { toast } from "../../hooks/use-toast";
 import {
   Calendar,
   Clock,
@@ -146,7 +147,7 @@ export default function CourseDetail() {
       if (found) {
         return {
           enrolled: true,
-          status: found.status, // ✅ استفاده از status
+          status: found.status,
         };
       }
       return { enrolled: false };
@@ -213,8 +214,8 @@ export default function CourseDetail() {
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
-      navigate("/login");
+      // ✅ بدون action
+      toast.error("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
       return;
     }
 
@@ -234,11 +235,14 @@ export default function CourseDetail() {
         enrolledCount: (course.enrolledCount || 0) + 1,
       });
 
-      alert(
-        "✅ پیش‌ثبت‌نام با موفقیت انجام شد! دوره به سبد خرید شما اضافه شد.",
+      // ✅ بدون action
+      toast.success(
+        "✅ پیش‌ثبت‌نام با موفقیت انجام شد!",
+        "دوره به سبد خرید شما اضافه شد.",
       );
     } catch (error) {
       console.error("❌ خطا در به‌روزرسانی وضعیت:", error);
+      toast.error("خطا در ثبت‌نام", "لطفاً دوباره تلاش کنید");
     }
   };
 

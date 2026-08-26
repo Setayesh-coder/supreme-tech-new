@@ -25,6 +25,7 @@ import {
   Clock,
 } from "lucide-react";
 import { AdminListSkeleton } from "../../../components/skeletons/AdminListSkeleton";
+import { toast } from "../../../hooks/use-toast";
 
 interface User {
   id: string;
@@ -146,7 +147,7 @@ export default function UserList() {
       setShowRoleModal(false);
       setSelectedUser(null);
     } catch (err: any) {
-      alert(err?.message || "خطا در تغییر نقش");
+      toast.error(err?.message || "خطا در تغییر نقش");
     } finally {
       setUpdating(false);
     }
@@ -161,7 +162,7 @@ export default function UserList() {
         ),
       );
     } catch (err) {
-      alert("خطا در تغییر وضعیت");
+      toast.error("خطا در تغییر وضعیت");
     }
   };
 
@@ -172,7 +173,7 @@ export default function UserList() {
       setUsers(users.filter((u) => u.id !== id));
       setTotalUsers(totalUsers - 1);
     } catch (err) {
-      alert("خطا در حذف کاربر");
+      toast.error("خطا در حذف کاربر");
     }
   };
 

@@ -8,12 +8,12 @@ import {
 } from "../../lib/api/enrollments";
 import { cartAPI } from "../../lib/api/cart";
 import { useCart } from "../../hooks/useCart";
-// import { coursesAPI } from "../../lib/api/courses";
 import { ticketsAPI, type Ticket } from "../../lib/api/tickets";
-import { messagesAPI } from "../../lib/api/messages";
+import { messagesAPI, type Message } from "../../lib/api/messages";
 import { uploadAPI } from "../../lib/api/upload";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
+import { toast } from "../../hooks/use-toast";
 import {
   ProfileHeader,
   ProfileTabs,
@@ -35,6 +35,62 @@ import {
   X,
 } from "lucide-react";
 import { authAPI } from "../../lib/api";
+
+// ✅ کامپوننت Confirm Dialog
+const ConfirmDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmText = "تأیید",
+  cancelText = "انصراف",
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <LiquidGlassCard
+        className="p-6 max-w-md w-full mx-4"
+        borderRadius="24px"
+        blurIntensity="xl"
+        glowIntensity="md"
+      >
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-gray-400 text-sm mb-6">{description}</p>
+        <div className="flex gap-3">
+          <GlassButton
+            variant="secondary"
+            size="md"
+            fullWidth
+            onClick={onClose}
+          >
+            {cancelText}
+          </GlassButton>
+          <GlassButton
+            variant="danger"
+            size="md"
+            fullWidth
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+          >
+            {confirmText}
+          </GlassButton>
+        </div>
+      </LiquidGlassCard>
+    </div>
+  );
+};
 
 // ============== Interfaces ==============
 interface UserProfile {
@@ -216,15 +272,18 @@ export default function Profile() {
     "enrollments" | "cart" | "tickets" | "replies"
   >("enrollments");
 
+  // ✅ State برای Confirm Dialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
+
   const handleCartClick = () => {
     navigate("/cart");
   };
-  const {
-    cart: hookCart,
-    loading: hookLoading,
-    // refetch: refetchCart,
-    // isCartValid,
-  } = useCart();
+  const { cart: hookCart, loading: hookLoading } = useCart();
 
   // ============== توابع ==============
   const fetchTickets = async () => {
@@ -241,18 +300,37 @@ export default function Profile() {
       setTickets(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error("❌ خطا در دریافت تیکت‌ها:", err);
-      setError("خطا در دریافت تیکت‌ها");
+      toast.error("خطا در دریافت تیکت‌ها");
     } finally {
       setTicketsLoading(false);
     }
   };
 
+  // ✅ اصلاح fetchReplies - استفاده از messagesAPI.getAll به جای getUserReplies
   const fetchReplies = async () => {
     if (!user?.id) return;
     setRepliesLoading(true);
     try {
-      const data = await messagesAPI.getUserReplies(user.id);
-      setReplies(data || []);
+      // دریافت همه پیام‌ها و فیلتر کردن برای کاربر فعلی
+      const response = await messagesAPI.getAll();
+      const allMessages = response.items || [];
+
+      // تبدیل به فرمت MessageReply
+      const mappedReplies: MessageReply[] = allMessages
+        .filter((msg: Message) => msg.reply) // فقط پیام‌هایی که پاسخ دارند
+        .map((msg: Message) => ({
+          id: msg.id,
+          messageId: msg.id,
+          message: {
+            subject: msg.project_type || "پیام",
+            message: msg.project_description || "",
+            createdAt: msg.created_at,
+          },
+          reply: msg.reply || "",
+          sentAt: msg.replied_at || msg.created_at,
+        }));
+
+      setReplies(mappedReplies);
     } catch (err) {
       console.error("❌ خطا در دریافت پاسخ‌ها:", err);
       setReplies([]);
@@ -261,55 +339,7 @@ export default function Profile() {
     }
   };
 
-  // ✅ تابع صحیح دریافت اطلاعات دوره
-  // const fetchCourseDetails = async (courseId: string) => {
-  //   if (
-  //     !courseId ||
-  //     courseId === "undefined" ||
-  //     courseId === "null" ||
-  //     courseId.trim() === ""
-  //   ) {
-  //     console.warn("⚠️ courseId نامعتبر:", courseId);
-  //     return {
-  //       id: courseId || "unknown",
-  //       title: "دوره نامشخص",
-  //       slug: "",
-  //       date: new Date().toISOString(),
-  //       price: 0,
-  //       image: "",
-  //       duration: "",
-  //       meetingLink: "",
-  //     };
-  //   }
-
-  //   try {
-  //     console.log(`🔄 دریافت دوره: ${courseId}`);
-  //     const course = await coursesAPI.getById(courseId);
-  //     return {
-  //       id: course.id,
-  //       title: course.title || "دوره آموزشی",
-  //       slug: course.slug || "",
-  //       date: course.created_at || new Date().toISOString(),
-  //       price: course.price || 0,
-  //       image: course.cover_image || "",
-  //       duration: course.duration_hours ? `${course.duration_hours} ساعت` : "",
-  //     };
-  //   } catch (error) {
-  //     console.error(`❌ خطا در دریافت دوره ${courseId}:`, error);
-  //     return {
-  //       id: courseId,
-  //       title: "دوره آموزشی",
-  //       slug: "",
-  //       date: new Date().toISOString(),
-  //       price: 0,
-  //       image: "",
-  //       duration: "",
-  //       meetingLink: "",
-  //     };
-  //   }
-  // };
-
-  // ✅ تابع fetchProfile - فقط از بک‌اند استفاده می‌کند
+  // ✅ تابع fetchProfile
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -320,7 +350,6 @@ export default function Profile() {
         return;
       }
 
-      // ✅ دریافت اطلاعات کاربر از بک‌اند
       try {
         const profileData = await usersAPI.getMyProfile();
         if (profileData) {
@@ -345,14 +374,9 @@ export default function Profile() {
           navigate("/login");
           return;
         }
+        toast.error("خطا در دریافت اطلاعات کاربر");
       }
 
-      // ============================================
-      // ✅ دریافت ثبت‌نام‌های نهایی (CONFIRMED و WAITING)
-      // ============================================
-      // src/pages/Profile/Profile.tsx
-
-      // ✅ تابع fetchProfile - بخش دریافت ثبت‌نام‌های نهایی
       try {
         const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
         console.log("📥 ثبت‌نام‌های نهایی:", enrollmentsData);
@@ -360,12 +384,8 @@ export default function Profile() {
         const mappedEnrollments: Enrollment[] = enrollmentsData.map(
           (item: any) => {
             const courseId = item.course_id || item.eventId || item.id;
-
-            // ✅ استفاده از اطلاعات موجود در item
-            // اگر item.event یا item.course وجود دارد از آن استفاده کن
             const courseInfo = item.event || item.course || {};
 
-            // ✅ اگر اطلاعات دوره در خود item وجود دارد
             const title = courseInfo.title || item.title || "دوره آموزشی";
             const slug = courseInfo.slug || item.slug || "";
             const date =
@@ -379,7 +399,6 @@ export default function Profile() {
             const duration = courseInfo.duration || "";
             const meetingLink = courseInfo.meetingLink || "";
 
-            // ✅ وضعیت پرداخت - فقط برای دوره‌های PENDING نمایش داده شود
             const paymentStatus =
               item.status === "PENDING" ? "PENDING" : undefined;
 
@@ -422,19 +441,16 @@ export default function Profile() {
         setEnrollments(finalEnrollments);
       } catch (err) {
         console.error("❌ خطا در دریافت ثبت‌نام‌های نهایی:", err);
+        toast.error("خطا در دریافت ثبت‌نام‌ها");
         setEnrollments([]);
       }
 
-      // ============================================
-      // ✅ دریافت سبد خرید (آیتم‌های در انتظار پرداخت)
-      // ============================================
       try {
         const cartData = await cartAPI.getCart();
         console.log("🛒 سبد خرید از API:", cartData);
 
         const items = cartData.items || [];
 
-        // ✅ مپ کردن مستقیم به فرمت مورد نیاز CartTab
         const mappedCart = items.map((item: any) => ({
           id: item.enrollment_id,
           enrollment_id: item.enrollment_id,
@@ -464,6 +480,7 @@ export default function Profile() {
       await fetchTickets();
     } catch (err: any) {
       console.error("❌ خطا در fetchProfile:", err);
+      toast.error("خطا در بارگذاری اطلاعات");
     } finally {
       setLoading(false);
     }
@@ -541,6 +558,8 @@ export default function Profile() {
     } catch (error) {
       console.error("❌ خطا در آپلود آواتار:", error);
       throw new Error("خطا در آپلود تصویر");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -604,26 +623,21 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = () => {
-    if (confirm("آیا از خروج از حساب کاربری مطمئن هستید؟")) {
-      localStorage.removeItem("token");
-      navigate("/login");
-    }
+  // ✅ Logout با Confirm Dialog
+  const handleLogoutClick = () => {
+    setConfirmAction({
+      title: "خروج از حساب کاربری",
+      description: "آیا از خروج از حساب کاربری مطمئن هستید؟",
+      onConfirm: () => {
+        localStorage.removeItem("token");
+        navigate("/login");
+        toast.info("با موفقیت خارج شدید");
+      },
+    });
+    setShowConfirmDialog(true);
   };
 
   // ============== Payment Functions ==============
-  // const handlePayment = (enrollmentId: string) => {
-  //   if (
-  //     !enrollmentId ||
-  //     enrollmentId === "undefined" ||
-  //     enrollmentId === "null"
-  //   ) {
-  //     alert("خطا: شناسه ثبت‌نام نامعتبر است");
-  //     return;
-  //   }
-  //   navigate(`/cart?payment=${enrollmentId}`);
-  // };
-
   const processPayment = async () => {
     if (!selectedEnrollment) return;
 
@@ -652,42 +666,43 @@ export default function Profile() {
       setSaving(false);
     }
   };
-  // ============================================
-  // ✅ تابع حذف از سبد خرید
-  // ============================================
-  // Profile.tsx
 
   // ============================================
-  // ✅ تابع حذف از سبد خرید
+  // ✅ تابع حذف از سبد خرید با Confirm Dialog
   // ============================================
   const handleRemoveFromCart = async (enrollmentId: string) => {
-    if (!window.confirm("آیا از حذف این آیتم از سبد خرید مطمئن هستید؟")) return;
+    setConfirmAction({
+      title: "حذف از سبد خرید",
+      description: "آیا از حذف این آیتم از سبد خرید مطمئن هستید؟",
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const result = await enrollmentsAPI.cancel(enrollmentId);
+          console.log("✅ نتیجه لغو ثبت‌نام:", result);
 
-    try {
-      setLoading(true);
+          setCart((prev) =>
+            prev.filter(
+              (item) =>
+                item.id !== enrollmentId && item.enrollment_id !== enrollmentId,
+            ),
+          );
 
-      // 📌 حذف با استفاده از /enrollments/${enrollmentId}/cancel
-      const result = await enrollmentsAPI.cancel(enrollmentId);
-      console.log("✅ نتیجه لغو ثبت‌نام:", result);
-
-      // ✅ به‌روزرسانی سبد خرید
-      setCart((prev) =>
-        prev.filter(
-          (item) =>
-            item.id !== enrollmentId && item.enrollment_id !== enrollmentId,
-        ),
-      );
-
-      setSuccess("✅ آیتم از سبد خرید حذف شد");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.error("❌ خطا در حذف از سبد خرید:", err);
-      setError(err.response?.data?.detail || err.message || "خطا در حذف آیتم");
-      setTimeout(() => setError(""), 3000);
-    } finally {
-      setLoading(false);
-    }
+          setSuccess("✅ آیتم از سبد خرید حذف شد");
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("❌ خطا در حذف از سبد خرید:", err);
+          setError(
+            err.response?.data?.detail || err.message || "خطا در حذف آیتم",
+          );
+          setTimeout(() => setError(""), 3000);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+    setShowConfirmDialog(true);
   };
+
   // ============== Ticket Functions ==============
   const handleCreateTicket = () => {
     navigate("/tickets/create");
@@ -698,24 +713,21 @@ export default function Profile() {
   };
 
   const handleDeleteTicket = async (id: string) => {
-    try {
-      await ticketsAPI.delete(id);
-      setTickets(tickets.filter((t) => t.id !== id));
-      setSuccess("✅ تیکت با موفقیت حذف شد");
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (err) {
-      setError("خطا در حذف تیکت");
-    }
-  };
-
-  const handleSendTicketMessage = async (ticketId: string, message: string) => {
-    try {
-      await ticketsAPI.addMessage(ticketId, message);
-      await fetchTickets();
-    } catch (err) {
-      console.error("❌ خطا در ارسال پیام:", err);
-      throw err;
-    }
+    setConfirmAction({
+      title: "حذف تیکت",
+      description: "آیا از حذف این تیکت مطمئن هستید؟",
+      onConfirm: async () => {
+        try {
+          await ticketsAPI.delete(id);
+          setTickets(tickets.filter((t) => t.id !== id));
+          setSuccess("✅ تیکت با موفقیت حذف شد");
+          setTimeout(() => setSuccess(""), 2000);
+        } catch (err) {
+          setError("خطا در حذف تیکت");
+        }
+      },
+    });
+    setShowConfirmDialog(true);
   };
 
   // ============== Helper Functions ==============
@@ -889,7 +901,7 @@ export default function Profile() {
         <ProfileHeader
           user={user}
           cartCount={stats.cartCount}
-          onLogout={handleLogout}
+          onLogout={handleLogoutClick}
           onCartClick={handleCartClick}
         />
 
@@ -913,7 +925,7 @@ export default function Profile() {
               onCancel={handleCancel}
               onSave={handleSave}
               onChange={handleChange}
-              onLogout={handleLogout}
+              onLogout={handleLogoutClick}
             />
           </div>
 
@@ -926,7 +938,6 @@ export default function Profile() {
                 formatPrice={formatPrice}
                 getStatusLabel={getStatusLabel}
                 getPaymentStatusLabel={getPaymentStatusLabel}
-                // ❌ handlePayment={handlePayment} - حذف شود
               />
             )}
 
@@ -939,15 +950,14 @@ export default function Profile() {
                 onRemoveFromCart={handleRemoveFromCart}
               />
             )}
+
             {activeTab === "tickets" && (
               <TicketsTab
                 tickets={tickets}
                 loading={ticketsLoading}
-                navigate={navigate}
                 onCreateTicket={handleCreateTicket}
                 onViewTicket={handleViewTicket}
                 onDeleteTicket={handleDeleteTicket}
-                onSendMessage={handleSendTicketMessage}
               />
             )}
 
@@ -978,6 +988,24 @@ export default function Profile() {
           onConfirm={processPayment}
         />
       )}
+
+      {/* ✅ Confirm Dialog */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setConfirmAction(null);
+        }}
+        onConfirm={() => {
+          if (confirmAction) {
+            confirmAction.onConfirm();
+          }
+        }}
+        title={confirmAction?.title || "تأیید"}
+        description={confirmAction?.description || "آیا مطمئن هستید؟"}
+        confirmText="تأیید"
+        cancelText="انصراف"
+      />
     </div>
   );
 }

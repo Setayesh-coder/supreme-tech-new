@@ -4,14 +4,8 @@ import { partnersAPI } from "../../../lib/api/partners";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  ExternalLink,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Plus, Edit, Trash2, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface Partner {
   id: string;
@@ -52,7 +46,7 @@ export default function PartnersList() {
       await partnersAPI.delete(id);
       setPartners(partners.filter((p) => p.id !== id));
     } catch (err) {
-      alert("خطا در حذف همکار");
+      toast.error("خطا در حذف همکار");
       console.error(err);
     }
   };
@@ -66,7 +60,7 @@ export default function PartnersList() {
         ),
       );
     } catch (err) {
-      alert("خطا در تغییر وضعیت");
+      toast.error("خطا در تغییر وضعیت");
       console.error(err);
     }
   };
@@ -173,7 +167,9 @@ export default function PartnersList() {
                     </GlassButton>
                   </Link>
                   <button
-                    onClick={() => handleToggleActive(partner.id, partner.isActive)}
+                    onClick={() =>
+                      handleToggleActive(partner.id, partner.isActive)
+                    }
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                     title={partner.isActive ? "غیرفعال کردن" : "فعال کردن"}
                   >

@@ -17,6 +17,7 @@ import {
   Users,
   Search,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface Event {
   id: string;
@@ -139,7 +140,7 @@ export default function EventList() {
       await eventsAPI.delete(id);
       setEvents(events.filter((e) => e.id !== id));
     } catch (err) {
-      alert("خطا در حذف رویداد");
+      toast.error("خطا در حذف رویداد");
     }
   };
 

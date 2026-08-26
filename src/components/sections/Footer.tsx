@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Send, MessageCircle, Heart } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
+import { toast } from "../../hooks/use-toast";
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (
@@ -27,9 +28,9 @@ export default function Footer() {
   const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      alert(`${type} با موفقیت کپی شد!`);
+      toast.success(`${type} با موفقیت کپی شد!`);
     } catch (err) {
-      alert("خطا در کپی کردن");
+      toast.error("خطا در کپی کردن");
     }
   };
 

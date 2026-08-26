@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
@@ -23,6 +22,7 @@ import {
   Building2,
   Briefcase,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 // ✅ تایپ توسعه‌یافته برای نمایش در لیست (با فیلدهای اضافی از API)
 interface EmployeeListItem extends EmployeePublic {
@@ -74,7 +74,7 @@ export default function EmployeeList() {
       await employeesAPI.delete(id);
       setEmployees(employees.filter((e) => e.id !== id));
     } catch (err) {
-      alert("خطا در حذف کارمند");
+      toast.error("خطا در حذف کارمند");
     }
   };
 
@@ -87,7 +87,7 @@ export default function EmployeeList() {
         ),
       );
     } catch (err) {
-      alert("خطا در تغییر وضعیت");
+      toast.error("خطا در تغییر وضعیت");
     }
   };
 
@@ -97,7 +97,13 @@ export default function EmployeeList() {
       MANAGER: { label: "مدیر", color: "text-purple-400", icon: Shield },
       ADMIN: { label: "ادمین", color: "text-red-400", icon: Shield },
     };
-    return roles[role || "EMPLOYEE"] || { label: role || "کارمند", color: "text-gray-400", icon: User };
+    return (
+      roles[role || "EMPLOYEE"] || {
+        label: role || "کارمند",
+        color: "text-gray-400",
+        icon: User,
+      }
+    );
   };
 
   const filteredEmployees = employees.filter((employee) => {
@@ -311,10 +317,17 @@ export default function EmployeeList() {
                   <div className="flex gap-2">
                     <button
                       onClick={() =>
-                        handleToggleStatus(employee.id, employee.is_active !== false)
+                        handleToggleStatus(
+                          employee.id,
+                          employee.is_active !== false,
+                        )
                       }
                       className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
-                      title={employee.is_active !== false ? "غیرفعال کردن" : "فعال کردن"}
+                      title={
+                        employee.is_active !== false
+                          ? "غیرفعال کردن"
+                          : "فعال کردن"
+                      }
                     >
                       {employee.is_active !== false ? (
                         <X size={18} />

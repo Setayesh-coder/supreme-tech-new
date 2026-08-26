@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { BlogPostSkeleton } from "../../components/skeletons/BlogPostSkeleton";
 import { getImageUrl } from "../../lib/constants";
+import { toast } from "../../hooks/use-toast";
 
 // آیکون‌ها
 const TwitterIcon = () => (
@@ -146,7 +147,7 @@ export default function BlogPost() {
   const handleLike = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("برای لایک کردن باید وارد حساب کاربری خود شوید.");
+      toast.info("برای لایک کردن باید وارد حساب کاربری خود شوید.");
       return;
     }
 

@@ -18,6 +18,7 @@ import {
   Clock,
   DollarSign,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface Event {
   id: string;
@@ -143,7 +144,7 @@ export default function CourseCreate() {
       // console.log("📤 ارسال داده:", courseData);
 
       await coursesAPI.create(courseData);
-      alert("✅ دوره با موفقیت ایجاد شد!");
+      toast.success(" دوره با موفقیت ایجاد شد!");
       navigate("/admin/courses");
     } catch (err: any) {
       console.error("❌ خطا:", err);

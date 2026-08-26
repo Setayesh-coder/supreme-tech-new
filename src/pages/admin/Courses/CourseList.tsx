@@ -20,6 +20,7 @@ import {
   XCircle,
   X,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface Course {
   id: string;
@@ -85,7 +86,7 @@ export default function CourseList() {
       setCourses(courses.filter((c) => c.id !== id));
       setTotalCount((prev) => prev - 1);
     } catch (err) {
-      alert("خطا در حذف دوره");
+      toast.error("خطا در حذف دوره");
     }
   };
 

@@ -21,6 +21,7 @@ import {
   Filter,
   Download,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 // ✅ تایپ ثبت‌نام مطابق با بک‌اند
 interface Enrollment {
@@ -132,7 +133,7 @@ export default function EventEnrollments() {
       await enrollmentsAPI.updateStatus(enrollmentId, status);
       await fetchEnrollments();
     } catch (err) {
-      alert("خطا در بروزرسانی وضعیت");
+      toast.error("خطا در بروزرسانی وضعیت");
     }
   };
 
@@ -143,12 +144,12 @@ export default function EventEnrollments() {
     setUpdating(true);
     try {
       await enrollmentsAPI.setMeetingLink(selectedEnrollment.id, meetingLink);
-      alert("✅ لینک جلسه با موفقیت ارسال شد");
+      toast.success(" لینک جلسه با موفقیت ارسال شد");
       setShowMeetingModal(false);
       setMeetingLink("");
       await fetchEnrollments();
     } catch (err) {
-      alert("خطا در ارسال لینک جلسه");
+      toast.error("خطا در ارسال لینک جلسه");
     } finally {
       setUpdating(false);
     }

@@ -7,6 +7,7 @@ import { GlassButton } from "../../../components/ui/GlassButton";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function PartnerEdit() {
   const { id } = useParams<{ id: string }>();
@@ -144,10 +145,10 @@ export default function PartnerEdit() {
       await partnersAPI.update(id!, partnerData);
 
       // ✅ نمایش پیام موفقیت
-      alert("✅ همکار با موفقیت ویرایش شد!");
+      toast.success(" همکار با موفقیت ویرایش شد!");
       navigate("/admin/partners");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      toast.error(" خطا:", err);
 
       // ✅ نمایش خطای دقیق
       let errorMessage = "خطا در ویرایش همکار";

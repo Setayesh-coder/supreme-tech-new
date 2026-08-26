@@ -7,6 +7,7 @@ import { GlassButton } from "../../../components/ui/GlassButton";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function PartnerCreate() {
   const navigate = useNavigate();
@@ -114,10 +115,10 @@ export default function PartnerCreate() {
       await partnersAPI.create(partnerData);
 
       // ✅ پیام موفقیت
-      alert("✅ همکار با موفقیت ایجاد شد!");
+      toast.success(" همکار با موفقیت ایجاد شد!");
       navigate("/admin/partners");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      toast.error("❌ خطا:", err);
 
       // ✅ نمایش خطای دقیق از بک‌اند
       let errorMessage = "خطا در ایجاد همکار";

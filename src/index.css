@@ -1,3 +1,4 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -20,4 +21,211 @@
   .text-gradient {
     @apply bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent;
   }
+}
+
+/* ✅ ===== انیمیشن‌های Toast ===== */
+
+/* نوار پیشرفت */
+@keyframes progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-progress {
+  animation: progress 4s linear forwards;
+}
+
+/* ✅ ورود از سمت راست */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ✅ خروج به سمت راست */
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* ✅ ورود از بالا */
+@keyframes slideInTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ✅ خروج به بالا */
+@keyframes slideOutTop {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+/* ✅ ورود با fade و scale */
+@keyframes fadeInScale {
+  from {
+    transform: scale(0.9) translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ✅ خروج با fade و scale */
+@keyframes fadeOutScale {
+  from {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9) translateY(-10px);
+    opacity: 0;
+  }
+}
+
+/* ✅ انیمیشن‌های Radix Toast */
+[data-state="open"] {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-state="closed"] {
+  animation: slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-swipe="move"] {
+  transform: translateX(var(--radix-toast-swipe-move-x));
+}
+
+[data-swipe="cancel"] {
+  transform: translateX(0);
+  transition: transform 0.2s ease-out;
+}
+
+[data-swipe="end"] {
+  animation: slideOutRight 0.3s ease-in forwards;
+}
+
+/* ✅ انیمیشن آیکون‌ها */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.toast-icon {
+  animation: bounce-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ✅ انیمیشن برای Toast های مختلف */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.toast-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+/* ✅ استایل اسکرول برای لیست Toast ها */
+.toast-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.toast-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+
+.toast-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toast-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+
+/* ✅ انیمیشن برای دکمه بستن */
+@keyframes pulse-close {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.toast-close-btn:hover {
+  animation: pulse-close 0.3s ease-in-out;
+}
+
+/* ✅ ورود به صورت زنجیره‌ای برای چند Toast */
+.toast-enter {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-enter:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.toast-enter:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.toast-enter:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.toast-enter:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.toast-enter:nth-child(5) {
+  animation-delay: 0.4s;
 }

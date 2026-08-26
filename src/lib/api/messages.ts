@@ -16,25 +16,12 @@ export interface Message {
   replied_at?: string;
 }
 
-// ✅ تایپ برای درخواست ایجاد پیام
 export interface CreateMessageRequest {
   name: string;
   email: string;
   phone: string;
   project_type: string;
   project_description: string;
-}
-
-// ✅ تایپ برای پاسخ خطای اعتبارسنجی
-export interface ValidationError {
-  type: string;
-  loc: string[];
-  msg: string;
-  input: any;
-}
-
-export interface ErrorResponse {
-  detail: ValidationError[] | string;
 }
 
 export interface ReplyMessageRequest {
@@ -101,18 +88,40 @@ export const messagesAPI = {
   },
 
   /**
-   * پاسخ به پیام (ویژه ادمین)
+   * ⚠️ پاسخ به پیام - مسیر صحیح را بررسی کنید
+   * اگر مسیر درست نیست، این متد را غیرفعال کنید
    */
   reply: async (id: string, data: ReplyMessageRequest): Promise<Message> => {
     const token = localStorage.getItem("token") || "";
-    const response = await api.post(`/messages/${id}/reply`, data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+
+    // ✅ تلاش با مسیرهای مختلف
+    try {
+      // مسیر 1: /messages/{id}/reply
+      const response = await api.post(`/messages/${id}/reply`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      // اگر مسیر 1 کار نکرد، مسیر 2 را امتحان کن
+      if (error.response?.status === 404) {
+        console.log("🔄 تلاش با مسیر جایگزین...");
+        try {
+          // مسیر 2: /messages/{id}
+          const response = await api.patch(`/messages/${id}`, data, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          return response.data;
+        } catch (innerError: any) {
+          throw innerError;
+        }
+      }
+      throw error;
+    }
   },
 
   /**
    * علامت‌گذاری به عنوان پاسخ داده شده
+   * PATCH /api/v1/messages/{id}/replied
    */
   markAsReplied: async (id: string): Promise<Message> => {
     const token = localStorage.getItem("token") || "";
@@ -128,6 +137,7 @@ export const messagesAPI = {
 
   /**
    * علامت‌گذاری به عنوان خوانده شده
+   * PATCH /api/v1/messages/{id}/read
    */
   markAsRead: async (id: string): Promise<Message> => {
     const token = localStorage.getItem("token") || "";

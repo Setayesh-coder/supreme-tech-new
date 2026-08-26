@@ -23,6 +23,7 @@ import {
   Bot,
   Timer,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface OrderWithUser extends Order {
   user: {
@@ -110,10 +111,10 @@ export default function OrdersList() {
     try {
       await paymentsAPI.verifyOrder(orderId, approved);
       await fetchOrders();
-      alert(`✅ سفارش با موفقیت ${approved ? "تایید" : "رد"} شد!`);
+      toast.success(`✅ سفارش با موفقیت ${approved ? "تایید" : "رد"} شد!`);
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      alert(err.response?.data?.detail || "خطا در تایید سفارش");
+      toast.error(err.response?.data?.detail || "خطا در تایید سفارش");
     } finally {
       setProcessing(null);
     }

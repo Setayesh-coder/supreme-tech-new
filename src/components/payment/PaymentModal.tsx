@@ -5,6 +5,7 @@ import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import CardToCardPayment from "./CardToCardPayment";
 import BalePayment from "./BalePayment";
+import { toast } from "../../hooks/use-toast";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -48,7 +49,7 @@ export default function PaymentModal({
         finalAmount: amount * 0.9,
       });
     } catch (error) {
-      alert("کد تخفیف نامعتبر است");
+      toast.error("کد تخفیف نامعتبر است");
     } finally {
       setApplyingDiscount(false);
     }

@@ -15,6 +15,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function HeroList() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
@@ -46,7 +47,7 @@ export default function HeroList() {
       await heroAPI.delete(id);
       setSlides(slides.filter((s) => s.id !== id));
     } catch (err) {
-      alert("خطا در حذف اسلاید");
+      toast.error("خطا در حذف اسلاید");
     }
   };
 
@@ -74,7 +75,7 @@ export default function HeroList() {
       await heroAPI.reorder(reorderItems);
       setSlides(newSlides);
     } catch (err) {
-      alert("خطا در تغییر ترتیب");
+      toast.error("خطا در تغییر ترتیب");
     }
   };
 

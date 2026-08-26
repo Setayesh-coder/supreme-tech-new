@@ -15,6 +15,7 @@ import {
   X,
   Upload,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function HeroCreate() {
   const navigate = useNavigate();
@@ -136,7 +137,7 @@ export default function HeroCreate() {
       await heroAPI.create(slideData);
 
       // ✅ پیام موفقیت
-      alert("✅ اسلاید با موفقیت ایجاد شد!");
+      toast.success(" اسلاید با موفقیت ایجاد شد!");
       navigate("/admin/hero");
     } catch (err: any) {
       console.error("❌ خطا:", err);

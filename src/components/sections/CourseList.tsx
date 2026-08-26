@@ -5,6 +5,7 @@ import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { coursesAPI } from "../../lib/api/courses";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
+import { useCart } from "../../hooks/useCart";
 import CoursePreRegisterModal from "../course/CoursePreRegisterModal";
 import {
   ShoppingBag,
@@ -20,6 +21,7 @@ import {
   Timer,
   Lock,
 } from "lucide-react";
+import { toast } from "../../hooks/use-toast";
 
 interface Course {
   id: string;
@@ -71,22 +73,30 @@ interface CourseListProps {
 
 export default function CourseList({ eventId, eventTitle }: CourseListProps) {
   const navigate = useNavigate();
+
+  // ✅ استفاده از useCart
+  const { addToCart, cart, refetch } = useCart();
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
 
   const [showPreRegister, setShowPreRegister] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
-  const [selectedCourseTitle, setSelectedCourseTitle] = useState<string>("");
+  const [selectedCourseId] = useState<string>("");
+  const [selectedCourseTitle] = useState<string>("");
 
   const isLoggedIn = !!localStorage.getItem("token");
 
   useEffect(() => {
     fetchCourses();
-  }, [eventId]);
+  }, [eventId, cart]); // ✅ اضافه کردن cart به dependency
+
+  // ✅ بررسی اینکه آیا دوره در سبد خرید است
+  const checkIfInCart = (courseId: string) => {
+    return cart.some((item: any) => item.course_id === courseId);
+  };
 
   // ✅ بررسی ثبت‌نام کاربر از بک‌اند با وضعیت
   const checkUserEnrollment = async (
@@ -156,16 +166,80 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     }
   };
 
-  const handleOpenPreRegister = (courseId: string, courseTitle: string) => {
+  // ✅ تابع افزودن به سبد خرید با Toast
+  const handleAddToCart = async (courseId: string, courseTitle: string) => {
     if (!isLoggedIn) {
-      alert("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
+      toast.error("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
       navigate("/login");
       return;
     }
 
-    setSelectedCourseId(courseId);
-    setSelectedCourseTitle(courseTitle);
-    setShowPreRegister(true);
+    // جلوگیری از کلیک مکرر
+    if (enrolling === courseId) return;
+
+    setEnrolling(courseId);
+
+    try {
+      // ✅ افزودن به سبد خرید
+      await addToCart(courseId);
+
+      // ✅ به‌روزرسانی وضعیت دوره
+      setCourses(
+        courses.map((c) =>
+          c.id === courseId
+            ? {
+                ...c,
+                userEnrolled: true,
+                enrollmentStatus: "PENDING" as any,
+                enrolledCount: (c.enrolledCount || 0) + 1,
+              }
+            : c,
+        ),
+      );
+
+      // ✅ نمایش Toast موفقیت با دکمه مشاهده سبد خرید
+      toast.success(`✅ دوره "${courseTitle}" به سبد خرید اضافه شد!`, "", {
+        action: (
+          <button
+            onClick={() => navigate("/cart")}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
+            مشاهده سبد خرید
+          </button>
+        ),
+      });
+    } catch (error) {
+      console.error("❌ خطا:", error);
+      toast.error("خطا در افزودن به سبد خرید");
+    } finally {
+      setEnrolling(null);
+    }
+  };
+
+  const handleOpenPreRegister = (courseId: string, courseTitle: string) => {
+    if (!isLoggedIn) {
+      toast.error("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
+      navigate("/login");
+      return;
+    }
+
+    // ✅ اگر دوره در سبد خرید است، مستقیم به سبد خرید برود
+    if (checkIfInCart(courseId)) {
+      toast.info("این دوره در سبد خرید شما موجود است", "", {
+        action: (
+          <button
+            onClick={() => navigate("/cart")}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
+            مشاهده سبد خرید
+          </button>
+        ),
+      });
+      return;
+    }
+
+    // ✅ استفاده از تابع جدید
+    handleAddToCart(courseId, courseTitle);
   };
 
   const handlePreRegisterSuccess = async (
@@ -175,6 +249,9 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     setEnrolling(courseId);
 
     try {
+      // ✅ رفرش سبد خرید
+      await refetch();
+
       const { enrolled, status } = await checkUserEnrollment(courseId);
 
       setCourses(
@@ -190,13 +267,21 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
         ),
       );
 
-      setSuccess(`✅ دوره "${courseTitle}" به سبد خرید اضافه شد!`);
-      setTimeout(() => setSuccess(""), 5000);
+      toast.success(`✅ دوره "${courseTitle}" به سبد خرید اضافه شد!`, "", {
+        action: (
+          <button
+            onClick={() => navigate("/cart")}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
+            مشاهده سبد خرید
+          </button>
+        ),
+      });
 
       setShowPreRegister(false);
     } catch (error) {
       console.error("❌ خطا در به‌روزرسانی:", error);
-      setError("خطا در به‌روزرسانی وضعیت ثبت‌نام");
+      toast.error("خطا در به‌روزرسانی وضعیت ثبت‌نام");
     } finally {
       setEnrolling(null);
     }
@@ -248,22 +333,6 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
         </div>
       )}
 
-      {success && (
-        <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5" />
-            <span>{success}</span>
-          </div>
-          <button
-            onClick={goToCart}
-            className="px-4 py-1.5 bg-green-500/30 hover:bg-green-500/40 text-green-200 rounded-lg text-sm transition-colors flex items-center gap-1"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            مشاهده سبد خرید
-          </button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map((course) => {
           const isExpanded = expandedCourse === course.id;
@@ -272,6 +341,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
             course.capacity > 0;
           const isPast =
             course.endDate && new Date(course.endDate) < new Date();
+          const isInCart = checkIfInCart(course.id);
 
           // ✅ وضعیت‌های ثبت‌نام
           const isPending = course.enrollmentStatus === "PENDING";
@@ -379,6 +449,11 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                         <ShoppingCart size={16} />
                         در سبد خرید
                       </span>
+                    ) : isInCart ? (
+                      <span className="text-blue-400 text-sm flex items-center gap-1">
+                        <ShoppingCart size={16} />
+                        در سبد خرید
+                      </span>
                     ) : isPast ? (
                       <span className="text-gray-500 text-sm">پایان یافته</span>
                     ) : isFull ? (
@@ -389,27 +464,41 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                   {/* ✅ دکمه‌های مختلف بر اساس وضعیت */}
                   {!course.userEnrolled && !isPast && !isFull && (
                     <div onClick={(e) => e.stopPropagation()}>
-                      <GlassButton
-                        variant="primary"
-                        size="sm"
-                        fullWidth
-                        loading={enrolling === course.id}
-                        onClick={() =>
-                          handleOpenPreRegister(course.id, course.title)
-                        }
-                        icon={
-                          enrolling === course.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <ShoppingBag className="w-4 h-4" />
-                          )
-                        }
-                        iconPosition="left"
-                      >
-                        {enrolling === course.id
-                          ? "در حال ثبت..."
-                          : "افزودن به سبد خرید"}
-                      </GlassButton>
+                      {isInCart ? (
+                        <GlassButton
+                          variant="primary"
+                          size="sm"
+                          fullWidth
+                          onClick={goToCart}
+                          icon={<ShoppingCart className="w-4 h-4" />}
+                          iconPosition="left"
+                          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/30"
+                        >
+                          مشاهده سبد خرید
+                        </GlassButton>
+                      ) : (
+                        <GlassButton
+                          variant="primary"
+                          size="sm"
+                          fullWidth
+                          loading={enrolling === course.id}
+                          onClick={() =>
+                            handleOpenPreRegister(course.id, course.title)
+                          }
+                          icon={
+                            enrolling === course.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <ShoppingBag className="w-4 h-4" />
+                            )
+                          }
+                          iconPosition="left"
+                        >
+                          {enrolling === course.id
+                            ? "در حال ثبت..."
+                            : "افزودن به سبد خرید"}
+                        </GlassButton>
+                      )}
                     </div>
                   )}
 

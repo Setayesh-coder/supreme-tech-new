@@ -18,6 +18,7 @@ import {
   Send,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 // ✅ تایپ‌های محلی برای UI
 interface MessageUI extends Message {
@@ -66,7 +67,7 @@ export default function MessageList() {
       setMessages(mappedMessages);
       setTotal(response.total);
     } catch (err: any) {
-      console.error("❌ خطا در دریافت پیام‌ها:", err);
+      toast.error("❌ خطا در دریافت پیام‌ها:", err);
       setError(err.response?.data?.detail || "خطا در دریافت پیام‌ها");
     } finally {
       setLoading(false);
@@ -84,7 +85,7 @@ export default function MessageList() {
         setSelectedMessage({ ...selectedMessage, isRead: true });
       }
     } catch (err) {
-      alert("خطا در بروزرسانی وضعیت");
+      toast.error("خطا در بروزرسانی وضعیت");
     }
   };
 
@@ -99,7 +100,7 @@ export default function MessageList() {
         setSelectedMessage({ ...selectedMessage, isReplied: true });
       }
     } catch (err) {
-      alert("خطا در بروزرسانی وضعیت");
+      toast.error("خطا در بروزرسانی وضعیت");
     }
   };
 
@@ -114,7 +115,7 @@ export default function MessageList() {
         setShowDetail(false);
       }
     } catch (err) {
-      alert("خطا در حذف پیام");
+      toast.error("خطا در حذف پیام");
     }
   };
 
@@ -127,36 +128,66 @@ export default function MessageList() {
     }
   };
 
-  // ✅ ارسال پاسخ
+  // ✅ ارسال پاسخ// src/components/admin/Messages/MessageList.tsx
+
+  // ✅ اصلاح تابع handleSendReply
   const handleSendReply = async () => {
     if (!selectedMessage || !replyText.trim()) return;
 
     setSendingReply(true);
     try {
-      // ارسال پاسخ به API
+      console.log("📤 ارسال پاسخ:", {
+        id: selectedMessage.id,
+        reply: replyText,
+      });
+
+      // ✅ ارسال پاسخ به API
       await messagesAPI.reply(selectedMessage.id, {
         reply: replyText,
       });
 
-      // علامت پاسخ داده شده
-      await handleMarkAsReplied(selectedMessage.id);
+      // ✅ علامت پاسخ داده شده
+      await messagesAPI.markAsReplied(selectedMessage.id);
 
-      // آپدیت UI
+      // ✅ آپدیت UI
       setMessages(
         messages.map((m) =>
-          m.id === selectedMessage.id ? { ...m, isReplied: true } : m,
+          m.id === selectedMessage.id
+            ? {
+                ...m,
+                isReplied: true,
+                reply: replyText,
+                replied_at: new Date().toISOString(),
+              }
+            : m,
         ),
       );
-      setSelectedMessage({ ...selectedMessage, isReplied: true });
+      setSelectedMessage({
+        ...selectedMessage,
+        isReplied: true,
+        reply: replyText,
+        replied_at: new Date().toISOString(),
+      });
       setReplyText("");
       setShowReplyModal(false);
-      alert("✅ پاسخ با موفقیت ارسال شد!");
 
-      // رفرش لیست
+      console.log("✅ پاسخ با موفقیت ارسال شد!");
+
+      // ✅ رفرش لیست
       await fetchMessages();
-    } catch (error) {
-      console.error("❌ خطا:", error);
-      alert("خطا در ارسال پاسخ");
+    } catch (error: any) {
+      console.error(" خطا در ارسال پاسخ:", error);
+
+      // ✅ نمایش پیام خطا به کاربر
+      let errorMessage = "خطا در ارسال پاسخ";
+      if (error.response?.status === 404) {
+        errorMessage =
+          "مسیر ارسال پاسخ در سرور یافت نشد. لطفاً با پشتیبانی تماس بگیرید.";
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      toast.error(` ${errorMessage}`);
     } finally {
       setSendingReply(false);
     }

@@ -2,7 +2,21 @@
 
 export interface CartItem {
   id: string;
+  enrollment_id: string;
   course_id: string;
+  course_title: string;
+  original_price: string; //number
+  discounted_price: string; //number
+  applied_price: string; //number
+  final_price: string; //number
+
+  summary: {
+    total_original_price: string; //number
+    total_courses_discount: string; //number
+    coupon_code: string;
+    coupon_discount: string; //number
+    total_payable: string; //number
+  };
   course: {
     id: string;
     title: string;
@@ -11,7 +25,7 @@ export interface CartItem {
     cover_image?: string;
     instructor_name?: string;
   };
-  enrollment_id: string;
+
   price: number;
   created_at: string;
 }
