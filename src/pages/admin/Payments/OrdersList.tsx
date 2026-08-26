@@ -5,6 +5,7 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { paymentsAPI } from "../../../lib/api/payment";
 import { usersAPI } from "../../../lib/api/users";
+import { coursesAPI } from "../../../lib/api/courses";
 import PaymentDetailsModal from "../../../components/admin/PaymentDetailsModal";
 import type { Order } from "../../../types/cart";
 import {
@@ -22,9 +23,11 @@ import {
   CreditCard,
   Bot,
   Timer,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "../../../hooks/use-toast";
 
+// ✅ تایپ OrderWithUser با ساختار واقعی
 interface OrderWithUser extends Order {
   user: {
     id: string;
@@ -32,6 +35,12 @@ interface OrderWithUser extends Order {
     email: string;
     phone?: string;
   };
+  courses?: {
+    id: string;
+    title: string;
+    price: number;
+    cover_image?: string;
+  }[];
 }
 
 export default function OrdersList() {
@@ -71,6 +80,27 @@ export default function OrdersList() {
     }
   };
 
+  const fetchCourseDetails = async (courseId: string) => {
+    try {
+      const course = await coursesAPI.getById(courseId);
+      return {
+        id: course.id,
+        title: course.title || "دوره آموزشی",
+        price: course.price || 0,
+        cover_image: course.cover_image || "",
+      };
+    } catch (error) {
+      console.error(`❌ خطا در دریافت اطلاعات دوره ${courseId}:`, error);
+      return {
+        id: courseId,
+        title: "دوره آموزشی",
+        price: 0,
+        cover_image: "",
+      };
+    }
+  };
+  // src/pages/admin/Payments/OrdersList.tsx
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -80,20 +110,53 @@ export default function OrdersList() {
       const data = await paymentsAPI.getOrders();
       console.log("✅ سفارشات دریافت شد:", data);
 
-      const ordersWithUser = await Promise.all(
+      const ordersWithDetails = await Promise.all(
         (Array.isArray(data) ? data : []).map(async (order: Order) => {
-          if (!order.user || !order.user.name) {
-            const userData = await fetchUserData(order.user_id);
-            return {
-              ...order,
-              user: userData,
-            };
+          // دریافت اطلاعات کاربر
+          let userData = order.user;
+          if (!userData || !userData.name) {
+            userData = await fetchUserData(order.user_id);
           }
-          return order as OrderWithUser;
+
+          // ✅ دریافت اطلاعات دوره‌ها با try/catch
+          let coursesData: any[] = [];
+          if (order.courses_snapshot && order.courses_snapshot.length > 0) {
+            try {
+              coursesData = await Promise.all(
+                order.courses_snapshot.map(async (courseId: string) => {
+                  try {
+                    return await fetchCourseDetails(courseId);
+                  } catch (err) {
+                    console.warn(`⚠️ خطا در دریافت دوره ${courseId}:`, err);
+                    return {
+                      id: courseId,
+                      title: `دوره ${courseId.substring(0, 8)}`,
+                      price: 0,
+                      cover_image: "",
+                    };
+                  }
+                }),
+              );
+            } catch (err) {
+              console.error("❌ خطا در دریافت دوره‌ها:", err);
+              coursesData = order.courses_snapshot.map((id: string) => ({
+                id: id,
+                title: `دوره ${id.substring(0, 8)}`,
+                price: 0,
+                cover_image: "",
+              }));
+            }
+          }
+
+          return {
+            ...order,
+            user: userData,
+            courses: coursesData,
+          };
         }),
       );
 
-      setOrders(ordersWithUser);
+      setOrders(ordersWithDetails);
     } catch (err: any) {
       console.error("❌ خطا در دریافت سفارشات:", err);
       setError(err.response?.data?.detail || "خطا در دریافت سفارشات");
@@ -135,7 +198,6 @@ export default function OrdersList() {
     setShowPaymentModal(false);
   };
 
-  // ✅ استفاده از toLowerCase برای تطابق با داده‌های بک‌اند
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "paid":
@@ -149,6 +211,8 @@ export default function OrdersList() {
         return "text-red-400 bg-red-500/20 border-red-500/30";
       case "cancelled":
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
+      case "rejected":
+        return "text-red-400 bg-red-500/20 border-red-500/30";
       default:
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
     }
@@ -166,7 +230,7 @@ export default function OrdersList() {
       case "failed":
         return "ناموفق";
       case "rejected":
-        return "رد کردن و پرداخت دوباره کاربر";
+        return "رد شده";
       case "cancelled":
         return "لغو شده";
       default:
@@ -195,7 +259,7 @@ export default function OrdersList() {
   };
 
   const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
+    switch (method?.toLowerCase()) {
       case "card_to_card":
         return "کارت به کارت";
       case "bale":
@@ -206,7 +270,7 @@ export default function OrdersList() {
   };
 
   const getPaymentMethodIcon = (method: string) => {
-    switch (method) {
+    switch (method?.toLowerCase()) {
       case "card_to_card":
         return <CreditCard className="w-4 h-4" />;
       case "bale":
@@ -218,14 +282,18 @@ export default function OrdersList() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "نامشخص";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("fa-IR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "نامشخص";
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -246,8 +314,8 @@ export default function OrdersList() {
         order.user?.name?.toLowerCase().includes(search) ||
         order.user?.email?.toLowerCase().includes(search) ||
         order.id?.toLowerCase().includes(search) ||
-        (order.enrollments || []).some((e) =>
-          e.course_title?.toLowerCase().includes(search),
+        (order.courses || []).some((c) =>
+          c.title?.toLowerCase().includes(search),
         )
       );
     });
@@ -311,6 +379,7 @@ export default function OrdersList() {
             <option value="pending">💳 در انتظار پرداخت</option>
             <option value="failed">❌ ناموفق</option>
             <option value="cancelled">🚫 لغو شده</option>
+            <option value="rejected">🚫 رد شده</option>
           </select>
         </div>
 
@@ -343,7 +412,6 @@ export default function OrdersList() {
         ) : (
           <div className="space-y-4">
             {filteredOrders.map((order) => {
-              // ✅ بررسی وضعیت برای نمایش دکمه‌ها
               const isWaitingForApproval =
                 order.status?.toLowerCase() === "waiting_for_approval" ||
                 order.status?.toLowerCase() === "waiting";
@@ -355,9 +423,10 @@ export default function OrdersList() {
               const userEmail = order.user?.email || "ایمیل ثبت نشده";
               const userPhone = order.user?.phone || "";
 
+              // ✅ استفاده از final_amount به جای total_payable
               const displayPrice =
-                order.total_payable || order.total_original_price || 0;
-              const enrollments = order.enrollments || [];
+                order.final_amount || order.total_original_price || 0;
+              const courses = order.courses || [];
 
               return (
                 <LiquidGlassCard
@@ -424,10 +493,10 @@ export default function OrdersList() {
                         </span>
                       </span>
                       <span className="flex items-center gap-1 text-gray-400">
-                        <ShoppingBag className="w-4 h-4" />
+                        <BookOpen className="w-4 h-4" />
                         دوره‌ها:{" "}
                         <span className="text-white">
-                          {enrollments.length} دوره
+                          {courses.length} دوره
                         </span>
                       </span>
                       {order.tracking_code && (
@@ -440,19 +509,21 @@ export default function OrdersList() {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {enrollments.map((enrollment) => (
-                        <span
-                          key={enrollment.id}
-                          className="px-2 py-1 bg-white/5 rounded-lg text-xs text-gray-300"
-                        >
-                          {enrollment.course_title || "دوره آموزشی"}
-                        </span>
-                      ))}
-                    </div>
+                    {/* ✅ نمایش دوره‌ها */}
+                    {courses.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {courses.map((course) => (
+                          <span
+                            key={course.id}
+                            className="px-2 py-1 bg-white/5 rounded-lg text-xs text-gray-300"
+                          >
+                            {course.title || "دوره آموزشی"}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
-                      {/* ✅ دکمه‌های تایید/رد فقط برای waiting_for_approval */}
                       {isWaitingForApproval && (
                         <>
                           <GlassButton
@@ -503,6 +574,7 @@ export default function OrdersList() {
           </div>
         )}
 
+        {/* آمار */}
         {orders.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             <LiquidGlassCard
@@ -552,11 +624,12 @@ export default function OrdersList() {
                   orders.filter(
                     (o) =>
                       o.status?.toLowerCase() === "failed" ||
-                      o.status?.toLowerCase() === "cancelled",
+                      o.status?.toLowerCase() === "cancelled" ||
+                      o.status?.toLowerCase() === "rejected",
                   ).length
                 }
               </p>
-              <p className="text-gray-400 text-sm">ناموفق/لغو شده</p>
+              <p className="text-gray-400 text-sm">ناموفق/رد/لغو شده</p>
             </LiquidGlassCard>
           </div>
         )}
@@ -572,7 +645,11 @@ export default function OrdersList() {
           selectedOrder
             ? {
                 id: selectedOrder.id,
-                user: selectedOrder.user,
+                user: {
+                  name: selectedOrder.user?.name || "کاربر ناشناس",
+                  email: selectedOrder.user?.email || "ایمیل ثبت نشده",
+                  phone: selectedOrder.user?.phone || undefined,
+                },
                 created_at: selectedOrder.created_at,
                 status: selectedOrder.status,
                 paymentStatus:
@@ -581,29 +658,34 @@ export default function OrdersList() {
                     : selectedOrder.status?.toLowerCase() === "paid"
                       ? "PAID"
                       : "PENDING",
-                course_id: selectedOrder.enrollments?.[0]?.course_id,
+                course_id: selectedOrder.courses?.[0]?.id,
                 event_id: undefined,
-                tracking_code: selectedOrder.tracking_code,
-                receipt_image_url: selectedOrder.receipt_image_url,
-                payment_method: selectedOrder.payment_method,
+                tracking_code: selectedOrder.tracking_code ?? undefined,
+                receipt_image_url: selectedOrder.receipt_image_url ?? undefined,
+                payment_method: selectedOrder.payment_method || "card_to_card",
                 amount:
-                  selectedOrder.total_payable ||
-                  selectedOrder.total_original_price,
+                  selectedOrder.final_amount ||
+                  selectedOrder.total_original_price ||
+                  0,
               }
             : {
                 id: "",
-                user: { name: "", email: "", phone: "" },
+                user: {
+                  name: "کاربر ناشناس",
+                  email: "ایمیل ثبت نشده",
+                },
                 created_at: "",
-                status: "",
-                paymentStatus: "",
+                status: "pending",
+                paymentStatus: "PENDING",
+                amount: 0,
               }
         }
         coursePrice={
-          selectedOrder?.total_payable || selectedOrder?.total_original_price
+          selectedOrder?.final_amount ||
+          selectedOrder?.total_original_price ||
+          0
         }
-        courseTitle={
-          selectedOrder?.enrollments?.[0]?.course_title || "دوره آموزشی"
-        }
+        courseTitle={selectedOrder?.courses?.[0]?.title || "دوره آموزشی"}
         onConfirm={handleConfirmFromModal}
         onReject={handleRejectFromModal}
       />

@@ -35,16 +35,15 @@ interface PaymentDetailsModalProps {
     paymentStatus?: string;
     course_id?: string;
     event_id?: string;
-    // ✅ اضافه کردن فیلدهای جدید از order
-    tracking_code?: string;
-    receipt_image_url?: string;
-    payment_method?: "card_to_card" | "bale";
-    amount?: number;
+    tracking_code?: string; // ✅ nullable نباشه
+    receipt_image_url?: string; // ✅ nullable نباشه
+    payment_method?: "card_to_card" | "bale" | string;
+    amount: number;
   };
-  coursePrice?: number;
-  courseTitle?: string;
-  onConfirm?: (id: string) => void;
-  onReject?: (id: string) => void;
+  coursePrice: number;
+  courseTitle: string;
+  onConfirm: (enrollmentId: string) => void;
+  onReject: (enrollmentId: string) => void;
 }
 
 export default function PaymentDetailsModal({

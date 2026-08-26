@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { ticketsAPI } from "../../../lib/api/tickets";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { ArrowLeft, Save, Ticket, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Ticket, AlertCircle, CheckCircle } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 export default function TicketCreate() {
   const navigate = useNavigate();
@@ -13,9 +14,9 @@ export default function TicketCreate() {
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
     title: "",
-    message: "",
+    description: "", // ✅ تغییر از message به description
     department: "",
-    priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
+    priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL",
   });
 
   const handleChange = (
@@ -29,6 +30,17 @@ export default function TicketCreate() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ✅ اعتبارسنجی
+    if (!formData.title.trim()) {
+      toast.error("❌ عنوان تیکت الزامی است");
+      return;
+    }
+    if (!formData.description.trim()) {
+      toast.error("❌ متن پیام الزامی است");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
@@ -36,18 +48,22 @@ export default function TicketCreate() {
     try {
       await ticketsAPI.create({
         title: formData.title,
-        message: formData.message,
+        description: formData.description, // ✅ ارسال description
         department: formData.department || undefined,
         priority: formData.priority,
       });
 
-      setSuccess(" تیکت با موفقیت ایجاد شد!");
+      setSuccess("✅ تیکت با موفقیت ایجاد شد!");
+      toast.success("✅ تیکت با موفقیت ایجاد شد");
+      
       setTimeout(() => {
         navigate("/admin/tickets");
       }, 1500);
     } catch (err: any) {
-      console.error(" خطا:", err);
-      setError(err.response?.data?.detail || "خطا در ایجاد تیکت");
+      console.error("❌ خطا:", err);
+      const errorMsg = err.response?.data?.detail || "خطا در ایجاد تیکت";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -56,6 +72,7 @@ export default function TicketCreate() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-8 px-4">
       <div className="max-w-2xl mx-auto">
+        {/* هدر */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate("/admin/tickets")}
@@ -63,10 +80,15 @@ export default function TicketCreate() {
           >
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Ticket className="w-6 h-6 text-blue-400" />
-            ایجاد تیکت جدید
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Ticket className="w-6 h-6 text-blue-400" />
+              ایجاد تیکت جدید
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              برای دریافت پشتیبانی، تیکت جدید ایجاد کنید
+            </p>
+          </div>
         </div>
 
         <LiquidGlassCard
@@ -75,19 +97,24 @@ export default function TicketCreate() {
           blurIntensity="lg"
           glowIntensity="md"
         >
+          {/* خطا */}
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              {error}
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
+          
+          {/* موفقیت */}
           {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
-              {success}
+            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{success}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 عنوان تیکت <span className="text-red-400">*</span>
@@ -97,12 +124,17 @@ export default function TicketCreate() {
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="عنوان تیکت را وارد کنید"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="مثال: مشکل در ورود به سیستم"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                 required
+                disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                عنوانی کوتاه و گویا برای تیکت خود وارد کنید
+              </p>
             </div>
 
+            {/* دپارتمان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 دپارتمان
@@ -111,31 +143,38 @@ export default function TicketCreate() {
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none"
+                disabled={loading}
               >
                 <option value="">انتخاب دپارتمان...</option>
-                <option value="technical">فنی</option>
-                <option value="support">پشتیبانی</option>
-                <option value="sales">فروش</option>
-                <option value="general">عمومی</option>
+                <option value="technical">🛠️ فنی</option>
+                <option value="support">💬 پشتیبانی</option>
+                <option value="sales">💰 فروش</option>
+                <option value="general">📋 عمومی</option>
               </select>
             </div>
 
+            {/* پیام */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                پیام <span className="text-red-400">*</span>
+                متن پیام <span className="text-red-400">*</span>
               </label>
               <textarea
-                name="message"
-                value={formData.message}
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                rows={5}
-                placeholder="توضیحات کامل تیکت را وارد کنید..."
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                rows={6}
+                placeholder="توضیحات کامل مشکل خود را وارد کنید..."
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
                 required
+                disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                توضیحات کامل و دقیق را وارد کنید تا تیم پشتیبانی بهتر بتواند کمک کند
+              </p>
             </div>
 
+            {/* اولویت */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 اولویت
@@ -144,22 +183,29 @@ export default function TicketCreate() {
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none"
+                disabled={loading}
               >
-                <option value="LOW"> کم</option>
-                <option value="MEDIUM"> متوسط</option>
-                <option value="HIGH"> بالا</option>
-                <option value="URGENT"> فوری</option>
+                <option value="LOW">🟢 کم</option>
+                <option value="MEDIUM">🟡 متوسط</option>
+                <option value="HIGH">🟠 بالا</option>
+                <option value="URGENT">🔴 فوری</option>
+                <option value="CRITICAL">🔥 بحرانی</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                در صورت فوری بودن مشکل، اولویت را بالا انتخاب کنید
+              </p>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            {/* دکمه‌ها */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"
-                variant="white"
+                variant="secondary"
                 size="md"
                 onClick={() => navigate("/admin/tickets")}
                 className="flex-1"
+                disabled={loading}
               >
                 انصراف
               </GlassButton>
@@ -171,7 +217,7 @@ export default function TicketCreate() {
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
                 disabled={loading}
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
               >
                 {loading ? "در حال ایجاد..." : "ایجاد تیکت"}
               </GlassButton>

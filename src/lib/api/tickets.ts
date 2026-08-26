@@ -1,177 +1,234 @@
 // src/lib/api/tickets.ts
 import api from "./axios";
+import { usersAPI } from "./users";
+import type {
+  Ticket,
+  TicketCreate,
+  TicketGroupCreate,
+  TicketMessage,
+  TicketMessageCreate,
+} from "../../types/ticket";
 
-// ✅ تایپ‌های مربوط به تیکت
-export interface TicketMessage {
-  id: string;
-  ticket_id: string;
-  sender_id: string;
-  message: string;
-  attachments?: string[];
-  created_at: string;
-}
+// ✅ کش برای ذخیره اطلاعات کاربران
+const userCache = new Map<
+  string,
+  { name: string; email: string; phone?: string }
+>();
 
-export interface Ticket {
-  id: string;
-  title: string;
-  department?: string;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  status: "OPEN" | "PENDING" | "ANSWERED" | "CLOSED";
-  creator_id: string;
-  created_at: string;
-  updated_at: string;
-  messages?: TicketMessage[];
-  members?: string[];
-}
+// ✅ تابع کمکی برای دریافت اطلاعات کاربر با کش
+const getUserInfo = async (userId: string) => {
+  if (userCache.has(userId)) {
+    return userCache.get(userId)!;
+  }
+  try {
+    const user = await usersAPI.getById(userId);
+    const userInfo = {
+      name: user.name || "کاربر ناشناس",
+      email: user.email || "",
+      phone: user.phone || "",
+    };
+    userCache.set(userId, userInfo);
+    return userInfo;
+  } catch (error) {
+    console.error(`❌ خطا در دریافت کاربر ${userId}:`, error);
+    const fallbackName = `کاربر ${userId.slice(0, 8)}`;
+    const fallbackInfo = { name: fallbackName, email: "" };
+    userCache.set(userId, fallbackInfo);
+    return fallbackInfo;
+  }
+};
 
-// ✅ تایپ برای ایجاد تیکت
-export interface CreateTicketRequest {
-  title: string;
-  message: string;
-  department?: string;
-  priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-}
+// ✅ تابع کمکی برای غنی‌سازی تیکت با اطلاعات کاربر
+const enrichTicketWithUser = async (ticket: Ticket): Promise<Ticket> => {
+  if (ticket.creator_id && !ticket.creator) {
+    const userInfo = await getUserInfo(ticket.creator_id);
+    ticket.creator = {
+      id: ticket.creator_id,
+      name: userInfo.name,
+      email: userInfo.email,
+      // phone: userInfo.phone,
+    };
+  }
+  return ticket;
+};
 
-// ✅ تایپ برای ایجاد تیکت گروهی
-export interface CreateGroupTicketRequest {
-  title: string;
-  message: string;
-  department?: string;
-  priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  members: string[];
-}
+// ✅ تابع کمکی برای غنی‌سازی پیام‌ها با اطلاعات کاربر
+const enrichMessagesWithUser = async (
+  messages: TicketMessage[],
+): Promise<TicketMessage[]> => {
+  if (!messages || messages.length === 0) return messages;
 
-// ✅ تایپ برای تغییر وضعیت
-export interface UpdateStatusRequest {
-  status: "OPEN" | "PENDING" | "ANSWERED" | "CLOSED";
-}
-
-// ✅ تایپ برای پاسخ API
-export interface TicketsResponse {
-  items: Ticket[];
-  total: number;
-  page?: number;
-  limit?: number;
-}
+  return await Promise.all(
+    messages.map(async (msg) => {
+      if (msg.user_id && !msg.user) {
+        const userInfo = await getUserInfo(msg.user_id);
+        msg.user = {
+          id: msg.user_id,
+          name: userInfo.name,
+          email: userInfo.email,
+        };
+      }
+      return msg;
+    }),
+  );
+};
 
 export const ticketsAPI = {
   /**
-   * دریافت لیست تمام تیکت‌ها (پنل مدیریت)
-   * GET /api/v1/tickets
+   * 📋 دریافت لیست تمام تیکت‌ها (ادمین)
    */
   getAll: async (params?: {
-    page?: number;
-    limit?: number;
     status?: string;
     priority?: string;
-  }): Promise<TicketsResponse> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.get("/tickets", {
-      headers: { Authorization: `Bearer ${token}` },
-      params,
-    });
-    return response.data;
+  }): Promise<Ticket[]> => {
+    try {
+      const response = await api.get("/tickets", { params });
+      console.log("📋 لیست تیکت‌ها دریافت شد:", response.data);
+
+      const tickets = Array.isArray(response.data) ? response.data : [];
+      const enrichedTickets = await Promise.all(
+        tickets.map(enrichTicketWithUser),
+      );
+
+      return enrichedTickets;
+    } catch (error) {
+      console.error("❌ خطا در دریافت تیکت‌ها:", error);
+      throw error;
+    }
   },
 
   /**
-   * دریافت لیست تیکت‌های ایجادشده توسط کاربر متصل
-   * GET /api/v1/tickets/my
+   * 📋 دریافت تیکت‌های من (کاربر عادی)
    */
-  getMyTickets: async (params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-  }): Promise<TicketsResponse> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.get("/tickets/my", {
-      headers: { Authorization: `Bearer ${token}` },
-      params,
-    });
-    return response.data;
+  getMyTickets: async (): Promise<Ticket[]> => {
+    try {
+      const response = await api.get("/tickets/my");
+      const tickets = Array.isArray(response.data) ? response.data : [];
+      return await Promise.all(tickets.map(enrichTicketWithUser));
+    } catch (error) {
+      console.error("❌ خطا در دریافت تیکت‌های من:", error);
+      throw error;
+    }
   },
 
   /**
-   * دریافت جزئیات و تاریخچه پیام‌های یک تیکت مشخص
-   * GET /api/v1/tickets/{id}
+   * ➕ ایجاد تیکت جدید
+   */
+  create: async (data: TicketCreate): Promise<Ticket> => {
+    try {
+      const response = await api.post("/tickets", data);
+      console.log("✅ تیکت جدید ایجاد شد:", response.data);
+      return await enrichTicketWithUser(response.data);
+    } catch (error) {
+      console.error("❌ خطا در ایجاد تیکت:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 👥 ایجاد تیکت گروهی (ادمین)
+   */
+  createGroup: async (data: TicketGroupCreate): Promise<Ticket> => {
+    try {
+      const response = await api.post("/tickets/group", data);
+      console.log("✅ تیکت گروهی ایجاد شد:", response.data);
+      return await enrichTicketWithUser(response.data);
+    } catch (error) {
+      console.error("❌ خطا در ایجاد تیکت گروهی:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 📄 دریافت جزئیات یک تیکت
    */
   getById: async (id: string): Promise<Ticket> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.get(`/tickets/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+    try {
+      const response = await api.get(`/tickets/${id}`);
+      const ticket = response.data;
+
+      await enrichTicketWithUser(ticket);
+
+      if (ticket.messages && ticket.messages.length > 0) {
+        ticket.messages = await enrichMessagesWithUser(ticket.messages);
+      }
+
+      return ticket;
+    } catch (error) {
+      console.error(`❌ خطا در دریافت تیکت ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
-   * ایجاد تیکت پشتیبانی جدید
-   * POST /api/v1/tickets
+   * 💬 ارسال پیام روی تیکت
    */
-  create: async (data: CreateTicketRequest): Promise<Ticket> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.post("/tickets", data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  },
-
-  /**
-   * ایجاد تیکت پشتیبانی گروهی
-   * POST /api/v1/tickets/group
-   */
-  createGroup: async (data: CreateGroupTicketRequest): Promise<Ticket> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.post("/tickets/group", data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  },
-
-  /**
-   * ارسال پاسخ یا پیام جدید روی تیکت
-   * POST /api/v1/tickets/{id}/message
-   */
-  addMessage: async (
-    ticketId: string,
-    message: string,
+  sendMessage: async (
+    id: string,
+    data: TicketMessageCreate,
   ): Promise<TicketMessage> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.post(
-      `/tickets/${ticketId}/message`,
-      { message },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
+    try {
+      const response = await api.post(`/tickets/${id}/message`, data);
+      console.log(`✅ پیام به تیکت ${id} ارسال شد`);
+
+      const message = response.data;
+
+      // ✅ دریافت اطلاعات کاربر برای پیام
+      if (message.user_id && !message.user) {
+        const userInfo = await getUserInfo(message.user_id);
+        message.user = {
+          id: message.user_id,
+          name: userInfo.name,
+          email: userInfo.email,
+        };
+      }
+
+      return message;
+    } catch (error) {
+      console.error(`❌ خطا در ارسال پیام به تیکت ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
-   * تغییر وضعیت تیکت
-   * PATCH /api/v1/tickets/{id}/status
+   * 🔄 تغییر وضعیت تیکت
    */
   updateStatus: async (
-    ticketId: string,
-    status: "OPEN" | "PENDING" | "ANSWERED" | "CLOSED",
+    id: string,
+    status: "OPEN" | "IN_PROGRESS" | "WAITING" | "CLOSED",
   ): Promise<Ticket> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.patch(
-      `/tickets/${ticketId}/status`,
-      { status },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
+    try {
+      const response = await api.patch(`/tickets/${id}/status`, { status });
+      console.log(`✅ وضعیت تیکت ${id} به ${status} تغییر کرد`);
+      return await enrichTicketWithUser(response.data);
+    } catch (error) {
+      console.error(`❌ خطا در تغییر وضعیت تیکت ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
-   * حذف تیکت
-   * DELETE /api/v1/tickets/{id}
+   * 🗑️ حذف تیکت
    */
-  delete: async (id: string): Promise<void> => {
-    const token = localStorage.getItem("token") || "";
-    await api.delete(`/tickets/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  delete: async (id: string): Promise<{ message: string }> => {
+    try {
+      const response = await api.delete(`/tickets/${id}`);
+      console.log(`✅ تیکت ${id} حذف شد`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ خطا در حذف تیکت ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 🧹 پاک کردن کش کاربران
+   */
+  clearCache: () => {
+    userCache.clear();
+    console.log("🧹 کش کاربران پاک شد");
   },
 };
+
+// ✅ export کردن Ticket برای استفاده در جای دیگر
+export type { Ticket };

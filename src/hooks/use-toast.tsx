@@ -138,7 +138,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
-// ✅ توابع toast
+// ✅ تابع اصلی toast
 function toast({ ...props }: Toast) {
   const id = genId();
 
@@ -233,6 +233,25 @@ toast.loading = (
     duration: 1000000,
     ...options,
   });
+};
+
+// ✅ اضافه کردن تابع custom
+toast.custom = (
+  children: React.ReactNode,
+  options?: Partial<Toast> & { duration?: number },
+) => {
+  const result = toast({
+    description: children,
+    variant: "default",
+    duration: options?.duration || 5000,
+    ...options,
+  });
+  return result;
+};
+
+// ✅ اضافه کردن تابع dismiss به خود toast
+toast.dismiss = (toastId?: string) => {
+  dispatch({ type: "DISMISS_TOAST", toastId });
 };
 
 function useToast() {

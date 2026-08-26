@@ -1,22 +1,16 @@
-// src/types/cart.ts
+// types/cart.ts
 
+// ✅ تایپ اصلی آیتم سبد خرید
 export interface CartItem {
   id: string;
   enrollment_id: string;
   course_id: string;
   course_title: string;
-  original_price: string; //number
-  discounted_price: string; //number
-  applied_price: string; //number
-  final_price: string; //number
-
-  summary: {
-    total_original_price: string; //number
-    total_courses_discount: string; //number
-    coupon_code: string;
-    coupon_discount: string; //number
-    total_payable: string; //number
-  };
+  original_price: number;
+  discounted_price: number;
+  applied_price: number;
+  final_price: number;
+  quantity: number;
   course: {
     id: string;
     title: string;
@@ -25,32 +19,40 @@ export interface CartItem {
     cover_image?: string;
     instructor_name?: string;
   };
-
-  price: number;
   created_at: string;
 }
 
-export interface Cart {
+// ✅ تایپ خلاصه سبد خرید
+export interface CartSummary {
+  total_original_price: number;
+  total_courses_discount: number;
+  coupon_code?: string;
+  coupon_discount?: number;
+  total_payable: number;
+}
+
+// ✅ تایپ پاسخ سبد خرید
+export interface CartResponse {
   items: CartItem[];
-  total: number;
+  summary: CartSummary;
+}
+
+// ✅ تایپ برای نمایش در UI (نرمال‌شده)
+export interface DisplayCartItem {
+  id: string;
+  enrollment_id: string;
+  course_id: string;
+  title: string;
+  slug: string;
+  price: number;
+  original_price: number;
   discount: number;
-  final_total: number;
-  coupon?: {
-    code: string;
-    discount_amount: number;
-    type: "PERCENT" | "FIXED";
-    discount_value?: number;
-  };
+  image?: string;
+  date: string;
+  status: "PENDING" | "PAID" | "EXPIRED";
 }
 
-export interface ApplyCouponRequest {
-  code: string;
-}
-
-export interface RemoveCouponRequest {
-  code: string;
-}
-
+// ✅ تایپ کوپن
 export interface Coupon {
   id: string;
   code: string;
@@ -60,8 +62,7 @@ export interface Coupon {
   max_discount_amount: number;
   min_order_amount: number;
   max_uses_per_user: number;
-  allowed_courses: string;
-  allowed_phones: string;
+  allowed_courses: string[];
   max_uses: number;
   used_count: number;
   expires_at: string;
@@ -69,47 +70,71 @@ export interface Coupon {
   created_at: string;
 }
 
-export interface CardToCardPaymentRequest {
-  enrollment_id: string;
-  tracking_code: string;
-  receipt_image_url: string;
-  amount?: number;
+// ✅ تایپ درخواست‌ها
+export interface ApplyCouponRequest {
+  code: string;
 }
 
-export interface BalePaymentRequest {
+export interface RemoveCouponRequest {
+  code: string;
+}
+
+// ✅ تایپ پرداخت
+export interface PaymentRequest {
   enrollment_id: string;
   amount: number;
-  description?: string;
+  payment_method: "card_to_card" | "bale";
 }
 
-export interface BalePaymentResponse {
-  payment_link: string;
-  transaction_id: string;
+export interface PaymentResponse {
+  payment_link?: string;
+  transaction_id?: string;
+  status: "success" | "pending" | "failed";
+  message: string;
 }
 
 export interface Order {
   id: string;
   user_id: string;
+  coupon_id?: string | null;
+  total_original_price: number;
+  total_discount: number;
+  final_amount: number;
+  courses_snapshot: string[]; // ✅ آرایه‌ای از course_id ها
+  payment_method: "card_to_card" | "bale" | string;
+  status:
+    | "pending"
+    | "waiting_for_approval"
+    | "paid"
+    | "failed"
+    | "cancelled"
+    | "rejected";
+  receipt_image_url?: string | null;
+  tracking_code?: string | null;
+  created_at: string;
+  updated_at: string;
+
+  // ✅ اطلاعات کاربر (از join یا populate)
   user?: {
     id: string;
     name: string;
     email: string;
     phone?: string;
   };
-  total_original_price: number;
-  total_discount: number;
-  total_payable: number;
-  status: "pending" | "waiting_for_approval" | "paid" | "failed" | "cancelled";
-  payment_method: "card_to_card" | "bale";
-  tracking_code?: string;
-  receipt_image_url?: string;
-  transaction_id?: string;
-  enrollments: {
+
+  // ✅ اطلاعات دوره‌ها (از populate)
+  courses?: {
     id: string;
-    course_id: string;
-    course_title: string;
-    status: string;
+    title: string;
+    price: number;
+    cover_image?: string;
   }[];
-  created_at: string;
-  updated_at: string;
+
+  // ✅ اطلاعات کوپن (از populate)
+  coupon?: {
+    id: string;
+    code: string;
+    discount_type: "PERCENT" | "FIXED";
+    discount_value: number;
+  };
 }
