@@ -1,9 +1,11 @@
+// src/pages/auth/Login.tsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { Phone, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { toast } from "../../hooks/use-toast";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -25,35 +27,20 @@ export default function Login() {
     setError("");
 
     try {
-      console.log("📤 ارسال درخواست ورود:", {
-        phone: formData.phone,
-        password: formData.password,
-      });
-
       const response = await authAPI.loginUser({
         phone: formData.phone,
         password: formData.password,
       });
 
-      // console.log("📥 پاسخ:", response);
-
       if (response && response.token) {
-        // 🔥 توکن و کاربر ذخیره می‌شود (در authAPI انجام می‌شود)
-        // اما برای اطمینان، دوباره بررسی می‌کنیم
-        // const token = localStorage.getItem("token");
-        // const user = localStorage.getItem("user");
-
-        // console.log("✅ توکن ذخیره شد:", !!token);
-        // console.log("✅ کاربر ذخیره شد:", !!user);
-
-        // 🔥 هدایت به پروفایل
+        toast.success("✅ ورود با موفقیت انجام شد");
         navigate("/profile", { replace: true });
       } else {
         setError("خطا در ورود، لطفاً دوباره تلاش کنید");
       }
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(err?.message || "خطا در ورود، لطفاً دوباره تلاش کنید");
+      setError(err?.response?.data?.detail || err?.message || "خطا در ورود");
     } finally {
       setLoading(false);
     }
@@ -134,6 +121,14 @@ export default function Login() {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
+              </div>
+              <div className="text-right mt-1">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  رمز عبور خود را فراموش کرده‌اید؟
+                </Link>
               </div>
             </div>
 

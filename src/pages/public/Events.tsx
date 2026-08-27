@@ -166,7 +166,7 @@ export default function Events() {
           <SectionHeader
             badge="دوره‌ها و رویدادهای Supreme Tech"
             badgeIcon={<Sparkles className="w-4 h-4 text-blue-400" />}
-            title="دوره‌های آموزشی"
+            title="رویداد ها"
             subtitle="مهارت‌های خود را با دوره‌های تخصصی ما ارتقا دهید"
             description="از کارگاه‌های عملی تا وبینارهای تخصصی و بوت‌کمپ‌های فشرده"
           />
@@ -176,7 +176,7 @@ export default function Events() {
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="جستجوی دوره‌ها..."
+                placeholder="جستجوی رویدادها..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-full py-3 pr-12 pl-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"

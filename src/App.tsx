@@ -66,6 +66,7 @@ import CouponsManager from "./pages/admin/Copuns/CouponsManager";
 
 // Components
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 // ✅ تنظیم QueryClient
 const queryClient = new QueryClient({
@@ -94,6 +95,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/services" element={<ServicesPage />} />

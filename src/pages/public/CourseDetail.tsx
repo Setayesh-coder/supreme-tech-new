@@ -630,7 +630,7 @@ export default function CourseDetail() {
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500 text-center py-8">
-                      هنوز جلسه‌ای برای این دوره تعیین نشده است
+                      این دوره به زودی آغاز میشود...
                     </p>
                   )}
                 </LiquidGlassCard>

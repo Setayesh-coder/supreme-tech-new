@@ -23,7 +23,6 @@ import {
   Calendar,
   Hash,
   Mail,
-  // Phone,
 } from "lucide-react";
 import { AdminLayout } from "../AdminLayout";
 import { toast } from "../../../hooks/use-toast";
@@ -37,6 +36,11 @@ export default function TicketList() {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ✅ State برای Confirm Dialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteTargetTitle, setDeleteTargetTitle] = useState<string>("");
 
   useEffect(() => {
     fetchTickets();
@@ -65,15 +69,27 @@ export default function TicketList() {
     toast.success("✅ تیکت‌ها به‌روزرسانی شدند");
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این تیکت مطمئن هستید؟")) return;
+  // ✅ handleDelete - باز کردن Confirm Dialog
+  const handleDelete = (id: string, title: string) => {
+    setDeleteTargetId(id);
+    setDeleteTargetTitle(title);
+    setShowConfirmDialog(true);
+  };
+
+  // ✅ confirmDelete - اجرای حذف
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
     try {
-      await ticketsAPI.delete(id);
-      setTickets(tickets.filter((t) => t.id !== id));
+      await ticketsAPI.delete(deleteTargetId);
+      setTickets(tickets.filter((t) => t.id !== deleteTargetId));
       toast.success("✅ تیکت با موفقیت حذف شد");
     } catch (err: any) {
       console.error("❌ خطا:", err);
       toast.error(err.response?.data?.detail || "خطا در حذف تیکت");
+    } finally {
+      setDeleteTargetId(null);
+      setDeleteTargetTitle("");
+      setShowConfirmDialog(false);
     }
   };
 
@@ -272,6 +288,7 @@ export default function TicketList() {
               const priority = getPriorityLabel(ticket.priority);
               const userName = getUserName(ticket);
               const userEmail = getUserEmail(ticket);
+              const messageCount = ticket.messages?.length || 0;
 
               return (
                 <LiquidGlassCard
@@ -316,8 +333,8 @@ export default function TicketList() {
                             {ticket.department}
                           </span>
                         )}
-                        {ticket.messages && ticket.messages.length > 0 && (
-                          <span>💬 {ticket.messages.length} پیام</span>
+                        {messageCount > 0 && (
+                          <span>💬 {messageCount} پیام</span>
                         )}
                       </div>
                     </div>
@@ -332,7 +349,7 @@ export default function TicketList() {
                         مشاهده
                       </GlassButton>
                       <button
-                        onClick={() => handleDelete(ticket.id)}
+                        onClick={() => handleDelete(ticket.id, ticket.title)}
                         className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -411,6 +428,18 @@ export default function TicketList() {
                 )}
               </div>
 
+              {/* توضیحات تیکت */}
+              {selectedTicket.description && (
+                <div className="bg-white/5 rounded-xl p-4 mb-4">
+                  <h4 className="text-xs font-medium text-gray-400 mb-2">
+                    توضیحات
+                  </h4>
+                  <p className="text-white text-sm whitespace-pre-wrap">
+                    {selectedTicket.description}
+                  </p>
+                </div>
+              )}
+
               {/* پیام‌ها */}
               <div className="space-y-3 max-h-60 overflow-y-auto mb-4 bg-white/5 rounded-xl p-4">
                 {!selectedTicket.messages ||
@@ -459,7 +488,9 @@ export default function TicketList() {
                     onChange={(e) => setReply(e.target.value)}
                     placeholder="پیام خود را بنویسید..."
                     className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !e.shiftKey && handleSendMessage()
+                    }
                     disabled={sending}
                   />
                   <GlassButton
@@ -483,6 +514,60 @@ export default function TicketList() {
               )}
             </LiquidGlassCard>
           </div>
+        </div>
+      )}
+
+      {/* ✅ Confirm Dialog برای حذف */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <LiquidGlassCard
+            className="p-6 max-w-md w-full mx-4"
+            borderRadius="24px"
+            blurIntensity="xl"
+            glowIntensity="md"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-500/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">حذف تیکت</h3>
+            </div>
+            <p className="text-gray-400 text-sm mb-2">
+              آیا از حذف این تیکت مطمئن هستید؟
+            </p>
+            {deleteTargetTitle && (
+              <p className="text-white text-sm font-medium mb-6">
+                "{deleteTargetTitle}"
+              </p>
+            )}
+            <p className="text-gray-500 text-xs mb-6">
+              این عمل غیرقابل بازگشت است و تمام پیام‌های این تیکت نیز حذف خواهند
+              شد.
+            </p>
+            <div className="flex gap-3">
+              <GlassButton
+                variant="secondary"
+                size="md"
+                fullWidth
+                onClick={() => {
+                  setShowConfirmDialog(false);
+                  setDeleteTargetId(null);
+                  setDeleteTargetTitle("");
+                }}
+              >
+                انصراف
+              </GlassButton>
+              <GlassButton
+                variant="danger"
+                size="md"
+                fullWidth
+                onClick={confirmDelete}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30"
+              >
+                حذف
+              </GlassButton>
+            </div>
+          </LiquidGlassCard>
         </div>
       )}
     </AdminLayout>

@@ -1,40 +1,22 @@
-// src/pages/auth/Register.tsx
+// src/pages/auth/ForgotPassword.tsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../../lib/api/auth";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
-import {
-  User,
-  Phone,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowLeft,
-  Mail,
-  Key,
-} from "lucide-react";
+import { Phone, Key, ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "../../hooks/use-toast";
 
-export default function Register() {
+export default function ForgotPassword() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"phone" | "otp" | "register">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "reset">("phone");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [timer, setTimer] = useState(0);
-
-  // مرحله 1: شماره تلفن
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
-
-  // مرحله 2: اطلاعات ثبت‌نام
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [timer, setTimer] = useState(0);
 
   // ✅ ارسال کد OTP
   const handleSendOTP = async () => {
@@ -46,11 +28,8 @@ export default function Register() {
     setLoading(true);
     try {
       await authAPI.requestOTP(phone);
-
-      // ✅ اینجا step رو به otp تغییر میدیم تا فیلد کد نمایش داده بشه
       setStep("otp");
-      setTimer(60);
-
+      setTimer(180);
       toast.success("✅ کد تایید به شماره شما ارسال شد");
 
       const interval = setInterval(() => {
@@ -81,8 +60,8 @@ export default function Register() {
     setLoading(true);
     try {
       await authAPI.verifyOTP(phone, otpCode);
-      setStep("register");
-      toast.success("✅ کد تایید شد، اطلاعات ثبت‌نام را کامل کنید");
+      setStep("reset");
+      toast.success("✅ کد تایید شد، رمز جدید را وارد کنید");
     } catch (err: any) {
       toast.error(
         err?.response?.data?.detail || err?.message || "کد تایید نامعتبر است",
@@ -92,65 +71,41 @@ export default function Register() {
     }
   };
 
-  // ✅ ثبت‌نام نهایی با رمز عبور
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ✅ بازنشانی رمز عبور
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("رمز عبور باید حداقل ۶ کاراکتر باشد");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("رمز عبور و تکرار آن مطابقت ندارند");
+      return;
+    }
+
     setLoading(true);
-    setError("");
-
-    if (!formData.name || formData.name.length < 3) {
-      setError("نام و نام خانوادگی را کامل وارد کنید");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("رمز عبور و تکرار آن مطابقت ندارند");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("رمز عبور باید حداقل ۶ کاراکتر باشد");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await authAPI.registerUser({
-        phone: phone,
-        name: formData.name,
-        password: formData.password,
-        email: formData.email || undefined,
-      });
-
-      if (response && response.token) {
-        toast.success("✅ ثبت‌نام با موفقیت انجام شد");
-        navigate("/profile", { replace: true });
-      } else {
-        setError("خطا در ثبت‌نام، لطفاً دوباره تلاش کنید");
-      }
+      await authAPI.resetPasswordWithOTP(phone, otpCode, newPassword);
+      toast.success("✅ رمز عبور با موفقیت تغییر کرد");
+      navigate("/login");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
-      setError(err?.response?.data?.detail || err?.message || "خطا در ثبت‌نام");
+      toast.error(
+        err?.response?.data?.detail || err?.message || "خطا در تغییر رمز عبور",
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <Link
-          to="/"
+          to="/login"
           className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
         >
           <ArrowLeft size={18} className="ml-2" />
-          بازگشت به صفحه اصلی
+          بازگشت به ورود
         </Link>
 
         <LiquidGlassCard
@@ -162,24 +117,18 @@ export default function Register() {
         >
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-white">
-              {step === "phone" && "ثبت‌نام"}
-              {step === "otp" && "تایید شماره"}
-              {step === "register" && "تکمیل ثبت‌نام"}
+              {step === "phone" && "بازیابی رمز عبور"}
+              {step === "otp" && "تایید کد"}
+              {step === "reset" && "تنظیم رمز جدید"}
             </h1>
             <p className="text-gray-400 text-sm mt-2">
               {step === "phone" && "شماره تلفن خود را وارد کنید"}
               {step === "otp" && "کد ارسال شده را وارد کنید"}
-              {step === "register" && "اطلاعات خود را کامل کنید"}
+              {step === "reset" && "رمز عبور جدید خود را وارد کنید"}
             </p>
           </div>
 
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
-            </div>
-          )}
-
-          {/* ✅ مرحله 1: وارد کردن شماره تلفن */}
+          {/* مرحله 1: شماره تلفن */}
           {step === "phone" && (
             <div className="space-y-4">
               <div>
@@ -196,12 +145,8 @@ export default function Register() {
                     placeholder="۰۹۱۲۱۲۳۴۵۶۷"
                     dir="ltr"
                     required
-                    autoFocus
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  کد تایید به این شماره ارسال خواهد شد
-                </p>
               </div>
 
               <GlassButton
@@ -214,31 +159,12 @@ export default function Register() {
               >
                 {loading ? "در حال ارسال..." : "ارسال کد تایید"}
               </GlassButton>
-
-              <div className="text-center">
-                <p className="text-gray-400 text-sm">
-                  قبلاً ثبت‌نام کرده‌اید؟{" "}
-                  <Link
-                    to="/login"
-                    className="text-blue-400 hover:text-blue-300"
-                  >
-                    وارد شوید
-                  </Link>
-                </p>
-              </div>
             </div>
           )}
 
-          {/* ✅ مرحله 2: وارد کردن کد OTP - کاربر اینجا کد رو وارد میکنه */}
+          {/* مرحله 2: تایید OTP */}
           {step === "otp" && (
             <div className="space-y-4">
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-center">
-                <p className="text-blue-300 text-sm">
-                  کد تایید به شماره <span className="font-bold">{phone}</span>{" "}
-                  ارسال شد
-                </p>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   کد تایید
@@ -285,10 +211,7 @@ export default function Register() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setStep("phone");
-                  setOtpCode("");
-                }}
+                onClick={() => setStep("phone")}
                 className="text-center text-sm text-gray-400 hover:text-white transition-colors w-full"
               >
                 ← بازگشت به مرحله قبل
@@ -296,62 +219,19 @@ export default function Register() {
             </div>
           )}
 
-          {/* مرحله 3: تکمیل ثبت‌نام */}
-          {step === "register" && (
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-center">
-                <p className="text-green-300 text-sm">
-                  ✅ شماره تلفن {phone} تایید شد
-                </p>
-              </div>
-
+          {/* مرحله 3: تنظیم رمز جدید */}
+          {step === "reset" && (
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  نام و نام خانوادگی <span className="text-red-400">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
-                    placeholder="نام کامل"
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  ایمیل (اختیاری)
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
-                    placeholder="example@email.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  رمز عبور <span className="text-red-400">*</span>
+                  رمز عبور جدید
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full pl-12 pr-12 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                     placeholder="حداقل ۶ کاراکتر"
                     required
@@ -368,15 +248,14 @@ export default function Register() {
 
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  تکرار رمز عبور <span className="text-red-400">*</span>
+                  تکرار رمز عبور جدید
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                     placeholder="تکرار رمز عبور"
                     required
@@ -385,27 +264,16 @@ export default function Register() {
               </div>
 
               <GlassButton
-                type="submit"
+                type="button"
                 variant="primary"
                 size="lg"
                 fullWidth
                 loading={loading}
+                onClick={handleResetPassword}
               >
-                {loading ? "در حال ثبت‌نام..." : "ثبت‌نام"}
+                {loading ? "در حال تغییر..." : "تغییر رمز عبور"}
               </GlassButton>
-
-              <div className="text-center">
-                <p className="text-gray-400 text-sm">
-                  قبلاً ثبت‌نام کرده‌اید؟{" "}
-                  <Link
-                    to="/login"
-                    className="text-blue-400 hover:text-blue-300"
-                  >
-                    وارد شوید
-                  </Link>
-                </p>
-              </div>
-            </form>
+            </div>
           )}
         </LiquidGlassCard>
       </div>

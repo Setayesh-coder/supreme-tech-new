@@ -176,15 +176,25 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
     initialFromValue?.day || initialDate?.day?.toString() || "",
   );
 
-  // وقتی value از بیرون تغییر کند
+  // ✅ وقتی value از بیرون تغییر کند
   useEffect(() => {
     if (value) {
       const parsed = parsePersianDateFromString(value);
       setPersianYear(parsed.year);
-      setPersianMonth(parsed.month);
-      setPersianDay(parsed.day);
+      // ✅ حذف صفر جلو (مثلاً "09" → "9")
+      setPersianMonth(parsed.month ? String(parseInt(parsed.month)) : "");
+      setPersianDay(parsed.day ? String(parseInt(parsed.day)) : "");
     }
   }, [value]);
+
+  // ✅ وقتی initialDate تغییر کند
+  useEffect(() => {
+    if (initialDate) {
+      setPersianYear(initialDate.year?.toString() || "");
+      setPersianMonth(initialDate.month?.toString() || "");
+      setPersianDay(initialDate.day?.toString() || "");
+    }
+  }, [initialDate]);
 
   // تولید سال‌های شمسی (از 1300 تا سال جاری شمسی)
   const getCurrentPersianYear = () => {
@@ -252,8 +262,6 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
       // فرمت شمسی: YYYY-MM-DD
       const persianDateString = `${newPersianYear}-${String(newPersianMonth).padStart(2, "0")}-${String(newPersianDay).padStart(2, "0")}`;
 
-      // console.log("📅 تاریخ شمسی انتخاب شده:", persianDateString);
-
       if (onChange) onChange(persianDateString);
 
       // همچنین تاریخ میلادی را برای onDateChange برگردان
@@ -294,10 +302,15 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
     ${disabled ? "opacity-50 cursor-not-allowed hover:bg-white/10" : ""}`;
 
   // نمایش تاریخ انتخاب شده به فارسی
-  const selectedDate =
-    persianYear && persianMonth && persianDay
-      ? `${toPersianDigits(persianYear)}/${toPersianDigits(persianMonth)}/${toPersianDigits(persianDay)}`
-      : "";
+  // const selectedDate =
+  //   persianYear && persianMonth && persianDay
+  //     ? `${toPersianDigits(persianYear)}/${toPersianDigits(persianMonth)}/${toPersianDigits(persianDay)}`
+  //     : "";
+
+  // // ✅ پیدا کردن نام ماه انتخاب شده برای نمایش
+  // const selectedMonthLabel = persianMonth
+  //   ? persianMonths.find((m) => m.value === persianMonth)?.label
+  //   : "";
 
   return (
     <div className={`w-full max-w-md mx-auto ${className}`}>
@@ -313,12 +326,6 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
           onChange={(e) => handlePersianChange("year", e.target.value)}
           disabled={disabled}
           className={selectClassName}
-          style={{
-            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "left 10px center",
-            backgroundSize: "16px",
-          }}
         >
           <option value="" className="bg-gray-800 text-white">
             سال
@@ -335,12 +342,6 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
           onChange={(e) => handlePersianChange("month", e.target.value)}
           disabled={disabled}
           className={selectClassName}
-          style={{
-            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "left 10px center",
-            backgroundSize: "16px",
-          }}
         >
           <option value="" className="bg-gray-800 text-white">
             ماه
@@ -361,12 +362,6 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
           onChange={(e) => handlePersianChange("day", e.target.value)}
           disabled={disabled || !persianMonth || !persianYear}
           className={selectClassName}
-          style={{
-            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "left 10px center",
-            backgroundSize: "16px",
-          }}
         >
           <option value="" className="bg-gray-800 text-white">
             روز
@@ -379,13 +374,16 @@ const GlassBirthdayPicker: React.FC<BirthdayPickerProps> = ({
         </select>
       </div>
 
-      {/* نمایش تاریخ انتخاب شده به صورت فارسی */}
-      {selectedDate && (
+      {/* ✅ نمایش تاریخ انتخاب شده به صورت فارسی با نام ماه */}
+      {/* {selectedDate && selectedMonthLabel && (
         <div className="mt-3 text-center text-white/70 text-sm">
-          تاریخ انتخاب شده:{" "}
-          <span className="text-white font-medium">{selectedDate}</span>
+          تاریخ انتخاب شده:
+          <span className="text-white font-medium">
+            {toPersianDigits(persianDay)} {selectedMonthLabel}{" "}
+            {toPersianDigits(persianYear)}
+          </span>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

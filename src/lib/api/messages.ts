@@ -10,6 +10,7 @@ export interface Message {
   project_type: string;
   project_description: string;
   is_read: boolean;
+  is_replied: boolean;
   created_at: string;
   updated_at: string;
   reply?: string;
@@ -27,7 +28,10 @@ export interface CreateMessageRequest {
 export interface ReplyMessageRequest {
   reply: string;
 }
-
+export interface statusMessage {
+  is_read: boolean;
+  is_replied: boolean;
+}
 export interface MessagesResponse {
   total: number;
   page: number;
@@ -148,6 +152,14 @@ export const messagesAPI = {
         headers: { Authorization: `Bearer ${token}` },
       },
     );
+    return response.data;
+  },
+
+  status: async (id: string, data: statusMessage): Promise<Message> => {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.patch(`/messages/${id}/status`, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 };

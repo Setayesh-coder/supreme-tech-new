@@ -8,9 +8,16 @@ export interface Course {
   description?: string;
   cover_image?: string;
   price: number;
+  orginal_price: number;
+  discount_value: number;
+  discount_type: string;
   duration_hours?: number;
   instructor_name?: string;
   is_active: boolean;
+  registration_start_date: string;
+  registration_end_date: string;
+  class_start_date: string;
+
   event_id?: string;
   event?: {
     id: string;
@@ -26,8 +33,12 @@ export interface CourseCreate {
   description?: string;
   cover_image?: string;
   price?: number;
+  orginal_price: number;
   duration_hours?: number;
   instructor_name?: string;
+  registration_start_date: string;
+  registration_end_date: string;
+  class_start_date: string;
   is_active?: boolean;
   event_id?: string;
 }
@@ -38,7 +49,11 @@ export interface CourseUpdate {
   description?: string;
   cover_image?: string;
   price?: number;
+  orginal_price: number;
   duration_hours?: number;
+  registration_start_date: string;
+  registration_end_date: string;
+  class_start_date: string;
   instructor_name?: string;
   is_active?: boolean;
   event_id?: string;

@@ -22,6 +22,40 @@ const InstagramIcon = () => (
   </svg>
 );
 
+// لیست سرویس‌ها با لینک‌های کامل
+const servicesData = [
+  {
+    id: 1,
+    title: "AI Agents سفارشی",
+    link: "/blog/ایجنت-هوشمند-ai-agent-چیست؟-اتوماسیون-پیشرفته-و-کاهش-هزینههای-سازمان",
+  },
+  {
+    id: 2,
+    title: "هوش مصنوعی پیشرفته",
+    link: "/blog/کاربردهای-یادگیری-عمیق-و-پردازش-زبان-طبیعی-nlp-در-حل-چالشهای-واقعی-کسبوکارها",
+  },
+  {
+    id: 3,
+    title: "توسعه نرم‌افزار",
+    link: "/blog/راهنمای-انتخاب-پشته-فناوری-tech-stack-برای-توسعه-سایتها-و-سامانههای-مدرن",
+  },
+  {
+    id: 4,
+    title: "زیرساخت ابری",
+    link: "/blog/اهمیت-استقرار-ابری-و-معماری-مقیاسپذیر-در-بنچمارک-پروژههای-نرمافزاری-و-هوش-مصنوعی",
+  },
+  {
+    id: 5,
+    title: "دوره‌های آموزشی",
+    link: "/blog/نقشه-راه-یادگیری-برنامهنویسی-و-هوش-مصنوعی؛-از-صفر-تا-ورود-به-بازار-کار",
+  },
+  {
+    id: 6,
+    title: "مشاوره تخصصی",
+    link: "/blog/نقشه-راه-تحول-دیجیتال؛-چگونه-کسبوکارهای-سنتی-را-به-سامانههای-هوشمند-مجهز-کنیم؟",
+  },
+];
+
 export default function Footer() {
   const { settings, loading } = useSettings();
 
@@ -106,30 +140,21 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* خدمات */}
+          {/* خدمات با لینک‌های واقعی */}
           <div className="text-center">
             <h4 className="font-semibold text-white mb-2 md:mb-4 text-xs md:text-base">
               خدمات
             </h4>
             <div className="space-y-1 md:space-y-2">
-              <p className="text-[9px] md:text-sm text-gray-500">
-                AI Agents سفارشی
-              </p>
-              <p className="text-[9px] md:text-sm text-gray-500">
-                هوش مصنوعی پیشرفته
-              </p>
-              <p className="text-[9px] md:text-sm text-gray-500">
-                توسعه نرم‌افزار
-              </p>
-              <p className="text-[9px] md:text-sm text-gray-500">
-                زیرساخت ابری
-              </p>
-              <p className="text-[9px] md:text-sm text-gray-500">
-                دوره‌های آموزشی
-              </p>
-              <p className="text-[9px] md:text-sm text-gray-500">
-                مشاوره تخصصی
-              </p>
+              {servicesData.map((service) => (
+                <Link
+                  key={service.id}
+                  to={service.link}
+                  className="block text-[9px] md:text-sm text-gray-500 hover:text-blue-400 transition"
+                >
+                  {service.title}
+                </Link>
+              ))}
             </div>
           </div>
 
