@@ -5,21 +5,38 @@ import { Trash2, Calendar, Wallet, ShoppingCart } from "lucide-react";
 import type { DisplayCartItem } from "../../types/cart";
 
 interface CartItemProps {
-  item: DisplayCartItem;
+  item: Partial<DisplayCartItem> & {
+    id?: string;
+    enrollment_id?: string;
+    course_title?: string;
+    final_price?: number;
+  };
   onRemove: () => void;
   isRemoving: boolean;
 }
 
-// ✅ export کردن با نام CartItemComponent
 export const CartItemComponent: React.FC<CartItemProps> = ({
-  item,
+  item = {},
   onRemove,
   isRemoving,
 }) => {
-  const formatPrice = (price: number) => {
-    if (price === 0) return "رایگان";
-    return `${price.toLocaleString()} تومان`;
+  const formatPrice = (price: any) => {
+    // ✅ بررسی کامل
+    if (price === undefined || price === null) return "۰ تومان";
+    const numPrice = Number(price);
+    if (isNaN(numPrice)) return "۰ تومان";
+    if (numPrice === 0) return "رایگان";
+    return `${numPrice.toLocaleString("fa-IR")} تومان`;
   };
+
+  // ✅ استخراج با مقدار پیش‌فرض
+  const title = item?.title || item?.course_title || "دوره آموزشی";
+  const price = item?.price ?? item?.final_price ?? 0;
+  const originalPrice = item?.original_price ?? 0;
+  const discount = item?.discount ?? Math.max(0, originalPrice - price);
+  const image = item?.image || "";
+  const date = item?.date || new Date().toISOString();
+  //   const id = item?.id || item?.enrollment_id || "";
 
   return (
     <LiquidGlassCard
@@ -29,12 +46,16 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
       glowIntensity="sm"
     >
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        {/* تصویر */}
         <div className="w-full md:w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
-          {item.image ? (
+          {image ? (
             <img
-              src={item.image}
-              alt={item.title}
+              src={image}
+              alt={title}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -43,27 +64,27 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
           )}
         </div>
 
+        {/* اطلاعات */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-bold text-white truncate">
-            {item.title}
-          </h3>
+          <h3 className="text-base font-bold text-white truncate">{title}</h3>
           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-400">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {new Date(item.date).toLocaleDateString("fa-IR")}
+              {date ? new Date(date).toLocaleDateString("fa-IR") : "نامشخص"}
             </span>
             <span className="flex items-center gap-1 text-blue-400 font-medium">
               <Wallet className="w-3 h-3" />
-              {formatPrice(item.price)}
+              {formatPrice(price)}
             </span>
-            {item.discount > 0 && (
+            {discount > 0 && (
               <span className="text-green-400 text-xs">
-                {formatPrice(item.discount)} تخفیف
+                {formatPrice(discount)} تخفیف
               </span>
             )}
           </div>
         </div>
 
+        {/* دکمه حذف */}
         <button
           onClick={onRemove}
           disabled={isRemoving}
@@ -76,5 +97,4 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
   );
 };
 
-// ✅ export پیش‌فرض برای سازگاری با کدهای قدیمی
 export default CartItemComponent;

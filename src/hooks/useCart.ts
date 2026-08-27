@@ -5,24 +5,38 @@ import { toast } from "./use-toast";
 import type { CartResponse, DisplayCartItem } from "../types/cart";
 
 // ✅ تبدیل داده به فرمت نمایش
-const toDisplayCart = (cart: CartResponse): DisplayCartItem[] => {
-  return (cart.items || []).map((item) => ({
-    id: item.id,
-    enrollment_id: item.enrollment_id,
-    course_id: item.course_id,
-    title: item.course_title,
-    slug: item.course?.slug || "",
-    price: item.final_price || 0,
-    original_price: item.original_price || 0,
-    discount: (item.original_price || 0) - (item.final_price || 0),
-    image: item.course?.cover_image || "",
-    date: item.created_at || new Date().toISOString(),
-    status: "PENDING" as const,
-  }));
-};
-
-// ✅ هوک اصلی سبد خرید
 // src/hooks/useCart.ts
+
+// ✅ تبدیل داده به فرمت نمایش با مقدار پیش‌فرض
+const toDisplayCart = (cart: CartResponse): DisplayCartItem[] => {
+  return (cart.items || []).map((item) => {
+    // ✅ استفاده از ?? برای مقدار پیش‌فرض
+    const title = item.course_title || item.course?.title || "دوره آموزشی";
+
+    const price =
+      item.final_price ?? item.discounted_price ?? item.applied_price ?? 0;
+
+    const originalPrice = item.original_price ?? 0;
+
+    const image = item.course?.cover_image || "";
+
+    const date = item.created_at || new Date().toISOString();
+
+    return {
+      id: item.id || item.enrollment_id || `temp-${Date.now()}`,
+      enrollment_id: item.enrollment_id || item.id || `temp-${Date.now()}`,
+      course_id: item.course_id || "",
+      title: title,
+      slug: item.course?.slug || "",
+      price: price,
+      original_price: originalPrice,
+      discount: Math.max(0, originalPrice - price),
+      image: image,
+      date: date,
+      status: "PENDING" as const,
+    };
+  });
+};
 export const useCart = () => {
   const queryClient = useQueryClient();
   const isLoggedIn = !!localStorage.getItem("token");
