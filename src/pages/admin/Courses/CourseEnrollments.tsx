@@ -21,8 +21,8 @@ import {
   Clock,
   X,
   BookOpen,
-  // Check,
   Timer,
+  Eye,
 } from "lucide-react";
 import { toast } from "../../../hooks/use-toast";
 
@@ -44,6 +44,11 @@ interface Enrollment {
   paymentStatus?: "PAID" | "UNPAID" | "PENDING" | "WAITING_VERIFY";
   course_id?: string;
   event_id?: string;
+  amount?: number;
+  price?: number;
+  tracking_code?: string;
+  receipt_image_url?: string;
+  payment_method?: string;
 }
 
 // ✅ تایپ دوره
@@ -128,10 +133,10 @@ export default function CourseEnrollments() {
     try {
       await enrollmentsAPI.updateStatus(enrollmentId, "CONFIRMED");
       await fetchData();
-      toast.success(" پرداخت با موفقیت تایید شد!");
+      toast.success("✅ پرداخت با موفقیت تایید شد!");
     } catch (err) {
       console.error("❌ خطا در تایید پرداخت:", err);
-      toast.error(" خطا در تایید پرداخت");
+      toast.error("❌ خطا در تایید پرداخت");
     } finally {
       setUpdating(null);
     }
@@ -145,10 +150,10 @@ export default function CourseEnrollments() {
     try {
       await enrollmentsAPI.updateStatus(enrollmentId, "CANCELLED");
       await fetchData();
-      toast.success(" پرداخت با موفقیت رد شد!");
+      toast.success("✅ پرداخت با موفقیت رد شد!");
     } catch (err) {
       console.error("❌ خطا در رد پرداخت:", err);
-      toast.error(" خطا در رد پرداخت");
+      toast.error("❌ خطا در رد پرداخت");
     } finally {
       setUpdating(null);
     }
@@ -236,11 +241,16 @@ export default function CourseEnrollments() {
               paymentStatus: paymentStatus,
               course_id: item.course_id || item.courseId,
               event_id: item.event_id || item.eventId,
+              amount: item.amount || item.price || 0,
+              price: item.price || item.amount || 0,
+              tracking_code: item.tracking_code,
+              receipt_image_url: item.receipt_image_url,
+              payment_method: item.payment_method,
             };
           }),
         );
 
-        // ✅ ✅ فقط کاربرانی که پرداخت کامل کرده‌اند (CONFIRMED یا PAID)
+        // ✅ فقط کاربرانی که پرداخت کامل کرده‌اند (CONFIRMED یا PAID)
         const confirmedEnrollments = mappedEnrollments.filter(
           (enrollment) =>
             enrollment.status === "CONFIRMED" ||
@@ -389,7 +399,6 @@ export default function CourseEnrollments() {
   }
 
   const enrolledCount = enrollments.length;
-  // const capacity = course.capacity || "نامحدود";
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -423,7 +432,7 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              toast.info(" قابلیت خروجی گرفتن در حال توسعه است...");
+              toast.info("📥 قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
             خروجی Excel
@@ -512,8 +521,6 @@ export default function CourseEnrollments() {
       ) : (
         <div className="space-y-3">
           {filteredEnrollments.map((enrollment) => {
-            // const isUpdating = updating === enrollment.id;
-
             return (
               <LiquidGlassCard
                 key={enrollment.id}
@@ -580,24 +587,12 @@ export default function CourseEnrollments() {
                     <GlassButton
                       variant="secondary"
                       size="sm"
-                      icon={<User className="w-3.5 h-3.5" />}
+                      icon={<Eye className="w-3.5 h-3.5" />}
                       iconPosition="left"
                       onClick={() => handleViewPaymentDetails(enrollment)}
                     >
                       جزئیات
                     </GlassButton>
-
-                    {/* دکمه مشاهده کاربر */}
-                    <Link to={`/admin/users/${enrollment.user_id}`}>
-                      <GlassButton
-                        variant="secondary"
-                        size="sm"
-                        icon={<User className="w-3.5 h-3.5" />}
-                        iconPosition="left"
-                      >
-                        کاربر
-                      </GlassButton>
-                    </Link>
                   </div>
                 </div>
               </LiquidGlassCard>
@@ -613,9 +608,25 @@ export default function CourseEnrollments() {
           setShowPaymentModal(false);
           setSelectedEnrollment(null);
         }}
-        enrollment={selectedEnrollment!}
-        coursePrice={course?.price}
-        courseTitle={course?.title}
+        enrollment={{
+          id: selectedEnrollment?.id || "",
+          user: {
+            name: selectedEnrollment?.user?.name || "",
+            email: selectedEnrollment?.user?.email || "",
+            phone: selectedEnrollment?.user?.phone || "",
+          },
+          created_at: selectedEnrollment?.created_at || "",
+          status: selectedEnrollment?.status || "",
+          paymentStatus: selectedEnrollment?.paymentStatus,
+          course_id: selectedEnrollment?.course_id,
+          event_id: selectedEnrollment?.event_id,
+          tracking_code: selectedEnrollment?.tracking_code,
+          receipt_image_url: selectedEnrollment?.receipt_image_url,
+          payment_method: selectedEnrollment?.payment_method,
+          amount: selectedEnrollment?.amount || selectedEnrollment?.price || 0,
+        }}
+        coursePrice={course?.price || 0}
+        courseTitle={course?.title || "دوره آموزشی"}
         onConfirm={handleConfirmFromModal}
         onReject={handleRejectFromModal}
       />

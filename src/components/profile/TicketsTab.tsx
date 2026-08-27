@@ -15,12 +15,10 @@ import {
   Send,
   X,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
-import {
-  type Ticket as TicketType,
-  type TicketMessage,
-  ticketsAPI,
-} from "../../lib/api/tickets";
+import { ticketsAPI } from "../../lib/api/tickets";
+import type { Ticket as TicketType, TicketMessage } from "../../types/ticket";
 import { toast } from "../../hooks/use-toast";
 
 interface TicketsTabProps {
@@ -46,54 +44,66 @@ export function TicketsTab({
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
 
+  // ✅ وضعیت‌های تیکت (هماهنگ با بک‌اند)
   const getStatusLabel = (status: string) => {
     const labels: Record<
       string,
       { label: string; icon: React.ReactElement; color: string }
     > = {
-      OPEN: {
+      open: {
         label: "باز",
         icon: <AlertCircle size={14} />,
-        color: "text-blue-400",
+        color: "text-green-400",
       },
-      PENDING: {
+      pending: {
         label: "در انتظار",
         icon: <Clock size={14} />,
         color: "text-yellow-400",
       },
-      ANSWERED: {
+      answered: {
         label: "پاسخ داده شده",
         icon: <CheckCircle size={14} />,
-        color: "text-green-400",
+        color: "text-blue-400",
       },
-      CLOSED: {
+      in_progress: {
+        label: "در حال بررسی",
+        icon: <Clock size={14} />,
+        color: "text-orange-400",
+      },
+      closed: {
         label: "بسته شده",
         icon: <XCircle size={14} />,
         color: "text-gray-400",
       },
     };
-    return labels[status] || labels.OPEN;
+    return labels[status?.toLowerCase()] || labels.open;
   };
 
+  // ✅ اولویت‌های تیکت (هماهنگ با بک‌اند)
   const getPriorityLabel = (priority: string) => {
     const labels: Record<string, { label: string; color: string }> = {
       LOW: { label: "کم", color: "text-blue-400" },
       MEDIUM: { label: "متوسط", color: "text-yellow-400" },
       HIGH: { label: "بالا", color: "text-orange-400" },
       URGENT: { label: "فوری", color: "text-red-400" },
+      CRITICAL: { label: "بحرانی", color: "text-red-600" },
     };
-    return labels[priority] || labels.LOW;
+    return labels[priority?.toUpperCase()] || labels.MEDIUM;
   };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      return new Date(dateString).toLocaleDateString("fa-IR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
   };
 
   // ✅ دریافت پیام‌های تیکت از سرور
@@ -105,6 +115,7 @@ export function TicketsTab({
       return ticket;
     } catch (err) {
       console.error("❌ خطا در دریافت پیام‌ها:", err);
+      toast.error("خطا در دریافت پیام‌های تیکت");
       return null;
     } finally {
       setMessagesLoading(false);
@@ -124,14 +135,16 @@ export function TicketsTab({
     }
   };
 
-  // ✅ ارسال پیام جدید
+  // ✅ ارسال پیام جدید (با sendMessage)
   const handleSendMessage = async () => {
     if (!reply.trim() || !selectedTicket) return;
 
     setSending(true);
     try {
-      // ارسال پیام به سرور
-      const newMessage = await ticketsAPI.addMessage(selectedTicket.id, reply);
+      // ✅ استفاده از sendMessage به جای addMessage
+      const newMessage = await ticketsAPI.sendMessage(selectedTicket.id, {
+        message: reply.trim(),
+      });
       console.log("✅ پیام ارسال شد:", newMessage);
 
       // ✅ به‌روزرسانی لیست پیام‌ها با پیام جدید
@@ -152,9 +165,10 @@ export function TicketsTab({
       if (onRefresh) {
         onRefresh();
       }
-    } catch (err) {
-      console.error(" خطا در ارسال پیام:", err);
-      toast.error("خطا در ارسال پیام. لطفاً دوباره تلاش کنید.");
+      toast.success("✅ پیام با موفقیت ارسال شد");
+    } catch (err: any) {
+      console.error("❌ خطا در ارسال پیام:", err);
+      toast.error(err.response?.data?.detail || "خطا در ارسال پیام");
     } finally {
       setSending(false);
     }
@@ -172,6 +186,7 @@ export function TicketsTab({
   const handleRefreshMessages = async () => {
     if (!selectedTicket) return;
     await fetchTicketMessages(selectedTicket.id);
+    toast.success("✅ پیام‌ها به‌روزرسانی شدند");
   };
 
   if (loading) {
@@ -183,7 +198,8 @@ export function TicketsTab({
         glowIntensity="md"
       >
         <div className="flex justify-center items-center py-12">
-          <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+          <span className="text-gray-400 mr-3">در حال بارگذاری تیکت‌ها...</span>
         </div>
       </LiquidGlassCard>
     );
@@ -231,7 +247,7 @@ export function TicketsTab({
 
         {tickets.length === 0 ? (
           <div className="text-center py-12">
-            <Ticket className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+            <Ticket className="w-16 h-16 mx-auto mb-4 text-white/20" />
             <p className="text-gray-400 mb-2">هنوز تیکتی ثبت نکرده‌اید</p>
             <p className="text-gray-500 text-sm">
               برای دریافت پشتیبانی، یک تیکت جدید ثبت کنید
@@ -242,6 +258,7 @@ export function TicketsTab({
             {tickets.map((ticket) => {
               const status = getStatusLabel(ticket.status);
               const priority = getPriorityLabel(ticket.priority);
+              const messageCount = ticket.messages?.length || 0;
 
               return (
                 <LiquidGlassCard
@@ -258,7 +275,7 @@ export function TicketsTab({
                         <h3 className="text-base font-bold text-white truncate">
                           {ticket.title}
                         </h3>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`text-xs font-medium ${priority.color} px-2 py-1 rounded-full bg-white/5`}
                           >
@@ -284,11 +301,10 @@ export function TicketsTab({
                             {ticket.department}
                           </span>
                         )}
-                        {/* تعداد پیام‌ها */}
-                        {ticket.messages && ticket.messages.length > 0 && (
+                        {messageCount > 0 && (
                           <span className="flex items-center gap-1 text-blue-400">
                             <Send className="w-3 h-3" />
-                            {ticket.messages.length} پیام
+                            {messageCount} پیام
                           </span>
                         )}
                       </div>
@@ -387,29 +403,32 @@ export function TicketsTab({
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 flex gap-4 mb-4 pb-4 border-b border-white/10 flex-wrap">
+              <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-white/10">
                 <span
-                  className={`px-2 py-1 rounded-full ${getStatusLabel(selectedTicket.status).color} bg-white/5`}
+                  className={`px-2 py-1 rounded-full text-xs ${getStatusLabel(selectedTicket.status).color} bg-white/5`}
                 >
                   {getStatusLabel(selectedTicket.status).label}
                 </span>
                 <span
-                  className={`px-2 py-1 rounded-full ${getPriorityLabel(selectedTicket.priority).color} bg-white/5`}
+                  className={`px-2 py-1 rounded-full text-xs ${getPriorityLabel(selectedTicket.priority).color} bg-white/5`}
                 >
                   {getPriorityLabel(selectedTicket.priority).label}
                 </span>
                 {selectedTicket.department && (
-                  <span className="px-2 py-1 rounded-full bg-white/5 text-gray-400">
+                  <span className="px-2 py-1 rounded-full text-xs bg-white/5 text-gray-400">
                     {selectedTicket.department}
                   </span>
                 )}
+                <span className="px-2 py-1 rounded-full text-xs bg-white/5 text-gray-400">
+                  {selectedTicket.creator?.name || "کاربر"}
+                </span>
               </div>
 
               {/* پیام‌ها */}
               <div className="space-y-3 max-h-60 overflow-y-auto mb-4 bg-white/5 rounded-xl p-4">
                 {messagesLoading ? (
                   <div className="flex justify-center items-center py-8">
-                    <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                    <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
                   </div>
                 ) : ticketMessages.length === 0 ? (
                   <p className="text-center text-white/40 text-sm py-4">
@@ -417,7 +436,11 @@ export function TicketsTab({
                   </p>
                 ) : (
                   ticketMessages.map((msg) => {
-                    const isAdmin = msg.sender_id !== selectedTicket.creator_id;
+                    // ✅ استفاده از user_id به جای sender_id
+                    const isAdmin = msg.user_id !== selectedTicket.creator_id;
+                    const senderName =
+                      msg.user?.name || (isAdmin ? "پشتیبانی" : "شما");
+
                     return (
                       <div
                         key={msg.id}
@@ -427,25 +450,25 @@ export function TicketsTab({
                             : "bg-white/5 mr-auto max-w-[80%]"
                         }`}
                       >
-                        <p className="text-white text-sm break-words">
-                          {msg.message}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-white/30">
-                            {isAdmin ? "👤 پشتیبانی" : "👤 شما"}
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-white/60">
+                            {senderName}
                           </span>
                           <span className="text-xs text-white/30">
                             {formatDate(msg.created_at)}
                           </span>
                         </div>
+                        <p className="text-white text-sm break-words whitespace-pre-wrap">
+                          {msg.message}
+                        </p>
                       </div>
                     );
                   })
                 )}
               </div>
 
-              {/* ارسال پیام */}
-              {selectedTicket.status !== "CLOSED" && (
+              {/* ارسال پیام - بررسی با lowercase */}
+              {selectedTicket.status?.toLowerCase() !== "closed" && (
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -472,7 +495,7 @@ export function TicketsTab({
                 </div>
               )}
 
-              {selectedTicket.status === "CLOSED" && (
+              {selectedTicket.status?.toLowerCase() === "closed" && (
                 <p className="text-center text-gray-500 text-sm py-4">
                   این تیکت بسته شده است و نمی‌توانید پیام جدیدی ارسال کنید.
                 </p>

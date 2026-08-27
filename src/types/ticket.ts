@@ -14,6 +14,7 @@ export interface Ticket {
   };
   members?: string[] | TicketMember[];
   messages?: TicketMessage[];
+  description?: string;
   created_at: string;
   updated_at: string;
 }

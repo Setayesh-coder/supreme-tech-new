@@ -14,11 +14,13 @@ import {
   Loader2,
   CreditCard,
   Bot,
+  User,
+  Wallet,
 } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { paymentsAPI } from "../../lib/api/payment";
-import { toast } from "../../hooks/use-toast";
+// import { toast } from "../../hooks/use-toast";
 
 interface PaymentDetailsModalProps {
   isOpen: boolean;
@@ -35,13 +37,13 @@ interface PaymentDetailsModalProps {
     paymentStatus?: string;
     course_id?: string;
     event_id?: string;
-    tracking_code?: string; // ✅ nullable نباشه
-    receipt_image_url?: string; // ✅ nullable نباشه
+    tracking_code?: string | null;
+    receipt_image_url?: string | null;
     payment_method?: "card_to_card" | "bale" | string;
     amount: number;
   };
-  coursePrice: number;
-  courseTitle: string;
+  coursePrice?: number;
+  courseTitle?: string;
   onConfirm: (enrollmentId: string) => void;
   onReject: (enrollmentId: string) => void;
 }
@@ -50,8 +52,8 @@ export default function PaymentDetailsModal({
   isOpen,
   onClose,
   enrollment,
-  coursePrice,
-  courseTitle,
+  coursePrice = 0,
+  courseTitle = "دوره آموزشی",
   onConfirm,
   onReject,
 }: PaymentDetailsModalProps) {
@@ -95,7 +97,7 @@ export default function PaymentDetailsModal({
       const details = await paymentsAPI.getPaymentByEnrollment(enrollment.id);
       setPaymentDetails(details);
     } catch (err: any) {
-      toast.error(" خطا در دریافت جزئیات پرداخت:", err);
+      console.error("❌ خطا در دریافت جزئیات پرداخت:", err);
       // اگر API خطا داد، از داده‌های موجود استفاده کن
       setPaymentDetails({
         id: enrollment.id,
@@ -116,6 +118,7 @@ export default function PaymentDetailsModal({
 
   if (!isOpen) return null;
 
+  // ✅ وضعیت‌های تیکت (هماهنگ با بک‌اند)
   const getStatusLabel = (status: string) => {
     const labels: Record<string, { label: string; color: string; icon: any }> =
       {
@@ -136,6 +139,16 @@ export default function PaymentDetailsModal({
           color: "text-yellow-400",
           icon: Clock,
         },
+        PAID: {
+          label: "پرداخت شده",
+          color: "text-green-400",
+          icon: CheckCircle,
+        },
+        UNPAID: {
+          label: "پرداخت نشده",
+          color: "text-red-400",
+          icon: XCircle,
+        },
       };
     return labels[status] || labels.PENDING;
   };
@@ -153,17 +166,25 @@ export default function PaymentDetailsModal({
   const status = getStatusLabel(enrollment.status);
   const paymentStatus = getPaymentStatusLabel(enrollment.paymentStatus);
   const StatusIcon = status.icon;
-  const isWaitingVerify = enrollment.paymentStatus === "WAITING_VERIFY";
+  const isWaitingVerify =
+    enrollment.paymentStatus === "WAITING_VERIFY" ||
+    enrollment.status === "WAITING" ||
+    enrollment.status === "PENDING";
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) return "نامشخص";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("fa-IR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "نامشخص";
+    }
   };
 
   const formatPrice = (price?: number) => {
@@ -173,7 +194,7 @@ export default function PaymentDetailsModal({
   };
 
   const getPaymentMethodLabel = (method?: string) => {
-    switch (method) {
+    switch (method?.toLowerCase()) {
       case "card_to_card":
         return "کارت به کارت";
       case "bale":
@@ -184,13 +205,13 @@ export default function PaymentDetailsModal({
   };
 
   const getPaymentMethodIcon = (method?: string) => {
-    switch (method) {
+    switch (method?.toLowerCase()) {
       case "card_to_card":
         return <CreditCard className="w-4 h-4" />;
       case "bale":
         return <Bot className="w-4 h-4" />;
       default:
-        return <CreditCard className="w-4 h-4" />;
+        return <Wallet className="w-4 h-4" />;
     }
   };
 
@@ -252,7 +273,8 @@ export default function PaymentDetailsModal({
 
               {/* اطلاعات کاربر */}
               <div className="bg-white/5 rounded-xl p-4 space-y-2">
-                <h3 className="text-sm font-medium text-gray-400 mb-2">
+                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <User className="w-4 h-4" />
                   اطلاعات کاربر
                 </h3>
                 <div className="flex items-center gap-3">
@@ -312,7 +334,8 @@ export default function PaymentDetailsModal({
                   </div>
 
                   {/* کد پیگیری (فقط کارت به کارت) */}
-                  {paymentDetails?.payment_method === "card_to_card" &&
+                  {paymentDetails?.payment_method?.toLowerCase() ===
+                    "card_to_card" &&
                     paymentDetails?.tracking_code && (
                       <div className="col-span-2">
                         <p className="text-gray-500">کد پیگیری</p>
@@ -323,7 +346,7 @@ export default function PaymentDetailsModal({
                     )}
 
                   {/* شناسه تراکنش (فقط بله) */}
-                  {paymentDetails?.payment_method === "bale" &&
+                  {paymentDetails?.payment_method?.toLowerCase() === "bale" &&
                     paymentDetails?.transaction_id && (
                       <div className="col-span-2">
                         <p className="text-gray-500">شناسه تراکنش</p>
@@ -336,7 +359,8 @@ export default function PaymentDetailsModal({
               </div>
 
               {/* تصویر رسید (فقط کارت به کارت) */}
-              {paymentDetails?.payment_method === "card_to_card" &&
+              {paymentDetails?.payment_method?.toLowerCase() ===
+                "card_to_card" &&
                 paymentDetails?.receipt_image_url && (
                   <div className="bg-white/5 rounded-xl p-4">
                     <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">

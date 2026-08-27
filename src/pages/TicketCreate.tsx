@@ -46,7 +46,7 @@ export default function TicketCreate() {
 
       await ticketsAPI.create({
         title: formData.title,
-        message: formData.message,
+        description: formData.message,
         department: formData.department || undefined,
         priority: formData.priority,
       });

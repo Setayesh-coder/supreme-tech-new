@@ -38,7 +38,7 @@ export default function BalePayment({
         amount: amount,
       });
 
-      const result = await paymentsAPI.baleInitiate({
+      const result = await paymentsAPI.balePayment({
         enrollment_id: enrollmentId,
         amount: amount,
         description: `پرداخت دوره`,

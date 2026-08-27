@@ -95,7 +95,7 @@ export default function CardToCardPayment({
         coupon_code: couponCode,
       });
 
-      await paymentsAPI.cardToCard({
+      await paymentsAPI.cardToCardPayment({
         enrollment_id: enrollmentId,
         tracking_code: cleanTrackingCode,
         receipt_image_url: imageUrl,

@@ -1,12 +1,15 @@
 // src/components/Cart/CartTab.tsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
+// import { useNavigate } from "react-router-dom";
 import { useCart } from "../../hooks/useCart";
-import { CartItem } from "./CartItem";
-import { CartSummary } from "./CartSummary";
+import { CartItemComponent } from "./CartItem"; // ✅ تغییر: export کردن CartItemComponent
 import { CouponInput } from "./CouponInput";
+import { CartSummary } from "./CartSummary";
 import { EmptyCart } from "./EmptyCart";
 import { LoadingSkeleton } from "../skeletons/LoadingSkeleton";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
+// ✅ مسیر درست برای PaymentMethodModal
+import { PaymentMethodModal } from "../payment/PaymentMethodModal";
 import { toast } from "../../hooks/use-toast";
 import { ShoppingCart, RefreshCw } from "lucide-react";
 
@@ -25,6 +28,7 @@ export const CartTab: React.FC<CartTabProps> = ({
   //   standalone = false,
   onRemoveFromCart,
 }) => {
+  //   const navigate = useNavigate();
   const {
     displayItems,
     totalPrice,
@@ -42,18 +46,19 @@ export const CartTab: React.FC<CartTabProps> = ({
   } = useCart();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [, setLocalItems] = useState<any[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [, setShowBalePayment] = useState(false);
+  const [, setShowCardToCard] = useState(false);
+  const [, setPaymentData] = useState<{
+    enrollmentId: string;
+    amount: number;
+    title: string;
+  } | null>(null);
 
-  // ✅ استفاده از داده‌های خارجی یا داخلی
   const items = externalCart !== undefined ? externalCart : displayItems;
   const loading = externalLoading !== undefined ? externalLoading : isLoading;
 
-  // ✅ وقتی items تغییر میکنه، localItems رو به‌روز کن
-  useEffect(() => {
-    setLocalItems(items);
-  }, [items]);
-
-  // ✅ رفرش دستی با به‌روزرسانی کامل
+  // ✅ رفرش دستی
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -67,24 +72,19 @@ export const CartTab: React.FC<CartTabProps> = ({
     }
   }, [refetch, onRefresh]);
 
-  // ✅ حذف آیتم با رفرش اجباری
+  // ✅ حذف آیتم
   const handleRemove = useCallback(
     async (id: string) => {
       try {
         if (onRemoveFromCart) {
           await onRemoveFromCart(id);
         } else {
-          // ✅ حذف و سپس رفرش
-          await removeFromCart(id);
-          // ✅ بعد از حذف، رفرش کن
+          removeFromCart(id);
           await refetch();
         }
-
-        // ✅ اگر externalCart استفاده میشه، onRefresh رو صدا بزن
         if (externalCart !== undefined && onRefresh) {
           await onRefresh();
         }
-
         toast.success("✅ آیتم از سبد خرید حذف شد");
       } catch (error) {
         console.error("❌ خطا در حذف:", error);
@@ -98,8 +98,8 @@ export const CartTab: React.FC<CartTabProps> = ({
   const handleApplyCoupon = useCallback(
     async (code: string) => {
       try {
-        await applyCoupon({ code });
-        await refetch(); // ✅ بعد از اعمال، رفرش کن
+        applyCoupon({ code });
+        await refetch();
         if (onRefresh) await onRefresh();
       } catch (error) {
         console.error("❌ خطا در اعمال کد تخفیف:", error);
@@ -112,14 +112,78 @@ export const CartTab: React.FC<CartTabProps> = ({
   const handleRemoveCoupon = useCallback(async () => {
     if (couponCode) {
       try {
-        await removeCoupon({ code: couponCode });
-        await refetch(); // ✅ بعد از حذف، رفرش کن
+        removeCoupon({ code: couponCode });
+        await refetch();
         if (onRefresh) await onRefresh();
       } catch (error) {
         console.error("❌ خطا در حذف کد تخفیف:", error);
       }
     }
   }, [removeCoupon, couponCode, refetch, onRefresh]);
+
+  // ✅ باز کردن مودال انتخاب روش پرداخت
+  const handleOpenPaymentMethod = useCallback(() => {
+    if (items.length === 0) {
+      toast.warning("سبد خرید شما خالی است");
+      return;
+    }
+
+    const enrollmentIds = items
+      .map((item: any) => item.enrollment_id || item.id)
+      .filter(Boolean);
+
+    if (enrollmentIds.length === 0) {
+      toast.error("❌ شناسه ثبت‌نام یافت نشد");
+      return;
+    }
+
+    const enrollmentIdString = enrollmentIds.join(",");
+    const courseTitle = items.map((item: any) => item.title).join(" - ");
+
+    setPaymentData({
+      enrollmentId: enrollmentIdString,
+      amount: totalPrice,
+      title: courseTitle || `پرداخت ${items.length} دوره`,
+    });
+
+    setShowPaymentModal(true);
+  }, [items, totalPrice]);
+
+  // ✅ انتخاب روش پرداخت بله
+  const handleSelectBale = useCallback(() => {
+    setShowPaymentModal(false);
+    setShowBalePayment(true);
+  }, []);
+
+  // ✅ انتخاب روش کارت به کارت
+  const handleSelectCardToCard = useCallback(() => {
+    setShowPaymentModal(false);
+    setShowCardToCard(true);
+  }, []);
+
+  // ✅ بازگشت از پرداخت
+  //   const handlePaymentBack = useCallback(() => {
+  //     setShowBalePayment(false);
+  //     setShowCardToCard(false);
+  //     setPaymentData(null);
+  //     if (items.length > 0) {
+  //       setShowPaymentModal(true);
+  //     }
+  //   }, [items]);
+
+  // ✅ موفقیت در پرداخت
+  //   const handlePaymentSuccess = useCallback(async () => {
+  //     setShowBalePayment(false);
+  //     setShowCardToCard(false);
+  //     setShowPaymentModal(false);
+  //     setPaymentData(null);
+
+  //     await refetch();
+  //     if (onRefresh) await onRefresh();
+
+  //     toast.success("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
+  //     navigate("/profile");
+  //   }, [refetch, onRefresh, navigate]);
 
   // ✅ لودینگ
   if (loading) {
@@ -131,9 +195,11 @@ export const CartTab: React.FC<CartTabProps> = ({
     return <EmptyCart />;
   }
 
+  const isFree = totalPrice === 0 && items.length > 0;
+
   return (
     <div className="space-y-6">
-      {/* Header with Refresh */}
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <ShoppingCart className="w-5 h-5 text-orange-400" />
@@ -142,7 +208,6 @@ export const CartTab: React.FC<CartTabProps> = ({
             ({items.length} دوره)
           </span>
         </h2>
-
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -164,7 +229,7 @@ export const CartTab: React.FC<CartTabProps> = ({
       >
         <div className="space-y-3">
           {items.map((item: any) => (
-            <CartItem
+            <CartItemComponent
               key={item.id || item.enrollment_id}
               item={item}
               onRemove={() => handleRemove(item.enrollment_id || item.id)}
@@ -181,7 +246,6 @@ export const CartTab: React.FC<CartTabProps> = ({
         blurIntensity="lg"
         glowIntensity="md"
       >
-        {/* Coupon Section */}
         <CouponInput
           onApply={handleApplyCoupon}
           onRemove={handleRemoveCoupon}
@@ -189,18 +253,28 @@ export const CartTab: React.FC<CartTabProps> = ({
           currentCoupon={couponCode}
         />
 
-        {/* Summary */}
         <CartSummary
           totalOriginalPrice={totalOriginalPrice}
           totalDiscount={totalDiscount}
           couponDiscount={couponDiscount}
           totalPrice={totalPrice}
           totalItems={items.length}
-          onCheckout={() => {
-            toast.info("در حال انتقال به درگاه پرداخت...");
-          }}
+          onCheckout={handleOpenPaymentMethod}
         />
       </LiquidGlassCard>
+
+      {/* Payment Method Modal */}
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPaymentData(null);
+        }}
+        amount={totalPrice}
+        isFree={isFree}
+        onSelectBale={handleSelectBale}
+        onSelectCardToCard={handleSelectCardToCard}
+      />
     </div>
   );
 };

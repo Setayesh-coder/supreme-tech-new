@@ -1,148 +1,87 @@
 // src/lib/api/payment.ts
 import api from "./axios";
-import type {
-  CardToCardPaymentRequest,
-  BalePaymentRequest,
-  BalePaymentResponse,
-  Order,
-} from "../../types/cart";
+import type { Order } from "../../types/cart";
 
 export const paymentsAPI = {
   /**
    * 💳 ثبت رسید پرداخت کارت به کارت
-   * POST /api/v1/payments/card-to-card
    */
-  cardToCard: async (
-    data: CardToCardPaymentRequest,
-  ): Promise<{ message: string; status: string }> => {
+  cardToCardPayment: async (data: {
+    enrollment_id: string;
+    tracking_code: string;
+    receipt_image_url: string;
+    amount?: number;
+  }) => {
     try {
-      const token = localStorage.getItem("token") || "";
-
-      const response = await api.post(
-        "/payments/card-to-card",
-        {
-          enrollment_id: data.enrollment_id,
-          tracking_code: data.tracking_code,
-          receipt_image_url: data.receipt_image_url,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      const response = await api.post("/payments/card-to-card", data);
+      console.log("✅ رسید کارت به کارت ثبت شد:", response.data);
       return response.data;
-    } catch (error: any) {
-      console.error("❌ خطا در پرداخت کارت به کارت:", error);
+    } catch (error) {
+      console.error("❌ خطا در ثبت رسید کارت به کارت:", error);
       throw error;
     }
   },
 
   /**
    * 🤖 تولید لینک پرداخت ربات بله
-   * POST /api/v1/payments/ble/initiate
    */
-  baleInitiate: async (
-    data: BalePaymentRequest,
-  ): Promise<BalePaymentResponse> => {
+  balePayment: async (data: {
+    enrollment_id: string;
+    amount: number;
+    description?: string;
+  }) => {
     try {
-      const token = localStorage.getItem("token") || "";
-      const response = await api.post("/payments/ble/initiate", data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await api.post("/payments/ble/initiate", data);
+      console.log("✅ لینک پرداخت بله تولید شد:", response.data);
       return response.data;
-    } catch (error: any) {
-      console.error("❌ خطا در پرداخت بله:", error);
+    } catch (error) {
+      console.error("❌ خطا در تولید لینک پرداخت بله:", error);
       throw error;
     }
   },
 
   /**
-   * 📊 استعلام اطلاعات فاکتور توسط ربات
-   * GET /api/v1/payments/ble/checkout-info
+   * 📋 دریافت تمامی سفارشات (ادمین)
    */
-  baleCheckoutInfo: async (transactionId: string): Promise<any> => {
+  getOrders: async (): Promise<Order[]> => {
     try {
-      const token = localStorage.getItem("token") || "";
-      const response = await api.get(
-        `/payments/ble/checkout-info?transaction_id=${transactionId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const response = await api.get("/payments/orders");
+      console.log("📋 سفارشات دریافت شد:", response.data);
       return response.data;
-    } catch (error: any) {
-      console.error("❌ خطا در استعلام بله:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * 📋 دریافت جزئیات پرداخت بر اساس enrollment
-   * GET /api/v1/payments/enrollment/{enrollmentId}
-   * این متد برای نمایش جزئیات پرداخت در مودال ادمین استفاده می‌شود
-   */
-  getPaymentByEnrollment: async (enrollmentId: string): Promise<any> => {
-    try {
-      const token = localStorage.getItem("token") || "";
-      const response = await api.get(`/payments/enrollment/${enrollmentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error(`❌ خطا در دریافت جزئیات پرداخت ${enrollmentId}:`, error);
-
-      // اگر خطای 404 بود، یعنی پرداختی برای این enrollment وجود ندارد
-      if (error.response?.status === 404) {
-        return null;
-      }
-
-      throw error;
-    }
-  }, // src/lib/api/payment.ts
-
-  /**
-   * 📋 دریافت لیست تمام سفارشات (فقط ادمین)
-   * GET /api/v1/payments/orders
-   */
-  getOrders: async (params?: { status?: string }): Promise<Order[]> => {
-    try {
-      const token = localStorage.getItem("token") || "";
-      const response = await api.get("/payments/orders", {
-        params,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data || [];
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ خطا در دریافت سفارشات:", error);
-      if (error.response?.status === 404) {
-        return [];
-      }
       throw error;
     }
   },
 
   /**
-   * ✅ تایید یا رد سفارش (فقط ادمین)
-   * PATCH /api/v1/payments/orders/{order_id}/verify
+   * ✅ تایید یا رد سفارش (ادمین)
    */
   verifyOrder: async (orderId: string, approved: boolean): Promise<any> => {
     try {
-      const token = localStorage.getItem("token") || "";
-      const response = await api.patch(
-        `/payments/orders/${orderId}/verify`,
-        { approved },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      const response = await api.patch(`/payments/orders/${orderId}/verify`, {
+        approved,
+      });
+      console.log(
+        `✅ سفارش ${orderId} ${approved ? "تایید" : "رد"} شد:`,
+        response.data,
       );
       return response.data;
-    } catch (error: any) {
-      console.error(`❌ خطا در تایید سفارش ${orderId}:`, error);
+    } catch (error) {
+      console.error(`❌ خطا در تایید/رد سفارش ${orderId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 💳 دریافت جزئیات پرداخت بر اساس enrollment_id
+   */
+  getPaymentByEnrollment: async (enrollmentId: string): Promise<any> => {
+    try {
+      const response = await api.get(`/payments/enrollment/${enrollmentId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ خطا در دریافت جزئیات پرداخت ${enrollmentId}:`, error);
       throw error;
     }
   },

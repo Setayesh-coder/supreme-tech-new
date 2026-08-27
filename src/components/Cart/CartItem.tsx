@@ -10,7 +10,8 @@ interface CartItemProps {
   isRemoving: boolean;
 }
 
-export const CartItem: React.FC<CartItemProps> = ({
+// ✅ export کردن با نام CartItemComponent
+export const CartItemComponent: React.FC<CartItemProps> = ({
   item,
   onRemove,
   isRemoving,
@@ -28,7 +29,6 @@ export const CartItem: React.FC<CartItemProps> = ({
       glowIntensity="sm"
     >
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-        {/* Image */}
         <div className="w-full md:w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
           {item.image ? (
             <img
@@ -43,7 +43,6 @@ export const CartItem: React.FC<CartItemProps> = ({
           )}
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold text-white truncate">
             {item.title}
@@ -65,7 +64,6 @@ export const CartItem: React.FC<CartItemProps> = ({
           </div>
         </div>
 
-        {/* Actions */}
         <button
           onClick={onRemove}
           disabled={isRemoving}
@@ -77,3 +75,6 @@ export const CartItem: React.FC<CartItemProps> = ({
     </LiquidGlassCard>
   );
 };
+
+// ✅ export پیش‌فرض برای سازگاری با کدهای قدیمی
+export default CartItemComponent;

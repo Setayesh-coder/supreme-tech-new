@@ -29,7 +29,6 @@ export const CartSummary: React.FC<CartSummaryProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Price Details */}
       <div className="space-y-2">
         <div className="flex justify-between text-gray-400">
           <span>جمع کل</span>
@@ -56,7 +55,6 @@ export const CartSummary: React.FC<CartSummaryProps> = ({
         </div>
       </div>
 
-      {/* Checkout Button */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
         <div className="text-center sm:text-right">
           <p className="text-sm text-gray-400">تعداد دوره‌ها</p>
@@ -76,7 +74,7 @@ export const CartSummary: React.FC<CartSummaryProps> = ({
           }
           className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
         >
-          {isFree ? "ثبت‌نام رایگان" : "پرداخت"}
+          {isFree ? "ثبت‌نام رایگان" : "انتخاب روش پرداخت"}
         </GlassButton>
       </div>
     </div>
