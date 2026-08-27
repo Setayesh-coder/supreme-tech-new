@@ -1,75 +1,44 @@
-// src/components/payment/PaymentModal.tsx
-import { useState } from "react";
-import { X, CreditCard, Bot, ArrowRight } from "lucide-react";
+// src/components/payment/PaymentMethodModal.tsx
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
-import { GlassButton } from "../ui/GlassButton";
-import CardToCardPayment from "./CardToCardPayment";
-import BalePayment from "./BalePayment";
-import { toast } from "../../hooks/use-toast";
+import { X, CreditCard, Bot, ArrowRight, Wallet, Zap } from "lucide-react";
 
-interface PaymentModalProps {
+interface PaymentMethodModalProps {
   isOpen: boolean;
   onClose: () => void;
-  enrollmentId: string;
   amount: number;
-  courseTitle: string;
-  onSuccess: () => void;
+  onSelectBale: () => void;
+  onSelectCardToCard: () => void;
+  isFree?: boolean;
 }
 
-export default function PaymentModal({
+export function PaymentMethodModal({
   isOpen,
   onClose,
-  enrollmentId,
-  amount,
-  courseTitle,
-  onSuccess,
-}: PaymentModalProps) {
-  const [method, setMethod] = useState<"CARD_TO_CARD" | "BALE" | null>(null);
-  const [step, setStep] = useState<"SELECT" | "PAYMENT">("SELECT");
-  const [discountCode, setDiscountCode] = useState("");
-  const [discountApplied, setDiscountApplied] = useState<{
-    amount: number;
-    finalAmount: number;
-  } | null>(null);
-  const [applyingDiscount, setApplyingDiscount] = useState(false);
-
+  amount = 0,
+  onSelectBale,
+  onSelectCardToCard,
+  isFree = false,
+}: PaymentMethodModalProps) {
   if (!isOpen) return null;
 
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) return;
-    setApplyingDiscount(true);
-    try {
-      // TODO: فراخوانی API اعتبارسنجی کد تخفیف
-      // const result = await discountsAPI.validate(discountCode, amount);
-      // setDiscountApplied(result);
-
-      // ✅ نمونه موقت
-      setDiscountApplied({
-        amount: amount * 0.1,
-        finalAmount: amount * 0.9,
-      });
-    } catch (error) {
-      toast.error("کد تخفیف نامعتبر است");
-    } finally {
-      setApplyingDiscount(false);
+  const formatPrice = (price: number) => {
+    // ✅ بررسی اینکه price عدد باشد
+    if (typeof price !== "number" || isNaN(price)) {
+      return "۰ تومان";
     }
+    if (price === 0) return "رایگان";
+    return `${price.toLocaleString("fa-IR")} تومان`;
   };
-
-  const handleSelectMethod = (selectedMethod: "CARD_TO_CARD" | "BALE") => {
-    setMethod(selectedMethod);
-    setStep("PAYMENT");
-  };
-
-  const handleBack = () => {
-    setStep("SELECT");
-    setMethod(null);
-  };
-
-  const finalAmount = discountApplied?.finalAmount || amount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="max-w-md w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <LiquidGlassCard
           className="p-6 md:p-8 relative"
           borderRadius="24px"
@@ -84,100 +53,89 @@ export default function PaymentModal({
             <X className="w-5 h-5" />
           </button>
 
-          <div className="mb-6 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white">
-              <CreditCard /> پرداخت
-            </h2>
-            <p className="text-gray-400 text-sm mt-1">{courseTitle}</p>
-            <p className="text-2xl font-bold text-blue-400 mt-2">
-              {finalAmount.toLocaleString()} تومان
-            </p>
-          </div>
-
-          {/* کد تخفیف */}
-          <div className="mb-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
-                placeholder="کد تخفیف"
-                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500"
-                disabled={!!discountApplied || applyingDiscount}
-              />
-              <GlassButton
-                variant="secondary"
-                size="sm"
-                onClick={handleApplyDiscount}
-                loading={applyingDiscount}
-                disabled={!discountCode.trim() || !!discountApplied}
-              >
-                اعمال
-              </GlassButton>
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Wallet className="w-8 h-8 text-blue-400" />
             </div>
-            {discountApplied && (
-              <p className="text-green-400 text-sm mt-1">
-                ✅ تخفیف اعمال شد: {discountApplied.amount.toLocaleString()}{" "}
-                تومان
-                <br />
-                مبلغ قابل پرداخت: {discountApplied.finalAmount.toLocaleString()}{" "}
-                تومان
+            <h2 className="text-2xl font-bold text-white">انتخاب روش پرداخت</h2>
+            <p className="text-gray-400 text-sm mt-1">
+              مبلغ قابل پرداخت: {formatPrice(amount)}
+            </p>
+            {isFree && (
+              <p className="text-green-400 text-sm mt-1 flex items-center justify-center gap-1">
+                <Zap className="w-4 h-4" />
+                تمام دوره‌ها رایگان هستند
               </p>
             )}
           </div>
 
-          {step === "SELECT" ? (
-            <div className="space-y-3">
+          <div className="space-y-3">
+            {!isFree && (
               <button
-                onClick={() => handleSelectMethod("CARD_TO_CARD")}
-                className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors flex items-center gap-4"
+                onClick={onSelectBale}
+                className="w-full p-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-xl transition-all duration-300 flex items-center gap-4 group text-right"
               >
-                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-blue-400" />
-                </div>
-                <div className="text-right flex-1">
-                  <p className="text-white font-medium">کارت به کارت</p>
-                  <p className="text-gray-400 text-sm">پرداخت با کارت بانکی</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-gray-500" />
-              </button>
-
-              <button
-                onClick={() => handleSelectMethod("BALE")}
-                className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors flex items-center gap-4"
-              >
-                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-6 h-6 text-green-400" />
                 </div>
-                <div className="text-right flex-1">
-                  <p className="text-white font-medium">ربات بله</p>
-                  <p className="text-gray-400 text-sm">
-                    پرداخت از طریق ربات بله
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold group-hover:text-green-400 transition-colors">
+                    پرداخت از طریق بله
+                  </h3>
+                  <p className="text-gray-400 text-xs">
+                    پرداخت خودکار و سریع از طریق ربات بله
                   </p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-gray-500" />
+                <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-green-400 transition-colors" />
               </button>
-            </div>
-          ) : (
-            <div>
-              {method === "CARD_TO_CARD" && (
-                <CardToCardPayment
-                  enrollmentId={enrollmentId}
-                  amount={finalAmount}
-                  onSuccess={onSuccess}
-                  onBack={handleBack}
-                />
-              )}
-              {method === "BALE" && (
-                <BalePayment
-                  enrollmentId={enrollmentId}
-                  amount={finalAmount}
-                  onSuccess={onSuccess}
-                  onBack={handleBack}
-                />
-              )}
-            </div>
-          )}
+            )}
+
+            {!isFree && (
+              <button
+                onClick={onSelectCardToCard}
+                className="w-full p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl transition-all duration-300 flex items-center gap-4 group text-right"
+              >
+                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-6 h-6 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
+                    پرداخت کارت به کارت
+                  </h3>
+                  <p className="text-gray-400 text-xs">
+                    واریز به شماره کارت و ارسال رسید
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
+              </button>
+            )}
+
+            {isFree && (
+              <button
+                onClick={onSelectCardToCard}
+                className="w-full p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-500/30 rounded-xl transition-all duration-300 flex items-center gap-4 group text-right"
+              >
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-6 h-6 text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold group-hover:text-green-400 transition-colors">
+                    ثبت‌نام رایگان
+                  </h3>
+                  <p className="text-gray-400 text-xs">
+                    تمام دوره‌های سبد خرید رایگان هستند
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-green-400 transition-colors" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-white/10">
+            <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+              🔒 تمامی پرداخت‌ها با امنیت بالا انجام می‌شود
+            </p>
+          </div>
         </LiquidGlassCard>
       </div>
     </div>

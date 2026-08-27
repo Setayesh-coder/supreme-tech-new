@@ -299,11 +299,11 @@ export const CartTab: React.FC<CartTabProps> = ({
         />
 
         <CartSummary
-          totalOriginalPrice={totalOriginalPrice}
-          totalDiscount={totalDiscount}
-          couponDiscount={couponDiscount}
-          totalPrice={totalPrice}
-          totalItems={items.length}
+          totalOriginalPrice={totalOriginalPrice ?? 0}
+          totalDiscount={totalDiscount ?? 0}
+          couponDiscount={couponDiscount ?? 0}
+          totalPrice={totalPrice ?? 0}
+          totalItems={items?.length ?? 0}
           onCheckout={handleOpenPaymentMethod}
         />
       </LiquidGlassCard>

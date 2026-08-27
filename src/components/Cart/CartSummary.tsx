@@ -13,16 +13,20 @@ interface CartSummaryProps {
 }
 
 export const CartSummary: React.FC<CartSummaryProps> = ({
-  totalOriginalPrice,
-  totalDiscount,
-  couponDiscount,
-  totalPrice,
-  totalItems,
+  totalOriginalPrice = 0,
+  totalDiscount = 0,
+  couponDiscount = 0,
+  totalPrice = 0,
+  totalItems = 0,
   onCheckout,
 }) => {
   const formatPrice = (price: number) => {
+    // ✅ بررسی اینکه price عدد باشد
+    if (typeof price !== "number" || isNaN(price)) {
+      return "۰ تومان";
+    }
     if (price === 0) return "رایگان";
-    return `${price.toLocaleString()} تومان`;
+    return `${price.toLocaleString("fa-IR")} تومان`;
   };
 
   const isFree = totalPrice === 0 && totalItems > 0;
@@ -58,7 +62,7 @@ export const CartSummary: React.FC<CartSummaryProps> = ({
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
         <div className="text-center sm:text-right">
           <p className="text-sm text-gray-400">تعداد دوره‌ها</p>
-          <p className="text-xl font-bold text-white">{totalItems} دوره</p>
+          <p className="text-xl font-bold text-white">{totalItems || 0} دوره</p>
         </div>
 
         <GlassButton

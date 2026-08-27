@@ -197,12 +197,14 @@ export const useCart = () => {
     total_courses_discount: 0,
     total_payable: 0,
   };
+  // src/hooks/useCart.ts
+  // مطمئن شوید که مقادیر پیش‌فرض دارند
 
-  const totalItems = items.length;
-  const totalPrice = summary.total_payable || 0;
-  const totalOriginalPrice = summary.total_original_price || 0;
-  const totalDiscount = summary.total_courses_discount || 0;
-  const couponDiscount = summary.coupon_discount || 0;
+  const totalPrice = summary?.total_payable ?? 0;
+  const totalOriginalPrice = summary?.total_original_price ?? 0;
+  const totalDiscount = summary?.total_courses_discount ?? 0;
+  const couponDiscount = summary?.coupon_discount ?? 0;
+  const totalItems = items?.length ?? 0;
   const couponCode = summary.coupon_code;
   const isEmpty = totalItems === 0;
 
