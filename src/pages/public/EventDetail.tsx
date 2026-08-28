@@ -236,7 +236,7 @@ export default function EventDetail() {
                 </span>
                 {event.featured && (
                   <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium bg-yellow-500/90 text-white backdrop-blur-sm shadow-lg">
-                    ⭐ ویژه
+                    ویژه
                   </span>
                 )}
               </div>

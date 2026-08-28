@@ -7,6 +7,7 @@ import { GlassButton } from "../../../components/ui/GlassButton";
 import { coursesAPI, generateSlug } from "../../../lib/api/courses";
 import { eventsAPI } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
+import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
 import {
   ArrowLeft,
   Save,
@@ -17,6 +18,7 @@ import {
   User,
   Clock,
   DollarSign,
+  Percent,
 } from "lucide-react";
 import { toast } from "../../../hooks/use-toast";
 
@@ -38,14 +40,20 @@ export default function CourseCreate() {
     description: "",
     instructor_name: "",
     price: 0,
+    orginal_price: 0,
+    discount_value: 0,
+    discount_type: "PERCENT" as "PERCENT" | "FIXED",
     duration_hours: 0,
     is_active: true,
-    event_id: "", // ✅ اضافه شد
+    event_id: "",
+    registration_start_date: "",
+    registration_end_date: "",
+    class_start_date: "",
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  // ✅ دریافت لیست رویدادها برای انتخاب
+  // دریافت لیست رویدادها
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -116,7 +124,6 @@ export default function CourseCreate() {
     setError("");
 
     try {
-      // ✅ آپلود تصویر
       let imageUrl = "";
       if (image) {
         try {
@@ -128,23 +135,26 @@ export default function CourseCreate() {
         }
       }
 
-      // ✅ ساخت داده مطابق با CourseCreateSchema بک‌اند
       const courseData = {
         title: formData.title.trim(),
         slug: generateSlug(formData.title.trim()),
         description: formData.description?.trim() || undefined,
         cover_image: imageUrl || undefined,
         price: Number(formData.price) || 0,
+        orginal_price: Number(formData.orginal_price) || 0,
+        discount_value: Number(formData.discount_value) || 0,
+        discount_type: formData.discount_type,
         duration_hours: Number(formData.duration_hours) || undefined,
         instructor_name: formData.instructor_name?.trim() || undefined,
         is_active: formData.is_active,
-        event_id: formData.event_id || undefined, // ✅ رویداد مرتبط
+        event_id: formData.event_id || undefined,
+        registration_start_date: formData.registration_start_date,
+        registration_end_date: formData.registration_end_date,
+        class_start_date: formData.class_start_date,
       };
 
-      // console.log("📤 ارسال داده:", courseData);
-
       await coursesAPI.create(courseData);
-      toast.success(" دوره با موفقیت ایجاد شد!");
+      toast.success("✅ دوره با موفقیت ایجاد شد!");
       navigate("/admin/courses");
     } catch (err: any) {
       console.error("❌ خطا:", err);
@@ -159,7 +169,6 @@ export default function CourseCreate() {
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
-        {/* هدر */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate("/admin/courses")}
@@ -183,7 +192,7 @@ export default function CourseCreate() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* ===== تصویر ===== */}
+            {/* تصویر */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر کاور
@@ -235,7 +244,7 @@ export default function CourseCreate() {
               )}
             </div>
 
-            {/* ===== عنوان ===== */}
+            {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 عنوان دوره <span className="text-red-400">*</span>
@@ -254,7 +263,7 @@ export default function CourseCreate() {
               </p>
             </div>
 
-            {/* ===== توضیحات ===== */}
+            {/* توضیحات */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 توضیحات
@@ -269,7 +278,7 @@ export default function CourseCreate() {
               />
             </div>
 
-            {/* ===== مدرس ===== */}
+            {/* مدرس */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-400" />
@@ -285,12 +294,26 @@ export default function CourseCreate() {
               />
             </div>
 
-            {/* ===== قیمت و مدت ===== */}
+            {/* قیمت و تخفیف */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-blue-400" />
-                  قیمت (تومان)
+                  قیمت اصلی (تومان)
+                </label>
+                <input
+                  type="number"
+                  name="orginal_price"
+                  value={formData.orginal_price}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-green-400" />
+                  قیمت نهایی (تومان)
                 </label>
                 <input
                   type="number"
@@ -299,27 +322,111 @@ export default function CourseCreate() {
                   onChange={handleChange}
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="۰ = رایگان"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  قیمت نهایی = قیمت اصلی - تخفیف
+                </p>
               </div>
+            </div>
+
+            {/* تخفیف */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-400" />
-                  مدت زمان (ساعت)
+                  <Percent className="w-4 h-4 text-orange-400" />
+                  مقدار تخفیف
                 </label>
                 <input
                   type="number"
-                  name="duration_hours"
-                  value={formData.duration_hours}
+                  name="discount_value"
+                  value={formData.discount_value}
                   onChange={handleChange}
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="مثلاً: ۴۰"
+                  placeholder="مقدار تخفیف"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  نوع تخفیف
+                </label>
+                <select
+                  name="discount_type"
+                  value={formData.discount_type}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                >
+                  <option value="PERCENT">درصدی (%)</option>
+                  <option value="FIXED">مبلغ ثابت (تومان)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* مدت زمان */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-400" />
+                مدت زمان (ساعت)
+              </label>
+              <input
+                type="number"
+                name="duration_hours"
+                value={formData.duration_hours}
+                onChange={handleChange}
+                min="0"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="مثلاً: ۴۰"
+              />
+            </div>
+
+            {/* ✅ تاریخ‌ها با PersianDatePicker */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  شروع ثبت‌نام
+                </label>
+                <PersianDatePicker
+                  value={formData.registration_start_date}
+                  onChange={(date) =>
+                    setFormData({ ...formData, registration_start_date: date })
+                  }
+                  includeTime
+                  placeholder="انتخاب تاریخ و ساعت"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  پایان ثبت‌نام
+                </label>
+                <PersianDatePicker
+                  value={formData.registration_end_date}
+                  onChange={(date) =>
+                    setFormData({ ...formData, registration_end_date: date })
+                  }
+                  includeTime
+                  placeholder="انتخاب تاریخ و ساعت"
+                  className="w-full"
                 />
               </div>
             </div>
 
-            {/* ===== رویداد مرتبط ===== */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                تاریخ شروع کلاس
+              </label>
+              <PersianDatePicker
+                value={formData.class_start_date}
+                onChange={(date) =>
+                  setFormData({ ...formData, class_start_date: date })
+                }
+                includeTime
+                placeholder="انتخاب تاریخ و ساعت"
+                className="w-full"
+              />
+            </div>
+
+            {/* رویداد مرتبط */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-400" />
@@ -349,7 +456,7 @@ export default function CourseCreate() {
               </p>
             </div>
 
-            {/* ===== وضعیت فعال ===== */}
+            {/* وضعیت فعال */}
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -367,7 +474,7 @@ export default function CourseCreate() {
               </label>
             </div>
 
-            {/* ===== دکمه‌ها ===== */}
+            {/* دکمه‌ها */}
             <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"

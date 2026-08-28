@@ -12,7 +12,6 @@ import {
   CheckCircle,
   Loader2,
   User,
-  Users,
   Clock,
   Star,
   Award,
@@ -21,12 +20,14 @@ import {
   Timer,
   Lock,
   X,
+  Percent,
+  Calendar,
 } from "lucide-react";
 import { toast } from "../../hooks/use-toast";
 import { SafeImage } from "../ui/SafeImage";
 
 // ============================================================
-// ✅ اینترفیس‌ها
+// ✅ اینترفیس‌ها با فیلدهای جدید
 // ============================================================
 interface Course {
   id: string;
@@ -35,6 +36,9 @@ interface Course {
   description?: string;
   cover_image?: string;
   price: number;
+  orginal_price: number;
+  discount_value: number;
+  discount_type: "PERCENT" | "FIXED";
   duration_hours?: number;
   level?: string;
   capacity: number;
@@ -48,6 +52,9 @@ interface Course {
   image?: string;
   duration?: string;
   endDate?: string;
+  registration_start_date?: string;
+  registration_end_date?: string;
+  class_start_date?: string;
 }
 
 interface Session {
@@ -164,6 +171,12 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
             enrollmentStatus: status as any,
             sessions: course.sessions || [],
             endDate: course.endDate || undefined,
+            registration_start_date:
+              course.registration_start_date || undefined,
+            registration_end_date: course.registration_end_date || undefined,
+            class_start_date: course.class_start_date || undefined,
+            discount_type:
+              (course.discount_type as "PERCENT" | "FIXED") || "PERCENT",
           };
         }),
       );
@@ -219,49 +232,6 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     },
     [navigate],
   );
-
-  // // ✅ تابع افزودن به سبد خرید (با نام صحیح)
-  // const addToCartHandler = useCallback(
-  //   async (courseId: string, courseTitle: string) => {
-  //     if (!isLoggedIn) {
-  //       toast.error("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
-  //       navigate("/login");
-  //       return;
-  //     }
-
-  //     if (enrolling === courseId) return;
-
-  //     setEnrolling(courseId);
-
-  //     try {
-  //       await addToCart(courseId);
-
-  //       setCourses((prev) =>
-  //         prev.map((c) =>
-  //           c.id === courseId
-  //             ? {
-  //                 ...c,
-  //                 userEnrolled: true,
-  //                 enrollmentStatus: "PENDING" as any,
-  //                 enrolledCount: (c.enrolledCount || 0) + 1,
-  //               }
-  //             : c,
-  //         ),
-  //       );
-
-  //       showToastWithAction(
-  //         `✅ دوره "${courseTitle}" به سبد خرید اضافه شد!`,
-  //         "success",
-  //       );
-  //     } catch (error) {
-  //       console.error("❌ خطا:", error);
-  //       toast.error("خطا در افزودن به سبد خرید");
-  //     } finally {
-  //       setEnrolling(null);
-  //     }
-  //   },
-  //   [isLoggedIn, navigate, addToCart, enrolling, showToastWithAction],
-  // );
 
   // ✅ باز کردن مودال ثبت‌نام
   const handleOpenPreRegister = useCallback(
@@ -347,6 +317,30 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
     return `${price.toLocaleString()} تومان`;
   }, []);
 
+  // ✅ فرمت تاریخ
+  const formatDate = useCallback((dateString?: string) => {
+    if (!dateString) return "نامشخص";
+    try {
+      return new Date(dateString).toLocaleDateString("fa-IR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "نامشخص";
+    }
+  }, []);
+
+  // ✅ محاسبه تخفیف
+  const getDiscountInfo = useCallback((course: Course) => {
+    const discountAmount = (course.orginal_price || 0) - (course.price || 0);
+    const discountPercent =
+      course.orginal_price > 0
+        ? Math.round((discountAmount / course.orginal_price) * 100)
+        : 0;
+    return { discountAmount, discountPercent };
+  }, []);
+
   // ✅ محاسبه وضعیت‌های هر دوره
   const courseStatuses = useMemo(() => {
     return courses.map((course) => {
@@ -358,6 +352,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
       const isPending = course.enrollmentStatus === "PENDING";
       const isWaiting = course.enrollmentStatus === "WAITING";
       const isConfirmed = course.enrollmentStatus === "CONFIRMED";
+      const { discountAmount, discountPercent } = getDiscountInfo(course);
 
       return {
         ...course,
@@ -367,9 +362,11 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
         isPending,
         isWaiting,
         isConfirmed,
+        discountAmount,
+        discountPercent,
       };
     });
-  }, [courses, checkIfInCart]);
+  }, [courses, checkIfInCart, getDiscountInfo]);
 
   // ============================================================
   // ✅ رندر
@@ -406,6 +403,7 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courseStatuses.map((course) => {
           const isExpanded = expandedCourse === course.id;
+          const hasDiscount = course.discountAmount > 0;
 
           return (
             <LiquidGlassCard
@@ -467,25 +465,39 @@ export default function CourseList({ eventId, eventTitle }: CourseListProps) {
                       <span>مدرس: {course.instructor_name}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <Users size={14} />
-                    <span>
-                      {course.enrolledCount || 0} /{" "}
-                      {course.capacity || "نامحدود"} نفر
-                    </span>
-                    {course.isFull && (
-                      <span className="text-red-400 text-xs">(تکمیل)</span>
-                    )}
-                  </div>
+                  {/* ✅ تاریخ‌های جدید */}
+                  {course.class_start_date && (
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} />
+                      <span>
+                        شروع کلاس: {formatDate(course.class_start_date)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* قیمت و دکمه */}
                 <div className="mt-auto pt-3">
                   {/* قیمت و وضعیت */}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-lg font-bold text-white">
-                      {formatPrice(course.price)}
-                    </span>
+                    <div className="flex flex-col items-start">
+                      <span className="text-lg font-bold text-white">
+                        {formatPrice(course.price)}
+                      </span>
+                      {hasDiscount && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-500 line-through">
+                            {formatPrice(course.orginal_price)}
+                          </span>
+                          <span className="text-xs text-green-400 flex items-center gap-0.5">
+                            <Percent size={12} />
+                            {course.discount_type === "PERCENT"
+                              ? `${course.discountPercent}%`
+                              : formatPrice(course.discountAmount)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
                     {/* نمایش وضعیت ثبت‌نام */}
                     {course.isConfirmed ? (

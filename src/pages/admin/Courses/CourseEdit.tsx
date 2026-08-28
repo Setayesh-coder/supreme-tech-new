@@ -7,6 +7,7 @@ import { GlassButton } from "../../../components/ui/GlassButton";
 import { coursesAPI } from "../../../lib/api/courses";
 import { eventsAPI } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
+import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
 import {
   ArrowLeft,
   Save,
@@ -17,6 +18,7 @@ import {
   User,
   Clock,
   DollarSign,
+  Percent,
 } from "lucide-react";
 
 interface Event {
@@ -36,7 +38,6 @@ export default function CourseEdit() {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
 
-  // ✅ ذخیره slug اصلی
   const [originalSlug, setOriginalSlug] = useState<string>("");
 
   const [formData, setFormData] = useState({
@@ -44,18 +45,22 @@ export default function CourseEdit() {
     description: "",
     instructor_name: "",
     price: 0,
+    orginal_price: 0,
+    discount_value: 0,
+    discount_type: "PERCENT" as "PERCENT" | "FIXED",
     duration_hours: 0,
     is_active: true,
     event_id: "",
+    registration_start_date: "",
+    registration_end_date: "",
+    class_start_date: "",
   });
 
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [, setCurrentImage] = useState<string>("");
-  // ✅ اضافه کردن state برای تشخیص حذف عکس
   const [isImageRemoved, setIsImageRemoved] = useState(false);
 
-  // ✅ دریافت لیست رویدادها
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -78,7 +83,6 @@ export default function CourseEdit() {
         setLoading(true);
         const data = await coursesAPI.getById(id);
 
-        // ✅ ذخیره slug اصلی
         setOriginalSlug(data.slug || "");
 
         setFormData({
@@ -86,9 +90,16 @@ export default function CourseEdit() {
           description: data.description || "",
           instructor_name: data.instructor_name || "",
           price: data.price || 0,
+          orginal_price: data.orginal_price || 0,
+          discount_value: data.discount_value || 0,
+          discount_type:
+            (data.discount_type as "PERCENT" | "FIXED") || "PERCENT",
           duration_hours: data.duration_hours || 0,
           is_active: data.is_active !== undefined ? data.is_active : true,
           event_id: data.event_id || "",
+          registration_start_date: data.registration_start_date || "",
+          registration_end_date: data.registration_end_date || "",
+          class_start_date: data.class_start_date || "",
         });
 
         if (data.cover_image) {
@@ -131,17 +142,16 @@ export default function CourseEdit() {
       }
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
-      setIsImageRemoved(false); // ✅ وقتی عکس جدید آپلود می‌شود، حذف را لغو کن
+      setIsImageRemoved(false);
       setError("");
     }
   };
 
-  // ✅ اصلاح: حذف تصویر
   const handleRemoveImage = () => {
     setImage(null);
     setImagePreview("");
     setCurrentImage("");
-    setIsImageRemoved(true); // ✅ علامت بزن که عکس حذف شده
+    setIsImageRemoved(true);
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -167,7 +177,6 @@ export default function CourseEdit() {
     try {
       let imageUrl: string | undefined = undefined;
 
-      // ✅ اگر عکس جدید آپلود شده
       if (image) {
         try {
           imageUrl = await uploadImage(image);
@@ -178,30 +187,30 @@ export default function CourseEdit() {
         }
       }
 
-      // ✅ اگر کاربر عکس را حذف کرده است
       if (isImageRemoved) {
-        imageUrl = null as any; // ارسال null برای حذف عکس
+        imageUrl = null as any;
       }
 
-      // ✅ داده‌های مطابق با CourseUpdateSchema
       const courseData = {
         title: formData.title.trim(),
         slug: originalSlug,
         description: formData.description?.trim() || undefined,
-        cover_image: imageUrl, // ✅ می‌تواند undefined یا null باشد
+        cover_image: imageUrl,
         price: Number(formData.price) || 0,
+        orginal_price: Number(formData.orginal_price) || 0,
+        discount_value: Number(formData.discount_value) || 0,
+        discount_type: formData.discount_type,
         duration_hours: Number(formData.duration_hours) || undefined,
         instructor_name: formData.instructor_name?.trim() || undefined,
         is_active: formData.is_active,
         event_id: formData.event_id || undefined,
+        registration_start_date: formData.registration_start_date,
+        registration_end_date: formData.registration_end_date,
+        class_start_date: formData.class_start_date,
       };
-
-      // console.log("📤 ارسال داده برای ویرایش:", courseData);
 
       await coursesAPI.update(id!, courseData);
       setSuccess("✅ دوره با موفقیت ویرایش شد!");
-
-      // ✅ بعد از ذخیره، حذف عکس را ریست کن
       setIsImageRemoved(false);
 
       setTimeout(() => {
@@ -230,7 +239,6 @@ export default function CourseEdit() {
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
-        {/* هدر */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate("/admin/courses")}
@@ -259,7 +267,7 @@ export default function CourseEdit() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* ===== تصویر ===== */}
+            {/* تصویر */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 تصویر کاور
@@ -320,7 +328,7 @@ export default function CourseEdit() {
               )}
             </div>
 
-            {/* ===== عنوان ===== */}
+            {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 عنوان <span className="text-red-400">*</span>
@@ -338,7 +346,7 @@ export default function CourseEdit() {
               </p>
             </div>
 
-            {/* ===== توضیحات ===== */}
+            {/* توضیحات */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 توضیحات
@@ -353,7 +361,7 @@ export default function CourseEdit() {
               />
             </div>
 
-            {/* ===== مدرس ===== */}
+            {/* مدرس */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-400" />
@@ -369,12 +377,26 @@ export default function CourseEdit() {
               />
             </div>
 
-            {/* ===== قیمت و مدت ===== */}
+            {/* قیمت و تخفیف */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-blue-400" />
-                  قیمت (تومان)
+                  قیمت اصلی (تومان)
+                </label>
+                <input
+                  type="number"
+                  name="orginal_price"
+                  value={formData.orginal_price}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-green-400" />
+                  قیمت نهایی (تومان)
                 </label>
                 <input
                   type="number"
@@ -384,24 +406,112 @@ export default function CourseEdit() {
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  قیمت نهایی = قیمت اصلی - تخفیف
+                </p>
               </div>
+            </div>
+
+            {/* تخفیف */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-400" />
-                  مدت زمان (ساعت)
+                  <Percent className="w-4 h-4 text-orange-400" />
+                  مقدار تخفیف
                 </label>
                 <input
                   type="number"
-                  name="duration_hours"
-                  value={formData.duration_hours}
+                  name="discount_value"
+                  value={formData.discount_value}
                   onChange={handleChange}
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="مقدار تخفیف"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  نوع تخفیف
+                </label>
+                <select
+                  name="discount_type"
+                  value={formData.discount_type}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                >
+                  <option value="PERCENT">درصدی (%)</option>
+                  <option value="FIXED">مبلغ ثابت (تومان)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* مدت زمان */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-400" />
+                مدت زمان (ساعت)
+              </label>
+              <input
+                type="number"
+                name="duration_hours"
+                value={formData.duration_hours}
+                onChange={handleChange}
+                min="0"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* ✅ تاریخ‌ها با PersianDatePicker */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  شروع ثبت‌نام
+                </label>
+                <PersianDatePicker
+                  value={formData.registration_start_date}
+                  onChange={(date) =>
+                    setFormData({ ...formData, registration_start_date: date })
+                  }
+                  includeTime
+                  placeholder="انتخاب تاریخ و ساعت"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  پایان ثبت‌نام
+                </label>
+                <PersianDatePicker
+                  value={formData.registration_end_date}
+                  onChange={(date) =>
+                    setFormData({ ...formData, registration_end_date: date })
+                  }
+                  includeTime
+                  placeholder="انتخاب تاریخ و ساعت"
+                  className="w-full"
                 />
               </div>
             </div>
 
-            {/* ===== رویداد مرتبط ===== */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-400" />
+                تاریخ شروع کلاس
+              </label>
+              <PersianDatePicker
+                value={formData.class_start_date}
+                onChange={(date) =>
+                  setFormData({ ...formData, class_start_date: date })
+                }
+                includeTime
+                placeholder="انتخاب تاریخ و ساعت"
+                className="w-full"
+              />
+            </div>
+
+            {/* رویداد مرتبط */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-400" />
@@ -426,12 +536,9 @@ export default function CourseEdit() {
                   ))
                 )}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                انتخاب رویداد مرتبط با این دوره
-              </p>
             </div>
 
-            {/* ===== وضعیت ===== */}
+            {/* وضعیت */}
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -449,7 +556,7 @@ export default function CourseEdit() {
               </label>
             </div>
 
-            {/* ===== دکمه‌ها ===== */}
+            {/* دکمه‌ها */}
             <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton
                 type="button"

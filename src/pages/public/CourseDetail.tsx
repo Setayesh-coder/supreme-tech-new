@@ -26,12 +26,14 @@ import {
   ShoppingCart,
   Timer,
   Lock,
+  User,
+  Percent,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal";
 
-// ✅ تایپ Course
+// ✅ تایپ Course با فیلدهای جدید کامل
 interface Course {
   id: string;
   title: string;
@@ -41,12 +43,18 @@ interface Course {
   cover_image?: string;
   image?: string;
   price: number;
+  orginal_price: number;
+  discount_value: number;
+  discount_type: "PERCENT" | "FIXED";
   duration_hours?: number;
   duration?: string;
   level?: string;
   capacity: number;
   enrolledCount: number;
   startDate?: string;
+  registration_start_date?: string;
+  registration_end_date?: string;
+  class_start_date?: string;
   endDate?: string;
   is_active: boolean;
   isFeatured: boolean;
@@ -54,6 +62,7 @@ interface Course {
   sessions?: Session[];
   userEnrolled?: boolean;
   enrollmentStatus?: "PENDING" | "WAITING" | "CONFIRMED" | "CANCELLED";
+  instructor_name?: string;
   event?: {
     id: string;
     title: string;
@@ -94,14 +103,19 @@ const getImageUrl = (imagePath?: string) => {
 };
 
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("fa-IR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (!dateString) return "نامشخص";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fa-IR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "نامشخص";
+  }
 };
 
 const formatPrice = (price: number) => {
@@ -131,7 +145,6 @@ export default function CourseDetail() {
   const [showPreRegister, setShowPreRegister] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
 
-  // ✅ بررسی وضعیت ثبت‌نام از بک‌اند
   const checkUserEnrollment = async (
     courseId: string,
   ): Promise<{ enrolled: boolean; status?: string }> => {
@@ -187,6 +200,13 @@ export default function CourseDetail() {
             userEnrolled: enrolled,
             enrollmentStatus: status as any,
             sessions: (foundCourse as any).sessions || [],
+            instructor_name: (foundCourse as any).instructor_name || undefined,
+            registration_start_date:
+              (foundCourse as any).registration_start_date || undefined,
+            registration_end_date:
+              (foundCourse as any).registration_end_date || undefined,
+            class_start_date:
+              (foundCourse as any).class_start_date || undefined,
             event: (foundCourse as any).event
               ? {
                   id: (foundCourse as any).event.id,
@@ -194,6 +214,8 @@ export default function CourseDetail() {
                   slug: (foundCourse as any).event.slug || "",
                 }
               : undefined,
+            discount_type:
+              (foundCourse.discount_type as "PERCENT" | "FIXED") || "PERCENT",
           };
           setCourse(mappedCourse);
         } else {
@@ -214,7 +236,6 @@ export default function CourseDetail() {
 
     const token = localStorage.getItem("token");
     if (!token) {
-      // ✅ بدون action
       toast.error("برای ثبت‌نام باید وارد حساب کاربری خود شوید");
       return;
     }
@@ -235,14 +256,10 @@ export default function CourseDetail() {
         enrolledCount: (course.enrolledCount || 0) + 1,
       });
 
-      // ✅ بدون action
-      toast.success(
-        "✅ پیش‌ثبت‌نام با موفقیت انجام شد!",
-        "دوره به سبد خرید شما اضافه شد.",
-      );
+      toast.success("✅ پیش‌ثبت‌نام با موفقیت انجام شد!");
     } catch (error) {
       console.error("❌ خطا در به‌روزرسانی وضعیت:", error);
-      toast.error("خطا در ثبت‌نام", "لطفاً دوباره تلاش کنید");
+      toast.error("خطا در ثبت‌نام");
     }
   };
 
@@ -288,6 +305,13 @@ export default function CourseDetail() {
   const isPending = course.enrollmentStatus === "PENDING";
   const isWaiting = course.enrollmentStatus === "WAITING";
   const isConfirmed = course.enrollmentStatus === "CONFIRMED";
+
+  // ✅ محاسبه تخفیف
+  const discountAmount = course.orginal_price - course.price;
+  const discountPercent =
+    course.orginal_price > 0
+      ? Math.round((discountAmount / course.orginal_price) * 100)
+      : 0;
 
   return (
     <section className="py-6 px-3 md:py-12 md:px-6 relative overflow-hidden min-h-screen">
@@ -372,6 +396,13 @@ export default function CourseDetail() {
                     {getLevelLabel(course.level)}
                   </span>
                 )}
+                {discountAmount > 0 && (
+                  <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium bg-green-500/90 text-white backdrop-blur-sm shadow-lg">
+                    {course.discount_type === "PERCENT"
+                      ? `${discountPercent}% تخفیف`
+                      : `${formatPrice(discountAmount)} تخفیف`}
+                  </span>
+                )}
               </div>
 
               <div className="absolute bottom-0 right-0 left-0 p-4 md:p-6 lg:p-8">
@@ -379,10 +410,16 @@ export default function CourseDetail() {
                   {course.title}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-200">
-                  {course.startDate && (
+                  {course.class_start_date && (
                     <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                       <Calendar size={14} className="md:w-4 md:h-4" />
-                      {formatDate(course.startDate)}
+                      {formatDate(course.class_start_date)}
+                    </span>
+                  )}
+                  {course.registration_start_date && (
+                    <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <Calendar size={14} className="md:w-4 md:h-4" />
+                      شروع ثبت‌نام: {formatDate(course.registration_start_date)}
                     </span>
                   )}
                   {course.duration && (
@@ -429,6 +466,43 @@ export default function CourseDetail() {
                       className="text-gray-300 leading-relaxed text-sm md:text-base"
                       dangerouslySetInnerHTML={{ __html: course.content }}
                     />
+                  )}
+                </div>
+
+                {/* ✅ اطلاعات تکمیلی دوره */}
+                <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
+                  {course.registration_start_date && (
+                    <div>
+                      <p className="text-xs text-gray-500">شروع ثبت‌نام</p>
+                      <p className="text-sm text-white">
+                        {formatDate(course.registration_start_date)}
+                      </p>
+                    </div>
+                  )}
+                  {course.registration_end_date && (
+                    <div>
+                      <p className="text-xs text-gray-500">پایان ثبت‌نام</p>
+                      <p className="text-sm text-white">
+                        {formatDate(course.registration_end_date)}
+                      </p>
+                    </div>
+                  )}
+                  {course.class_start_date && (
+                    <div>
+                      <p className="text-xs text-gray-500">شروع کلاس</p>
+                      <p className="text-sm text-white">
+                        {formatDate(course.class_start_date)}
+                      </p>
+                    </div>
+                  )}
+                  {course.instructor_name && (
+                    <div>
+                      <p className="text-xs text-gray-500">مدرس</p>
+                      <p className="text-sm text-white flex items-center gap-1">
+                        <User size={14} />
+                        {course.instructor_name}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -652,9 +726,24 @@ export default function CourseDetail() {
               shadowIntensity="lg"
             >
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
-                <span className="text-2xl font-bold text-white">
-                  {formatPrice(course.price)}
-                </span>
+                <div>
+                  <span className="text-2xl font-bold text-white">
+                    {formatPrice(course.price)}
+                  </span>
+                  {course.orginal_price > course.price && (
+                    <span className="text-sm text-gray-500 line-through mr-2">
+                      {formatPrice(course.orginal_price)}
+                    </span>
+                  )}
+                  {discountAmount > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-green-400">
+                      <Percent size={12} />
+                      {course.discount_type === "PERCENT"
+                        ? `${discountPercent}% تخفیف`
+                        : `${formatPrice(discountAmount)} تخفیف`}
+                    </div>
+                  )}
+                </div>
                 <ShareButton
                   title={course.title}
                   excerpt={course.description}
@@ -691,12 +780,12 @@ export default function CourseDetail() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
+                {/* <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">ظرفیت</span>
                   <span className="text-white">
                     {course.enrolledCount || 0} / {course.capacity || 0} نفر
                   </span>
-                </div>
+                </div> */}
 
                 {course.level && (
                   <div className="flex items-center justify-between text-sm">
@@ -711,6 +800,25 @@ export default function CourseDetail() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">مدت زمان</span>
                     <span className="text-white">{course.duration}</span>
+                  </div>
+                )}
+
+                {course.instructor_name && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">مدرس</span>
+                    <span className="text-white flex items-center gap-1">
+                      <User size={14} />
+                      {course.instructor_name}
+                    </span>
+                  </div>
+                )}
+
+                {course.class_start_date && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">شروع کلاس</span>
+                    <span className="text-white">
+                      {formatDate(course.class_start_date)}
+                    </span>
                   </div>
                 )}
               </div>

@@ -17,7 +17,6 @@ export interface Course {
   registration_start_date: string;
   registration_end_date: string;
   class_start_date: string;
-
   event_id?: string;
   event?: {
     id: string;
@@ -74,11 +73,8 @@ export const generateSlug = (text: string): string => {
       .trim()
       .toLowerCase()
       .replace(/[^\u0600-\u06FFa-zA-Z0-9\s-]/g, "")
-
       .replace(/\s+/g, "-")
-
       .replace(/-+/g, "-")
-
       .replace(/^-+|-+$/g, "") || "بدون-عنوان"
   );
 };
