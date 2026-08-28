@@ -1,18 +1,18 @@
 // src/pages/admin/Courses/CourseEdit.tsx
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { coursesAPI } from "../../../lib/api/courses";
+import { coursesAPI, generateSlug } from "../../../lib/api/courses";
 import { eventsAPI } from "../../../lib/api/events";
 import { uploadAPI } from "../../../lib/api/upload";
 import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
 import {
   ArrowLeft,
   Save,
-  Loader2,
   Upload,
+  Loader2,
   X,
   Calendar,
   User,
@@ -20,6 +20,7 @@ import {
   DollarSign,
   Percent,
 } from "lucide-react";
+import { toast } from "../../../hooks/use-toast";
 
 interface Event {
   id: string;
@@ -27,27 +28,30 @@ interface Event {
   slug: string;
 }
 
+// ✅ تابع کمکی برای تبدیل discount_type
+const convertDiscountType = (type: string): "percentage" | "fixed" => {
+  if (type === "PERCENT") return "percentage";
+  if (type === "FIXED") return "fixed";
+  return "percentage";
+};
+
 export default function CourseEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
-
-  const [originalSlug, setOriginalSlug] = useState<string>("");
-
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     instructor_name: "",
+    original_price: 0,
     price: 0,
-    orginal_price: 0,
     discount_value: 0,
-    discount_type: "PERCENT" as "PERCENT" | "FIXED",
+    discount_type: "percentage" as "percentage" | "fixed",
     duration_hours: 0,
     is_active: true,
     event_id: "",
@@ -55,12 +59,53 @@ export default function CourseEdit() {
     registration_end_date: "",
     class_start_date: "",
   });
-
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [, setCurrentImage] = useState<string>("");
-  const [isImageRemoved, setIsImageRemoved] = useState(false);
+  const [existingImage, setExistingImage] = useState<string>("");
 
+  // دریافت اطلاعات دوره
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!id) return;
+      try {
+        setFetching(true);
+        const course = await coursesAPI.getById(id);
+
+        // ✅ تبدیل صحیح discount_type
+        const discountType = convertDiscountType(course.discount_type);
+
+        setFormData({
+          title: course.title || "",
+          description: course.description || "",
+          instructor_name: course.instructor_name || "",
+          original_price: course.original_price || 0,
+          price: course.price || 0,
+          discount_value: course.discount_value || 0,
+          discount_type: discountType,
+          duration_hours: course.duration_hours || 0,
+          is_active: course.is_active !== undefined ? course.is_active : true,
+          event_id: course.event_id || "",
+          registration_start_date: course.registration_start_date || "",
+          registration_end_date: course.registration_end_date || "",
+          class_start_date: course.class_start_date || "",
+        });
+
+        if (course.cover_image) {
+          setExistingImage(course.cover_image);
+          setImagePreview(course.cover_image);
+        }
+      } catch (err) {
+        console.error("❌ خطا:", err);
+        toast.error("خطا در دریافت اطلاعات دوره");
+        navigate("/admin/courses");
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchCourse();
+  }, [id, navigate]);
+
+  // دریافت لیست رویدادها
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -75,46 +120,6 @@ export default function CourseEdit() {
     };
     fetchEvents();
   }, []);
-
-  useEffect(() => {
-    const fetchCourse = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const data = await coursesAPI.getById(id);
-
-        setOriginalSlug(data.slug || "");
-
-        setFormData({
-          title: data.title || "",
-          description: data.description || "",
-          instructor_name: data.instructor_name || "",
-          price: data.price || 0,
-          orginal_price: data.orginal_price || 0,
-          discount_value: data.discount_value || 0,
-          discount_type:
-            (data.discount_type as "PERCENT" | "FIXED") || "PERCENT",
-          duration_hours: data.duration_hours || 0,
-          is_active: data.is_active !== undefined ? data.is_active : true,
-          event_id: data.event_id || "",
-          registration_start_date: data.registration_start_date || "",
-          registration_end_date: data.registration_end_date || "",
-          class_start_date: data.class_start_date || "",
-        });
-
-        if (data.cover_image) {
-          setCurrentImage(data.cover_image);
-          setImagePreview(data.cover_image);
-          setIsImageRemoved(false);
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.detail || "خطا در دریافت اطلاعات دوره");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCourse();
-  }, [id]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -133,25 +138,21 @@ export default function CourseEdit() {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        setError("لطفاً یک فایل تصویری انتخاب کنید");
+        toast.error("لطفاً یک فایل تصویری انتخاب کنید");
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
+        toast.error("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
         return;
       }
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
-      setIsImageRemoved(false);
-      setError("");
     }
   };
 
   const handleRemoveImage = () => {
     setImage(null);
-    setImagePreview("");
-    setCurrentImage("");
-    setIsImageRemoved(true);
+    setImagePreview(existingImage || "");
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -170,66 +171,106 @@ export default function CourseEdit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    setLoading(true);
     setError("");
-    setSuccess("");
 
     try {
-      let imageUrl: string | undefined = undefined;
+      if (!formData.title.trim()) {
+        toast.error("لطفاً عنوان دوره را وارد کنید");
+        setLoading(false);
+        return;
+      }
 
+      let imageUrl = existingImage;
       if (image) {
         try {
           imageUrl = await uploadImage(image);
         } catch (uploadError: any) {
-          setError(uploadError.message);
-          setSubmitting(false);
+          toast.error(uploadError.message || "خطا در آپلود تصویر");
+          setLoading(false);
           return;
         }
       }
 
-      if (isImageRemoved) {
-        imageUrl = null as any;
-      }
-
       const courseData = {
         title: formData.title.trim(),
-        slug: originalSlug,
+        slug: generateSlug(formData.title.trim()),
         description: formData.description?.trim() || undefined,
-        cover_image: imageUrl,
+        cover_image: imageUrl || undefined,
+        original_price: Number(formData.original_price) || 0,
         price: Number(formData.price) || 0,
-        orginal_price: Number(formData.orginal_price) || 0,
         discount_value: Number(formData.discount_value) || 0,
         discount_type: formData.discount_type,
         duration_hours: Number(formData.duration_hours) || undefined,
         instructor_name: formData.instructor_name?.trim() || undefined,
         is_active: formData.is_active,
         event_id: formData.event_id || undefined,
-        registration_start_date: formData.registration_start_date,
-        registration_end_date: formData.registration_end_date,
-        class_start_date: formData.class_start_date,
+        registration_start_date: formData.registration_start_date || undefined,
+        registration_end_date: formData.registration_end_date || undefined,
+        class_start_date: formData.class_start_date || undefined,
       };
 
+      console.log("📤 ارسال داده:", courseData);
       await coursesAPI.update(id!, courseData);
-      setSuccess("✅ دوره با موفقیت ویرایش شد!");
-      setIsImageRemoved(false);
-
-      setTimeout(() => {
-        navigate("/admin/courses");
-      }, 1500);
+      toast.success("✅ دوره با موفقیت بروزرسانی شد!");
+      navigate("/admin/courses");
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(
-        err.response?.data?.detail || err.message || "خطا در ویرایش دوره",
-      );
+
+      if (err.response) {
+        console.log("📥 وضعیت:", err.response.status);
+        console.log(
+          "📥 داده‌های خطا:",
+          JSON.stringify(err.response.data, null, 2),
+        );
+      }
+
+      if (err.response?.status === 422) {
+        const detail = err.response?.data?.detail;
+
+        if (Array.isArray(detail)) {
+          const errorMessages = detail
+            .map((d: any) => {
+              const field = d.loc?.join(".") || "نامشخص";
+              return `${field}: ${d.msg}`;
+            })
+            .join(" • ");
+
+          setError(`❌ ${errorMessages}`);
+          toast.error(errorMessages);
+        } else if (typeof detail === "object" && detail !== null) {
+          const errorMsg = JSON.stringify(detail);
+          setError(`❌ ${errorMsg}`);
+          toast.error("داده‌های وارد شده معتبر نیستند");
+        } else if (typeof detail === "string") {
+          setError(`❌ ${detail}`);
+          toast.error(detail);
+        } else {
+          setError(
+            "❌ داده‌های وارد شده معتبر نیستند. لطفاً همه فیلدها را بررسی کنید.",
+          );
+          toast.error("داده‌های وارد شده معتبر نیستند");
+        }
+      } else if (err.message === "Network Error") {
+        setError(
+          "❌ اتصال به سرور برقرار نیست. لطفاً اتصال اینترنت و سرور را بررسی کنید.",
+        );
+        toast.error("خطا در اتصال به سرور");
+      } else {
+        const errorMessage =
+          err.response?.data?.detail || err.message || "خطا در بروزرسانی دوره";
+        setError(`❌ ${errorMessage}`);
+        toast.error(errorMessage);
+      }
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  if (fetching) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center min-h-[200px]">
           <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
         </div>
       </AdminLayout>
@@ -256,13 +297,8 @@ export default function CourseEdit() {
           glowIntensity="md"
         >
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              ❌ {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4">
-              ✅ {success}
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-sm whitespace-pre-wrap">
+              {error}
             </div>
           )}
 
@@ -286,13 +322,6 @@ export default function CourseEdit() {
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {isImageRemoved
-                      ? "🗑️ تصویر حذف خواهد شد"
-                      : image
-                        ? "🆕 تصویر جدید"
-                        : "📸 تصویر فعلی"}
-                  </p>
                 </div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors bg-white/5 hover:bg-white/10">
@@ -306,9 +335,7 @@ export default function CourseEdit() {
                       <>
                         <Upload className="w-10 h-10 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-400">
-                          {isImageRemoved
-                            ? "تصویر حذف شد - برای آپلود کلیک کنید"
-                            : "برای آپلود کلیک کنید"}
+                          برای آپلود کلیک کنید
                         </p>
                         <p className="text-xs text-gray-500">
                           PNG, JPG, WEBP (حداکثر ۵MB)
@@ -331,7 +358,7 @@ export default function CourseEdit() {
             {/* عنوان */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                عنوان <span className="text-red-400">*</span>
+                عنوان دوره <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -339,10 +366,11 @@ export default function CourseEdit() {
                 value={formData.title}
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="عنوان دوره را وارد کنید"
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                ⚡ اسلاگ دوره هنگام ویرایش تغییر نمی‌کند
+                ⚡ اسلاگ به صورت خودکار از عنوان تولید می‌شود
               </p>
             </div>
 
@@ -386,8 +414,8 @@ export default function CourseEdit() {
                 </label>
                 <input
                   type="number"
-                  name="orginal_price"
-                  value={formData.orginal_price}
+                  name="original_price"
+                  value={formData.original_price}
                   onChange={handleChange}
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -406,9 +434,6 @@ export default function CourseEdit() {
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  قیمت نهایی = قیمت اصلی - تخفیف
-                </p>
               </div>
             </div>
 
@@ -439,8 +464,8 @@ export default function CourseEdit() {
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
                 >
-                  <option value="PERCENT">درصدی (%)</option>
-                  <option value="FIXED">مبلغ ثابت (تومان)</option>
+                  <option value="percentage">درصدی (%)</option>
+                  <option value="fixed">مبلغ ثابت (تومان)</option>
                 </select>
               </div>
             </div>
@@ -458,14 +483,14 @@ export default function CourseEdit() {
                 onChange={handleChange}
                 min="0"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="مثلاً: ۴۰"
               />
             </div>
 
-            {/* ✅ تاریخ‌ها با PersianDatePicker */}
+            {/* تاریخ‌ها */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-400" />
+                <label className="block text-sm font-medium text-white/80 mb-2">
                   شروع ثبت‌نام
                 </label>
                 <PersianDatePicker
@@ -479,8 +504,7 @@ export default function CourseEdit() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-400" />
+                <label className="block text-sm font-medium text-white/80 mb-2">
                   پایان ثبت‌نام
                 </label>
                 <PersianDatePicker
@@ -496,8 +520,7 @@ export default function CourseEdit() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-400" />
+              <label className="block text-sm font-medium text-white/80 mb-2">
                 تاریخ شروع کلاس
               </label>
               <PersianDatePicker
@@ -536,9 +559,12 @@ export default function CourseEdit() {
                   ))
                 )}
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                انتخاب رویداد مرتبط با این دوره
+              </p>
             </div>
 
-            {/* وضعیت */}
+            {/* وضعیت فعال */}
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -570,13 +596,13 @@ export default function CourseEdit() {
                 type="submit"
                 variant="primary"
                 size="md"
-                loading={submitting || uploading}
+                loading={loading || uploading}
                 icon={<Save className="w-5 h-5" />}
                 iconPosition="left"
-                disabled={submitting || uploading}
+                disabled={loading || uploading}
                 className="flex-1"
               >
-                {uploading ? "در حال آپلود..." : "ذخیره تغییرات"}
+                {uploading ? "در حال آپلود..." : "بروزرسانی دوره"}
               </GlassButton>
             </div>
           </form>

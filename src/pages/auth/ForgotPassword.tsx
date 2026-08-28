@@ -9,7 +9,7 @@ import { toast } from "../../hooks/use-toast";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"phone" | "otp" | "reset">("phone");
+  const [step, setStep] = useState<"phone" | "reset">("phone");
   const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -28,7 +28,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       await authAPI.requestOTP(phone);
-      setStep("otp");
+      setStep("reset");
       setTimer(180);
       toast.success("✅ کد تایید به شماره شما ارسال شد");
 
@@ -50,29 +50,13 @@ export default function ForgotPassword() {
     }
   };
 
-  // ✅ تایید OTP
-  const handleVerifyOTP = async () => {
+  // ✅ بازنشانی رمز عبور با OTP (بدون مرحله verify جداگانه)
+  const handleResetPassword = async () => {
     if (!otpCode || otpCode.length < 5) {
       toast.error("لطفاً کد تایید را وارد کنید");
       return;
     }
 
-    setLoading(true);
-    try {
-      await authAPI.verifyOTP(phone, otpCode);
-      setStep("reset");
-      toast.success("✅ کد تایید شد، رمز جدید را وارد کنید");
-    } catch (err: any) {
-      toast.error(
-        err?.response?.data?.detail || err?.message || "کد تایید نامعتبر است",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ بازنشانی رمز عبور
-  const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 6) {
       toast.error("رمز عبور باید حداقل ۶ کاراکتر باشد");
       return;
@@ -85,12 +69,41 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
+      // ✅ ارسال همزمان OTP و رمز جدید
       await authAPI.resetPasswordWithOTP(phone, otpCode, newPassword);
       toast.success("✅ رمز عبور با موفقیت تغییر کرد");
       navigate("/login");
     } catch (err: any) {
       toast.error(
         err?.response?.data?.detail || err?.message || "خطا در تغییر رمز عبور",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ ارسال مجدد کد
+  const handleResendOTP = async () => {
+    if (timer > 0) return;
+
+    setLoading(true);
+    try {
+      await authAPI.requestOTP(phone);
+      setTimer(180);
+      toast.success("✅ کد تایید مجدداً ارسال شد");
+
+      const interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.detail || err?.message || "خطا در ارسال کد",
       );
     } finally {
       setLoading(false);
@@ -118,13 +131,11 @@ export default function ForgotPassword() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-white">
               {step === "phone" && "بازیابی رمز عبور"}
-              {step === "otp" && "تایید کد"}
               {step === "reset" && "تنظیم رمز جدید"}
             </h1>
             <p className="text-gray-400 text-sm mt-2">
               {step === "phone" && "شماره تلفن خود را وارد کنید"}
-              {step === "otp" && "کد ارسال شده را وارد کنید"}
-              {step === "reset" && "رمز عبور جدید خود را وارد کنید"}
+              {step === "reset" && "کد تایید و رمز عبور جدید را وارد کنید"}
             </p>
           </div>
 
@@ -162,8 +173,8 @@ export default function ForgotPassword() {
             </div>
           )}
 
-          {/* مرحله 2: تایید OTP */}
-          {step === "otp" && (
+          {/* مرحله 2: تایید OTP + تنظیم رمز جدید */}
+          {step === "reset" && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
@@ -185,8 +196,8 @@ export default function ForgotPassword() {
                 <div className="text-right mt-1">
                   <button
                     type="button"
-                    onClick={handleSendOTP}
-                    disabled={timer > 0}
+                    onClick={handleResendOTP}
+                    disabled={timer > 0 || loading}
                     className={`text-xs transition-colors ${
                       timer > 0
                         ? "text-gray-500 cursor-not-allowed"
@@ -198,30 +209,6 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              <GlassButton
-                type="button"
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={loading}
-                onClick={handleVerifyOTP}
-              >
-                {loading ? "در حال تایید..." : "تایید کد"}
-              </GlassButton>
-
-              <button
-                type="button"
-                onClick={() => setStep("phone")}
-                className="text-center text-sm text-gray-400 hover:text-white transition-colors w-full"
-              >
-                ← بازگشت به مرحله قبل
-              </button>
-            </div>
-          )}
-
-          {/* مرحله 3: تنظیم رمز جدید */}
-          {step === "reset" && (
-            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   رمز عبور جدید
@@ -263,16 +250,28 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              <GlassButton
-                type="button"
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={loading}
-                onClick={handleResetPassword}
-              >
-                {loading ? "در حال تغییر..." : "تغییر رمز عبور"}
-              </GlassButton>
+              <div className="flex gap-3">
+                <GlassButton
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setStep("phone")}
+                  className="flex-1"
+                >
+                  بازگشت
+                </GlassButton>
+                <GlassButton
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  loading={loading}
+                  onClick={handleResetPassword}
+                  className="flex-1"
+                >
+                  {loading ? "در حال تغییر..." : "تغییر رمز عبور"}
+                </GlassButton>
+              </div>
             </div>
           )}
         </LiquidGlassCard>

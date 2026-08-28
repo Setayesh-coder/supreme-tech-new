@@ -185,7 +185,7 @@ export default function Hero() {
         lg:px-8
       "
     >
-      <div className="mx-auto max-w-[1400px]">
+      <div className="mx-auto max-w-[1400px] ">
         {/* =================================================
             HERO
         ================================================== */}
@@ -578,9 +578,7 @@ export default function Hero() {
     absolute
     bottom-5
     left-5
-    right-5
-
-    sm:bottom-7
+    right-5 sm:bottom-7
     sm:left-7
     sm:right-7
 

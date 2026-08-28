@@ -39,10 +39,9 @@ export default function CourseCreate() {
     title: "",
     description: "",
     instructor_name: "",
-    price: 0,
-    orginal_price: 0,
+    original_price: 0,
     discount_value: 0,
-    discount_type: "PERCENT" as "PERCENT" | "FIXED",
+    discount_type: "percentage" as "percentage" | "fixed",
     duration_hours: 0,
     is_active: true,
     event_id: "",
@@ -53,7 +52,6 @@ export default function CourseCreate() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  // دریافت لیست رویدادها
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -86,16 +84,15 @@ export default function CourseCreate() {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        setError("لطفاً یک فایل تصویری انتخاب کنید");
+        toast.error("لطفاً یک فایل تصویری انتخاب کنید");
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
+        toast.error("حجم تصویر نباید بیشتر از ۵ مگابایت باشد");
         return;
       }
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
-      setError("");
     }
   };
 
@@ -124,43 +121,134 @@ export default function CourseCreate() {
     setError("");
 
     try {
+      // ✅ اعتبارسنجی عنوان
+      if (!formData.title.trim()) {
+        toast.error("لطفاً عنوان دوره را وارد کنید");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ اعتبارسنجی قیمت
+      if (!formData.original_price || formData.original_price < 0) {
+        toast.error("لطفاً قیمت معتبر وارد کنید");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ آپلود تصویر
       let imageUrl = "";
       if (image) {
         try {
           imageUrl = await uploadImage(image);
         } catch (uploadError: any) {
-          setError(uploadError.message);
+          toast.error(uploadError.message || "خطا در آپلود تصویر");
           setLoading(false);
           return;
         }
       }
 
+      // ✅ محاسبه قیمت نهایی
+      let finalPrice = formData.original_price;
+      if (formData.discount_value > 0) {
+        if (formData.discount_type === "percentage") {
+          finalPrice =
+            formData.original_price -
+            (formData.original_price * formData.discount_value) / 100;
+        } else {
+          finalPrice = formData.original_price - formData.discount_value;
+        }
+        finalPrice = Math.max(0, finalPrice);
+      }
+
+      // ✅ ساخت داده با تایپ صحیح
       const courseData = {
         title: formData.title.trim(),
         slug: generateSlug(formData.title.trim()),
-        description: formData.description?.trim() || undefined,
-        cover_image: imageUrl || undefined,
-        price: Number(formData.price) || 0,
-        orginal_price: Number(formData.orginal_price) || 0,
+        original_price: Number(formData.original_price) || 0,
+        price: Math.round(finalPrice),
         discount_value: Number(formData.discount_value) || 0,
         discount_type: formData.discount_type,
-        duration_hours: Number(formData.duration_hours) || undefined,
-        instructor_name: formData.instructor_name?.trim() || undefined,
         is_active: formData.is_active,
-        event_id: formData.event_id || undefined,
-        registration_start_date: formData.registration_start_date,
-        registration_end_date: formData.registration_end_date,
-        class_start_date: formData.class_start_date,
+        ...(formData.description?.trim() && {
+          description: formData.description.trim(),
+        }),
+        ...(imageUrl && { cover_image: imageUrl }),
+        ...(formData.duration_hours > 0 && {
+          duration_hours: Number(formData.duration_hours),
+        }),
+        ...(formData.instructor_name?.trim() && {
+          instructor_name: formData.instructor_name.trim(),
+        }),
+        ...(formData.event_id && { event_id: formData.event_id }),
+        ...(formData.registration_start_date && {
+          registration_start_date: formData.registration_start_date,
+        }),
+        ...(formData.registration_end_date && {
+          registration_end_date: formData.registration_end_date,
+        }),
+        ...(formData.class_start_date && {
+          class_start_date: formData.class_start_date,
+        }),
       };
 
+      console.log("📤 ارسال داده:", courseData);
+
+      // ✅ ارسال به API
       await coursesAPI.create(courseData);
       toast.success("✅ دوره با موفقیت ایجاد شد!");
       navigate("/admin/courses");
     } catch (err: any) {
       console.error("❌ خطا:", err);
-      setError(
-        err.response?.data?.detail || err.message || "خطا در ایجاد دوره",
-      );
+
+      // ✅ مدیریت خطاها
+      if (err.message === "Network Error") {
+        setError(
+          "❌ اتصال به سرور برقرار نیست. لطفاً اتصال اینترنت و سرور را بررسی کنید.",
+        );
+        toast.error("خطا در اتصال به سرور");
+      } else if (err.response) {
+        console.log("📥 وضعیت:", err.response.status);
+        console.log(
+          "📥 داده‌های خطا:",
+          JSON.stringify(err.response.data, null, 2),
+        );
+
+        if (err.response?.status === 422) {
+          const detail = err.response?.data?.detail;
+
+          if (Array.isArray(detail)) {
+            const errorMessages = detail
+              .map((d: any) => {
+                const field = d.loc?.join(".") || "نامشخص";
+                return `${field}: ${d.msg}`;
+              })
+              .join(" • ");
+
+            setError(`❌ ${errorMessages}`);
+            toast.error(errorMessages);
+          } else if (typeof detail === "object" && detail !== null) {
+            const errorMsg = JSON.stringify(detail);
+            setError(`❌ ${errorMsg}`);
+            toast.error("داده‌های وارد شده معتبر نیستند");
+          } else if (typeof detail === "string") {
+            setError(`❌ ${detail}`);
+            toast.error(detail);
+          } else {
+            setError(
+              "❌ داده‌های وارد شده معتبر نیستند. لطفاً همه فیلدها را بررسی کنید.",
+            );
+            toast.error("داده‌های وارد شده معتبر نیستند");
+          }
+        } else {
+          const errorMessage =
+            err.response?.data?.detail || err.message || "خطا در ایجاد دوره";
+          setError(`❌ ${errorMessage}`);
+          toast.error(errorMessage);
+        }
+      } else {
+        setError(`❌ ${err.message || "خطا در ایجاد دوره"}`);
+        toast.error(err.message || "خطا در ایجاد دوره");
+      }
     } finally {
       setLoading(false);
     }
@@ -186,8 +274,8 @@ export default function CourseCreate() {
           glowIntensity="md"
         >
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              ❌ {error}
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-sm whitespace-pre-wrap">
+              {error}
             </div>
           )}
 
@@ -299,38 +387,18 @@ export default function CourseCreate() {
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-blue-400" />
-                  قیمت اصلی (تومان)
+                  قیمت اصلی (تومان) <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="number"
-                  name="orginal_price"
-                  value={formData.orginal_price}
+                  name="original_price"
+                  value={formData.original_price}
                   onChange={handleChange}
                   min="0"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-green-400" />
-                  قیمت نهایی (تومان)
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  قیمت نهایی = قیمت اصلی - تخفیف
-                </p>
-              </div>
-            </div>
-
-            {/* تخفیف */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
                   <Percent className="w-4 h-4 text-orange-400" />
@@ -346,20 +414,25 @@ export default function CourseCreate() {
                   placeholder="مقدار تخفیف"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  نوع تخفیف
-                </label>
-                <select
-                  name="discount_type"
-                  value={formData.discount_type}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
-                >
-                  <option value="PERCENT">درصدی (%)</option>
-                  <option value="FIXED">مبلغ ثابت (تومان)</option>
-                </select>
-              </div>
+            </div>
+
+            {/* نوع تخفیف */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                نوع تخفیف
+              </label>
+              <select
+                name="discount_type"
+                value={formData.discount_type}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+              >
+                <option value="percentage">درصدی (%)</option>
+                <option value="fixed">مبلغ ثابت (تومان)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                قیمت نهایی = قیمت اصلی - تخفیف
+              </p>
             </div>
 
             {/* مدت زمان */}
@@ -379,7 +452,7 @@ export default function CourseCreate() {
               />
             </div>
 
-            {/* ✅ تاریخ‌ها با PersianDatePicker */}
+            {/* تاریخ‌ها */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">

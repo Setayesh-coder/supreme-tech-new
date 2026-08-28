@@ -31,6 +31,7 @@ import {
 import { BlogPostSkeleton } from "../../components/skeletons/BlogPostSkeleton";
 import { getImageUrl } from "../../lib/constants";
 import { toast } from "../../hooks/use-toast";
+import { statsAPI } from "../../lib/api/stats";
 
 // آیکون‌ها
 const TwitterIcon = () => (
@@ -72,8 +73,8 @@ export default function BlogPost() {
   const [likesCount, setLikesCount] = useState(0);
   const [likeLoading, setLikeLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [viewTracked, setViewTracked] = useState(false);
 
-  // ✅ تابع getNodeText به عنوان یک تابع کمکی داخل کامپوننت
   const getNodeText = (node: unknown): string => {
     if (typeof node === "string" || typeof node === "number")
       return String(node);
@@ -92,6 +93,9 @@ export default function BlogPost() {
         setPost(data);
         setLikesCount(data.likes_count || 0);
         await checkLikeStatus(data.id);
+
+        // ✅ ثبت بازدید پست
+        await trackPostView();
       } catch (err) {
         setError("پست مورد نظر پیدا نشد");
       } finally {
@@ -100,6 +104,34 @@ export default function BlogPost() {
     };
     fetchPost();
   }, [slug]);
+
+  // ✅ تابع ثبت بازدید پست (بدون نیاز به postId)
+  const trackPostView = async () => {
+    if (viewTracked || !slug) return; // جلوگیری از ثبت مجدد
+
+    try {
+      // دریافت sessionId
+      let sessionId = localStorage.getItem("session_id");
+      if (!sessionId) {
+        sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem("session_id", sessionId);
+      }
+
+      // ثبت بازدید
+      await statsAPI.trackView({
+        path: `/blog/${slug}`,
+        session_id: sessionId,
+        user_agent: navigator.userAgent,
+        referrer: document.referrer || undefined,
+      });
+
+      console.log(`👁️ بازدید ثبت شد: /blog/${slug}`);
+      setViewTracked(true);
+    } catch (error) {
+      // خطا را نادیده بگیر (برای کاربر مهم نیست)
+      console.warn("⚠️ خطا در ثبت بازدید:", error);
+    }
+  };
 
   const checkLikeStatus = async (postId: string) => {
     const token = localStorage.getItem("token");
@@ -346,7 +378,6 @@ export default function BlogPost() {
       return <p className="text-gray-300 leading-relaxed mb-4">{children}</p>;
     },
 
-    // ✅ استفاده از getNodeText در h1
     h1({ children }) {
       const id = slugify(getNodeText(children));
       return (
@@ -358,7 +389,6 @@ export default function BlogPost() {
         </h1>
       );
     },
-    // ✅ استفاده از getNodeText در h2
     h2({ children }) {
       const id = slugify(getNodeText(children));
       return (
@@ -370,7 +400,6 @@ export default function BlogPost() {
         </h2>
       );
     },
-    // ✅ استفاده از getNodeText در h3
     h3({ children }) {
       const id = slugify(getNodeText(children));
       return (

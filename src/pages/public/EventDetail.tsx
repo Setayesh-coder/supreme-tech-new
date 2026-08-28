@@ -7,10 +7,10 @@ import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import CourseList from "../../components/sections/CourseList";
 import ShareButton from "../../components/ui/ShareButton";
+import { statsAPI } from "../../lib/api/stats"; // ✅ اضافه کردن
 import {
   Calendar,
   MapPin,
-  // Users,
   Hourglass,
   Clock,
   ChevronLeft,
@@ -19,10 +19,15 @@ import {
   Tag,
   CalendarDays,
   Info,
+  Eye,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import CountdownTimer from "../../components/ui/CountdownTimer";
 import { motion } from "framer-motion";
+import { toast } from "../../hooks/use-toast";
 
 interface Event {
   id: string;
@@ -43,6 +48,7 @@ interface Event {
   featured: boolean;
   is_active: boolean;
   meetingLink?: string;
+  views_count?: number; // ✅ اضافه کردن
   _count?: {
     enrollments: number;
   };
@@ -83,6 +89,11 @@ export default function EventDetail() {
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState(false);
 
+  // ✅ اضافه کردن state برای کپی لینک
+  const [copied, setCopied] = useState(false);
+  const [viewTracked, setViewTracked] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
   useEffect(() => {
     const fetchEvent = async () => {
       if (!slug) {
@@ -95,7 +106,6 @@ export default function EventDetail() {
         setLoading(true);
         const data = await eventsAPI.getBySlug(slug);
 
-        // ✅ نگاشت داده‌ها به تایپ Event
         const mappedEvent: Event = {
           ...data,
           description: data.description || "",
@@ -104,8 +114,12 @@ export default function EventDetail() {
           end_date: data.end_date || new Date().toISOString(),
           type: (data as any).category || "WORKSHOP",
           featured: (data as any).is_featured || false,
+          views_count: (data as any).views_count || 0,
         };
         setEvent(mappedEvent);
+
+        // ✅ ثبت بازدید رویداد
+        await trackEventView();
       } catch (err) {
         console.error(" خطا:", err);
         setError("رویداد مورد نظر یافت نشد");
@@ -115,6 +129,81 @@ export default function EventDetail() {
     };
     fetchEvent();
   }, [slug]);
+
+  // ✅ تابع ثبت بازدید رویداد
+  const trackEventView = async () => {
+    if (viewTracked || !slug) return;
+
+    try {
+      let sessionId = localStorage.getItem("session_id");
+      if (!sessionId) {
+        sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem("session_id", sessionId);
+      }
+
+      await statsAPI.trackView({
+        path: `/events/${slug}`,
+        session_id: sessionId,
+        user_agent: navigator.userAgent,
+        referrer: document.referrer || undefined,
+      });
+
+      console.log(`👁️ بازدید ثبت شد: /events/${slug}`);
+      setViewTracked(true);
+    } catch (error) {
+      console.warn("⚠️ خطا در ثبت بازدید:", error);
+    }
+  };
+
+  // ✅ تابع کپی لینک
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("✅ لینک رویداد کپی شد!");
+    } catch (err) {
+      console.error("خطا در کپی کردن", err);
+      toast.error("خطا در کپی کردن لینک");
+    }
+  };
+
+  // ✅ تابع اشتراک‌گذاری
+  const handleShare = (platform: string) => {
+    const url = encodeURIComponent(window.location.href);
+    const title = encodeURIComponent(event?.title || "");
+
+    const shareUrls: Record<string, string> = {
+      twitter: `https://twitter.com/intent/tweet?text=${title}&url=${url}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+      telegram: `https://t.me/share/url?url=${url}&text=${title}`,
+    };
+
+    if (shareUrls[platform]) {
+      window.open(
+        shareUrls[platform],
+        "_blank",
+        "noopener,noreferrer,width=600,height=500",
+      );
+      setShowShareMenu(false);
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event?.title,
+          text: event?.description,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error("خطا در اشتراک‌گذاری:", err);
+      }
+    } else {
+      setShowShareMenu(!showShareMenu);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "نامشخص";
@@ -141,7 +230,6 @@ export default function EventDetail() {
           blurIntensity="lg"
           glowIntensity="md"
         >
-          {/* <div className="text-6xl mb-4">😕</div> */}
           <h3 className="text-xl font-bold text-white mb-2">
             {error || "رویداد یافت نشد"}
           </h3>
@@ -157,8 +245,6 @@ export default function EventDetail() {
   }
 
   const imageUrl = getImageUrl(event.image || event.cover_image);
-  // const totalEnrolled = event._count?.enrollments || 0;
-  // ✅ استفاده از start_date برای محاسبه روزهای باقی‌مانده
   const daysLeft = getDaysLeft(event.start_date);
   const isPast = new Date(event.end_date) < new Date();
   const eventDate = new Date(event.start_date);
@@ -262,6 +348,11 @@ export default function EventDetail() {
                       {event.location}
                     </span>
                   )}
+                  {/* ✅ نمایش تعداد بازدید */}
+                  <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                    <Eye size={14} className="md:w-4 md:h-4" />
+                    {(event.views_count || 0).toLocaleString()} بازدید
+                  </span>
                 </div>
               </div>
             </div>
@@ -408,15 +499,16 @@ export default function EventDetail() {
                   </div>
                 </div>
 
-                {/* <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <Users className="w-4 h-4 text-blue-400" />
+                {/* ✅ نمایش تعداد بازدید */}
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <Eye className="w-4 h-4 text-blue-400" />
                   <div className="flex-1">
-                    <p className="text-xs text-gray-500">شرکت‌کنندگان</p>
+                    <p className="text-xs text-gray-500">بازدید</p>
                     <p className="text-sm text-white">
-                      {totalEnrolled} نفر از {event.capacity} نفر
+                      {(event.views_count || 0).toLocaleString()} بازدید
                     </p>
                   </div>
-                </div> */}
+                </div>
               </div>
 
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
@@ -434,6 +526,62 @@ export default function EventDetail() {
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
                       در حال برگزاری
                     </span>
+                  )}
+                </div>
+              </div>
+
+              {/* ✅ بخش اشتراک‌گذاری و کپی لینک */}
+              <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
+                <span className="text-sm text-gray-400 block mb-3">
+                  اشتراک‌گذاری رویداد
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={handleNativeShare}
+                    aria-label="اشتراک‌گذاری"
+                    className="p-2 rounded-full bg-blue-500/20 hover:bg-blue-500/30 transition-colors group"
+                  >
+                    <Share2
+                      size={18}
+                      className="text-blue-400 group-hover:text-blue-300 transition-colors"
+                    />
+                  </button>
+                  <button
+                    onClick={copyToClipboard}
+                    aria-label="کپی لینک"
+                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors group"
+                  >
+                    {copied ? (
+                      <Check size={18} className="text-green-400" />
+                    ) : (
+                      <Copy
+                        size={18}
+                        className="text-gray-400 group-hover:text-white transition-colors"
+                      />
+                    )}
+                  </button>
+
+                  {showShareMenu && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleShare("twitter")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1DA1F2]/20 hover:bg-[#1DA1F2]/30 text-[#1DA1F2] rounded-lg transition-colors text-xs"
+                      >
+                        توییتر
+                      </button>
+                      <button
+                        onClick={() => handleShare("linkedin")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A66C2]/20 hover:bg-[#0A66C2]/30 text-[#0A66C2] rounded-lg transition-colors text-xs"
+                      >
+                        لینکدین
+                      </button>
+                      <button
+                        onClick={() => handleShare("telegram")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#26A5E4]/20 hover:bg-[#26A5E4]/30 text-[#26A5E4] rounded-lg transition-colors text-xs"
+                      >
+                        تلگرام
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

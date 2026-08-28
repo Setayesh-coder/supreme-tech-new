@@ -8,15 +8,15 @@ export interface Course {
   description?: string;
   cover_image?: string;
   price: number;
-  orginal_price: number;
+  original_price: number;
   discount_value: number;
-  discount_type: string;
+  discount_type: "percentage" | "fixed";
   duration_hours?: number;
   instructor_name?: string;
   is_active: boolean;
-  registration_start_date: string;
-  registration_end_date: string;
-  class_start_date: string;
+  registration_start_date?: string;
+  registration_end_date?: string;
+  class_start_date?: string;
   event_id?: string;
   event?: {
     id: string;
@@ -26,36 +26,42 @@ export interface Course {
   updated_at: string;
 }
 
+// ✅ اضافه کردن price به CourseCreate
 export interface CourseCreate {
   title: string;
   slug: string;
-  description?: string;
-  cover_image?: string;
-  price?: number;
-  orginal_price: number;
-  duration_hours?: number;
-  instructor_name?: string;
-  registration_start_date: string;
-  registration_end_date: string;
-  class_start_date: string;
+  description?: string | null;
+  cover_image?: string | null;
+  original_price: number;
+  price: number; // ✅ اضافه شد
+  discount_value?: number | null;
+  discount_type?: "percentage" | "fixed" | null;
+  duration_hours?: number | null;
+  instructor_name?: string | null;
   is_active?: boolean;
-  event_id?: string;
+  event_id?: string | null;
+  registration_start_date?: string | null;
+  registration_end_date?: string | null;
+  class_start_date?: string | null;
 }
 
+// ✅ اضافه کردن price به CourseUpdate
 export interface CourseUpdate {
   title?: string;
   slug?: string;
-  description?: string;
-  cover_image?: string;
-  price?: number;
-  orginal_price: number;
-  duration_hours?: number;
-  registration_start_date: string;
-  registration_end_date: string;
-  class_start_date: string;
-  instructor_name?: string;
+  description?: string | null;
+  cover_image?: string | null;
+  original_price?: number;
+  price?: number; // ✅ اضافه شد
+  discount_value?: number | null;
+  discount_type?: "percentage" | "fixed" | null;
+  duration_hours?: number | null;
+  instructor_name?: string | null;
   is_active?: boolean;
-  event_id?: string;
+  event_id?: string | null;
+  registration_start_date?: string | null;
+  registration_end_date?: string | null;
+  class_start_date?: string | null;
 }
 
 export interface CoursePaginatedResponse {
@@ -67,7 +73,6 @@ export interface CoursePaginatedResponse {
 
 export const generateSlug = (text: string): string => {
   if (!text || text.trim() === "") return "بدون-عنوان";
-
   return (
     text
       .trim()
@@ -86,7 +91,11 @@ export const coursesAPI = {
     limit?: number;
     isActive?: boolean;
   }): Promise<CoursePaginatedResponse> => {
-    const response = await api.get("/courses", { params });
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get("/courses", {
+      params,
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 
@@ -96,22 +105,39 @@ export const coursesAPI = {
   },
 
   getById: async (id: string): Promise<Course> => {
-    const response = await api.get(`/courses/${id}`);
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get(`/courses/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 
   create: async (data: CourseCreate): Promise<Course> => {
-    const response = await api.post("/courses", data);
+    const token = localStorage.getItem("token") || "";
+    const payload = {
+      ...data,
+      discount_type: data.discount_type || "percentage",
+    };
+    console.log("📤 ارسال به سرور:", payload);
+    const response = await api.post("/courses", payload, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 
   update: async (id: string, data: CourseUpdate): Promise<Course> => {
-    const response = await api.put(`/courses/${id}`, data);
+    const token = localStorage.getItem("token") || "";
+    const response = await api.put(`/courses/${id}`, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 
   delete: async (id: string): Promise<{ message: string }> => {
-    const response = await api.delete(`/courses/${id}`);
+    const token = localStorage.getItem("token") || "";
+    const response = await api.delete(`/courses/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 };

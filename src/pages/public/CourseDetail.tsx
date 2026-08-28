@@ -33,7 +33,7 @@ import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal";
 
-// ✅ تایپ Course با فیلدهای جدید کامل
+// ✅ تایپ Course با فیلدهای صحیح
 interface Course {
   id: string;
   title: string;
@@ -43,7 +43,7 @@ interface Course {
   cover_image?: string;
   image?: string;
   price: number;
-  orginal_price: number;
+  original_price: number; // ✅ اصلاح: orginal_price → original_price
   discount_value: number;
   discount_type: "PERCENT" | "FIXED";
   duration_hours?: number;
@@ -207,6 +207,10 @@ export default function CourseDetail() {
               (foundCourse as any).registration_end_date || undefined,
             class_start_date:
               (foundCourse as any).class_start_date || undefined,
+            original_price: (foundCourse as any).original_price || 0, // ✅ اصلاح
+            discount_value: (foundCourse as any).discount_value || 0,
+            discount_type:
+              (foundCourse.discount_type as "PERCENT" | "FIXED") || "PERCENT",
             event: (foundCourse as any).event
               ? {
                   id: (foundCourse as any).event.id,
@@ -214,8 +218,6 @@ export default function CourseDetail() {
                   slug: (foundCourse as any).event.slug || "",
                 }
               : undefined,
-            discount_type:
-              (foundCourse.discount_type as "PERCENT" | "FIXED") || "PERCENT",
           };
           setCourse(mappedCourse);
         } else {
@@ -306,11 +308,11 @@ export default function CourseDetail() {
   const isWaiting = course.enrollmentStatus === "WAITING";
   const isConfirmed = course.enrollmentStatus === "CONFIRMED";
 
-  // ✅ محاسبه تخفیف
-  const discountAmount = course.orginal_price - course.price;
+  // ✅ محاسبه تخفیف با استفاده از original_price
+  const discountAmount = (course.original_price || 0) - (course.price || 0);
   const discountPercent =
-    course.orginal_price > 0
-      ? Math.round((discountAmount / course.orginal_price) * 100)
+    course.original_price > 0
+      ? Math.round((discountAmount / course.original_price) * 100)
       : 0;
 
   return (
@@ -469,7 +471,7 @@ export default function CourseDetail() {
                   )}
                 </div>
 
-                {/* ✅ اطلاعات تکمیلی دوره */}
+                {/* اطلاعات تکمیلی دوره */}
                 <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
                   {course.registration_start_date && (
                     <div>
@@ -730,9 +732,9 @@ export default function CourseDetail() {
                   <span className="text-2xl font-bold text-white">
                     {formatPrice(course.price)}
                   </span>
-                  {course.orginal_price > course.price && (
+                  {course.original_price > course.price && (
                     <span className="text-sm text-gray-500 line-through mr-2">
-                      {formatPrice(course.orginal_price)}
+                      {formatPrice(course.original_price)}
                     </span>
                   )}
                   {discountAmount > 0 && (
@@ -779,13 +781,6 @@ export default function CourseDetail() {
                     <span className="text-yellow-400">در انتظار شروع</span>
                   )}
                 </div>
-
-                {/* <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">ظرفیت</span>
-                  <span className="text-white">
-                    {course.enrolledCount || 0} / {course.capacity || 0} نفر
-                  </span>
-                </div> */}
 
                 {course.level && (
                   <div className="flex items-center justify-between text-sm">

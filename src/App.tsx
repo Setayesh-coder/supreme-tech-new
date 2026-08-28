@@ -67,6 +67,7 @@ import CouponsManager from "./pages/admin/Copuns/CouponsManager";
 // Components
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import Stats from "./pages/admin/Stats";
 
 // ✅ تنظیم QueryClient
 const queryClient = new QueryClient({
@@ -112,7 +113,6 @@ function App() {
                 <Route path="/tickets/:id" element={<TicketDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
-
               {/* ============================================================
                 Admin
                 ============================================================ */}
@@ -132,8 +132,15 @@ function App() {
                     <Dashboard />
                   </ProtectedRoute>
                 }
+              />{" "}
+              <Route
+                path="/admin/stats"
+                element={
+                  <ProtectedRoute>
+                    <Stats />
+                  </ProtectedRoute>
+                }
               />
-
               {/* بلاگ */}
               <Route
                 path="/admin/blog"
@@ -159,7 +166,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* رویدادها */}
               <Route
                 path="/admin/events"
@@ -193,7 +199,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* دوره‌ها */}
               <Route
                 path="/admin/payments/orders"
@@ -243,7 +248,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* کارمندان */}
               <Route
                 path="/admin/employees"
@@ -269,7 +273,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* کاربران */}
               <Route
                 path="/admin/users"
@@ -279,7 +282,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* تیم */}
               <Route
                 path="/admin/team"
@@ -289,7 +291,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* همکاران */}
               <Route
                 path="/admin/partners"
@@ -315,7 +316,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* تیکت‌ها */}
               <Route
                 path="/admin/tickets"
@@ -341,7 +341,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* پیام‌ها */}
               <Route
                 path="/admin/messages"
@@ -351,7 +350,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* پروفایل ادمین */}
               <Route
                 path="/admin/profile"
@@ -361,7 +359,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* تنظیمات */}
               <Route
                 path="/admin/settings"
@@ -379,7 +376,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               {/* Hero */}
               <Route
                 path="/admin/hero"
@@ -405,7 +401,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
