@@ -93,6 +93,49 @@ export interface PaymentResponse {
   message: string;
 }
 
+// ✅ تایپ کامل Enrollment (ثبت نام) - اضافه شد
+export interface Enrollment {
+  id: string;
+  user_id: string;
+  course_id?: string;
+  event_id?: string;
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "WAITING";
+  payment_status: "PENDING" | "PAID" | "UNPAID" | "WAITING_VERIFY";
+  payment_method: "card_to_card" | "bale";
+  amount: number;
+  tracking_code?: string | null;
+  receipt_image_url?: string | null;
+  transaction_id?: string | null;
+  payment_data?: any; // برای داده‌های اضافی پرداخت
+  created_at: string;
+  updated_at: string;
+
+  // اطلاعات کاربر
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+
+  // اطلاعات دوره (اختیاری)
+  course?: {
+    id: string;
+    title: string;
+    price: number;
+    cover_image?: string;
+    slug?: string;
+  };
+
+  // اطلاعات رویداد (اختیاری)
+  event?: {
+    id: string;
+    title: string;
+    price: number;
+  };
+}
+
+// ✅ تایپ سفارش (Order) - اصلاح شده
 export interface Order {
   id: string;
   user_id: string;
@@ -100,7 +143,7 @@ export interface Order {
   total_original_price: number;
   total_discount: number;
   final_amount: number;
-  courses_snapshot: string[]; // ✅ آرایه‌ای از course_id ها
+  courses_snapshot: string[];
   payment_method: "card_to_card" | "bale" | string;
   status:
     | "pending"
@@ -114,7 +157,6 @@ export interface Order {
   created_at: string;
   updated_at: string;
 
-  // ✅ اطلاعات کاربر (از join یا populate)
   user?: {
     id: string;
     name: string;
@@ -122,7 +164,6 @@ export interface Order {
     phone?: string;
   };
 
-  // ✅ اطلاعات دوره‌ها (از populate)
   courses?: {
     id: string;
     title: string;
@@ -130,11 +171,23 @@ export interface Order {
     cover_image?: string;
   }[];
 
-  // ✅ اطلاعات کوپن (از populate)
   coupon?: {
     id: string;
     code: string;
     discount_type: "PERCENT" | "FIXED";
     discount_value: number;
+  };
+}
+
+// ✅ تایپ پاسخ پرداخت بله
+export interface BalePaymentCallback {
+  transaction_id: string;
+  enrollment_id: string;
+  status: "success" | "failed" | "pending";
+  amount: number;
+  payment_data?: {
+    ref_id?: string;
+    card_pan?: string;
+    [key: string]: any;
   };
 }

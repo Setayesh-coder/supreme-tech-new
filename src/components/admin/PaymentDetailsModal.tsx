@@ -16,158 +16,182 @@ import {
   Bot,
   User,
   Wallet,
+  BookOpen,
+  Calendar,
+  Tag,
+  Copy,
+  CheckCheck,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { paymentsAPI } from "../../lib/api/payment";
-// import { toast } from "../../hooks/use-toast";
+import type { Enrollment, BalePaymentCallback } from "../../types/cart";
+import { toast } from "../../hooks/use-toast";
 
 interface PaymentDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  enrollment: {
-    id: string;
-    user: {
-      name: string;
-      email: string;
-      phone?: string;
-    };
-    created_at: string;
-    status: string;
-    paymentStatus?: string;
-    course_id?: string;
-    event_id?: string;
-    tracking_code?: string | null;
-    receipt_image_url?: string | null;
-    payment_method?: "card_to_card" | "bale" | string;
-    amount: number;
-  };
+  enrollment: Enrollment;
+  onConfirm: (enrollmentId: string) => Promise<void>;
+  onReject: (enrollmentId: string) => Promise<void>;
+  onRefresh?: () => void;
   coursePrice?: number;
   courseTitle?: string;
-  onConfirm: (enrollmentId: string) => void;
-  onReject: (enrollmentId: string) => void;
 }
 
 export default function PaymentDetailsModal({
   isOpen,
   onClose,
   enrollment,
-  coursePrice = 0,
-  courseTitle = "دوره آموزشی",
   onConfirm,
   onReject,
+  onRefresh,
 }: PaymentDetailsModalProps) {
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [baleCallbackData, setBaleCallbackData] =
+    useState<BalePaymentCallback | null>(null);
+  const [isFetchingBale, setIsFetchingBale] = useState(false);
 
-  // ✅ استفاده از داده‌های موجود در enrollment
   useEffect(() => {
     if (isOpen && enrollment?.id) {
-      // اگر enrollment دارای اطلاعات پرداخت است، از آن استفاده کن
-      if (
-        enrollment.tracking_code ||
-        enrollment.receipt_image_url ||
-        enrollment.payment_method
-      ) {
-        setPaymentDetails({
-          id: enrollment.id,
-          enrollment_id: enrollment.id,
-          payment_method: enrollment.payment_method || "card_to_card",
-          tracking_code: enrollment.tracking_code,
-          receipt_image_url: enrollment.receipt_image_url,
-          transaction_id: null,
-          amount: enrollment.amount || coursePrice || 0,
-          status: enrollment.status,
-          created_at: enrollment.created_at,
-        });
-        setLoading(false);
-      } else {
-        // اگر اطلاعات پرداخت در enrollment نیست، از API دریافت کن
-        fetchPaymentDetails();
-      }
+      console.log("📦 Enrollment data received:", enrollment);
+      console.log("📦 Course data:", enrollment.course);
+      console.log("📦 Course ID:", enrollment.course_id);
+      console.log("📦 Payment method:", enrollment.payment_method);
     }
   }, [isOpen, enrollment]);
 
-  const fetchPaymentDetails = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const details = await paymentsAPI.getPaymentByEnrollment(enrollment.id);
-      setPaymentDetails(details);
-    } catch (err: any) {
-      console.error("❌ خطا در دریافت جزئیات پرداخت:", err);
-      // اگر API خطا داد، از داده‌های موجود استفاده کن
+  useEffect(() => {
+    if (isOpen && enrollment?.id) {
       setPaymentDetails({
         id: enrollment.id,
         enrollment_id: enrollment.id,
-        payment_method: "card_to_card",
-        tracking_code: "TRK-" + enrollment.id.slice(0, 8).toUpperCase(),
-        receipt_image_url: null,
-        transaction_id: null,
-        amount: coursePrice || 0,
-        status: enrollment.status,
+        payment_method: enrollment.payment_method || "card_to_card",
+        tracking_code: enrollment.tracking_code,
+        receipt_image_url: enrollment.receipt_image_url,
+        transaction_id: enrollment.transaction_id,
+        amount: enrollment.amount,
+        status: enrollment.payment_status,
         created_at: enrollment.created_at,
+        updated_at: enrollment.updated_at,
       });
-      setError("");
-    } finally {
+
+      if (enrollment.payment_method === "bale" && enrollment.transaction_id) {
+        fetchBaleCallbackData(enrollment.transaction_id);
+      }
+
       setLoading(false);
+      setError("");
+    }
+  }, [isOpen, enrollment]);
+
+  const fetchBaleCallbackData = async (transactionId: string) => {
+    try {
+      setIsFetchingBale(true);
+      const response = await paymentsAPI.getBalePaymentCallback(transactionId);
+      setBaleCallbackData(response);
+
+      setPaymentDetails((prev: any) => ({
+        ...prev,
+        payment_data: response.payment_data,
+        transaction_id: response.transaction_id || prev.transaction_id,
+        status: response.status === "success" ? "PAID" : prev.status,
+      }));
+    } catch (error) {
+      console.error("❌ خطا در دریافت callback بله:", error);
+    } finally {
+      setIsFetchingBale(false);
+    }
+  };
+
+  const handleRefreshBale = () => {
+    if (enrollment.transaction_id) {
+      fetchBaleCallbackData(enrollment.transaction_id);
+      toast.info("در حال بروزرسانی اطلاعات پرداخت...");
     }
   };
 
   if (!isOpen) return null;
 
-  // ✅ وضعیت‌های تیکت (هماهنگ با بک‌اند)
   const getStatusLabel = (status: string) => {
-    const labels: Record<string, { label: string; color: string; icon: any }> =
-      {
-        PENDING: { label: "در انتظار", color: "text-yellow-400", icon: Clock },
-        CONFIRMED: {
-          label: "تایید شده",
-          color: "text-green-400",
-          icon: CheckCircle,
-        },
-        CANCELLED: { label: "لغو شده", color: "text-red-400", icon: XCircle },
-        COMPLETED: {
-          label: "تکمیل شده",
-          color: "text-blue-400",
-          icon: CheckCircle,
-        },
-        WAITING: {
-          label: "در انتظار تایید",
-          color: "text-yellow-400",
-          icon: Clock,
-        },
-        PAID: {
-          label: "پرداخت شده",
-          color: "text-green-400",
-          icon: CheckCircle,
-        },
-        UNPAID: {
-          label: "پرداخت نشده",
-          color: "text-red-400",
-          icon: XCircle,
-        },
-      };
+    const labels: Record<
+      string,
+      { label: string; color: string; icon: any; bg: string }
+    > = {
+      PENDING: {
+        label: "در انتظار",
+        color: "text-yellow-400",
+        icon: Clock,
+        bg: "bg-yellow-500/20",
+      },
+      CONFIRMED: {
+        label: "تایید شده",
+        color: "text-green-400",
+        icon: CheckCircle,
+        bg: "bg-green-500/20",
+      },
+      CANCELLED: {
+        label: "لغو شده",
+        color: "text-red-400",
+        icon: XCircle,
+        bg: "bg-red-500/20",
+      },
+      COMPLETED: {
+        label: "تکمیل شده",
+        color: "text-blue-400",
+        icon: CheckCircle,
+        bg: "bg-blue-500/20",
+      },
+      WAITING: {
+        label: "در انتظار تایید",
+        color: "text-yellow-400",
+        icon: Clock,
+        bg: "bg-yellow-500/20",
+      },
+    };
     return labels[status] || labels.PENDING;
   };
 
   const getPaymentStatusLabel = (status?: string) => {
-    const labels: Record<string, { label: string; color: string }> = {
-      PENDING: { label: "در انتظار پرداخت", color: "text-yellow-400" },
-      PAID: { label: "پرداخت شده", color: "text-green-400" },
-      UNPAID: { label: "پرداخت نشده", color: "text-red-400" },
-      WAITING_VERIFY: { label: "در انتظار تایید", color: "text-blue-400" },
-    };
+    const labels: Record<string, { label: string; color: string; bg: string }> =
+      {
+        PENDING: {
+          label: "در انتظار پرداخت",
+          color: "text-yellow-400",
+          bg: "bg-yellow-500/20",
+        },
+        PAID: {
+          label: "پرداخت شده",
+          color: "text-green-400",
+          bg: "bg-green-500/20",
+        },
+        UNPAID: {
+          label: "پرداخت نشده",
+          color: "text-red-400",
+          bg: "bg-red-500/20",
+        },
+        WAITING_VERIFY: {
+          label: "در انتظار تایید",
+          color: "text-blue-400",
+          bg: "bg-blue-500/20",
+        },
+      };
     return labels[status || "PENDING"] || labels.PENDING;
   };
 
   const status = getStatusLabel(enrollment.status);
-  const paymentStatus = getPaymentStatusLabel(enrollment.paymentStatus);
+  const paymentStatus = getPaymentStatusLabel(enrollment.payment_status);
   const StatusIcon = status.icon;
+
   const isWaitingVerify =
-    enrollment.paymentStatus === "WAITING_VERIFY" ||
+    enrollment.payment_status === "WAITING_VERIFY" ||
     enrollment.status === "WAITING" ||
     enrollment.status === "PENDING";
 
@@ -194,19 +218,27 @@ export default function PaymentDetailsModal({
   };
 
   const getPaymentMethodLabel = (method?: string) => {
-    switch (method?.toLowerCase()) {
+    if (!method) return "نامشخص";
+    const normalizedMethod = method.toLowerCase().trim();
+    switch (normalizedMethod) {
       case "card_to_card":
+      case "cardtocard":
+      case "card-to-card":
         return "کارت به کارت";
       case "bale":
         return "ربات بله";
       default:
-        return "نامشخص";
+        return method || "نامشخص";
     }
   };
 
   const getPaymentMethodIcon = (method?: string) => {
-    switch (method?.toLowerCase()) {
+    if (!method) return <Wallet className="w-4 h-4" />;
+    const normalizedMethod = method.toLowerCase().trim();
+    switch (normalizedMethod) {
       case "card_to_card":
+      case "cardtocard":
+      case "card-to-card":
         return <CreditCard className="w-4 h-4" />;
       case "bale":
         return <Bot className="w-4 h-4" />;
@@ -215,9 +247,120 @@ export default function PaymentDetailsModal({
     }
   };
 
-  // ✅ محاسبه مبلغ نهایی
-  const finalAmount =
-    paymentDetails?.amount || enrollment.amount || coursePrice || 0;
+  // ✅ اصلاح: تشخیص بهتر اطلاعات محصول
+  const hasCourse = !!enrollment.course;
+  const hasEvent = !!enrollment.event;
+  const hasCourseId = !!enrollment.course_id;
+  const hasEventId = !!enrollment.event_id;
+
+  // ✅ دریافت عنوان محصول از منابع مختلف
+  const getItemTitle = () => {
+    // اولویت 1: اطلاعات کامل course
+    if (hasCourse && enrollment.course?.title) {
+      return enrollment.course.title;
+    }
+    // اولویت 2: اطلاعات کامل event
+    if (hasEvent && enrollment.event?.title) {
+      return enrollment.event.title;
+    }
+    // اولویت 3: از course_id (اگر رشته است)
+    if (hasCourseId && typeof enrollment.course_id === "string") {
+      return `دوره ${enrollment.course_id.substring(0, 8)}`;
+    }
+    // اولویت 4: از event_id (اگر رشته است)
+    if (hasEventId && typeof enrollment.event_id === "string") {
+      return `رویداد ${enrollment.event_id.substring(0, 8)}`;
+    }
+    // اولویت 5: از نام کاربر
+    if (enrollment.user?.name) {
+      return `سفارش ${enrollment.user.name}`;
+    }
+    return "محصول نامشخص";
+  };
+
+  // ✅ دریافت قیمت محصول از منابع مختلف
+  const getItemPrice = () => {
+    if (hasCourse && enrollment.course?.price !== undefined) {
+      return enrollment.course.price;
+    }
+    if (hasEvent && enrollment.event?.price !== undefined) {
+      return enrollment.event.price;
+    }
+    // اگر قیمت نداریم، از amount استفاده کن
+    return enrollment.amount || 0;
+  };
+
+  // ✅ دریافت آیکون محصول
+  const getItemIcon = () => {
+    if (hasCourse) return <BookOpen className="w-4 h-4" />;
+    if (hasEvent) return <Calendar className="w-4 h-4" />;
+    return <Tag className="w-4 h-4" />;
+  };
+
+  // ✅ دریافت نوع محصول
+  const getItemType = () => {
+    if (hasCourse) return "دوره";
+    if (hasEvent) return "رویداد";
+    if (hasCourseId) return "دوره";
+    if (hasEventId) return "رویداد";
+    if (enrollment.user?.name) return "سفارش";
+    return "محصول";
+  };
+
+  // ✅ دریافت شناسه محصول
+  const getItemId = () => {
+    if (hasCourse) return enrollment.course?.id || enrollment.course_id;
+    if (hasEvent) return enrollment.event?.id || enrollment.event_id;
+    if (enrollment.course_id) return enrollment.course_id;
+    if (enrollment.event_id) return enrollment.event_id;
+    return enrollment.id;
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      toast.success("کپی شد!");
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleConfirm = async () => {
+    try {
+      setIsProcessing(true);
+      await onConfirm(enrollment.id);
+      toast.success("پرداخت با موفقیت تایید شد");
+      if (onRefresh) onRefresh();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || "خطا در تایید پرداخت");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      setIsProcessing(true);
+      await onReject(enrollment.id);
+      toast.success("پرداخت رد شد");
+      if (onRefresh) onRefresh();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || "خطا در رد پرداخت");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getBaleStatus = () => {
+    if (!baleCallbackData) return null;
+    if (baleCallbackData.status === "success") {
+      return { label: "موفق", color: "text-green-400", icon: CheckCircle };
+    } else if (baleCallbackData.status === "failed") {
+      return { label: "ناموفق", color: "text-red-400", icon: XCircle };
+    }
+    return { label: "در انتظار", color: "text-yellow-400", icon: Clock };
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -229,20 +372,34 @@ export default function PaymentDetailsModal({
           glowIntensity="lg"
           shadowIntensity="lg"
         >
-          {/* دکمه بستن */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 hover:text-white"
+            disabled={isProcessing}
+            className="absolute top-3 right-3 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
 
-          {/* هدر */}
           <div className="mb-6 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white">
               جزئیات پرداخت
             </h2>
-            <p className="text-gray-400 text-sm mt-1">{courseTitle}</p>
+            <div className="flex items-center justify-center gap-2 mt-1">
+              <span className="text-gray-400 text-sm">شناسه ثبت‌نام:</span>
+              <code className="text-blue-400 text-sm font-mono bg-blue-500/10 px-2 py-0.5 rounded">
+                #{enrollment.id.slice(0, 8).toUpperCase()}
+              </code>
+              <button
+                onClick={() => handleCopy(enrollment.id)}
+                className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+              >
+                {copied ? (
+                  <CheckCheck className="w-3 h-3 text-green-400" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -251,44 +408,71 @@ export default function PaymentDetailsModal({
               <span className="text-gray-400 mr-3">در حال بارگذاری...</span>
             </div>
           ) : error ? (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm">
-              {error}
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl text-sm flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* وضعیت‌ها */}
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${status.color} bg-white/10`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${status.color} ${status.bg}`}
                 >
                   <StatusIcon className="w-3 h-3" />
                   {status.label}
                 </span>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${paymentStatus.color} bg-white/10`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${paymentStatus.color} ${paymentStatus.bg}`}
                 >
                   💳 {paymentStatus.label}
                 </span>
               </div>
 
-              {/* اطلاعات کاربر */}
-              <div className="bg-white/5 rounded-xl p-4 space-y-2">
+              {/* ✅ بخش اطلاعات محصول */}
+              <div className="bg-white/5 rounded-xl p-4 space-y-2 border border-white/5">
+                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  {getItemIcon()}
+                  اطلاعات {getItemType()}
+                </h3>
+                <div>
+                  <p className="text-white font-medium text-lg">
+                    {getItemTitle()}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 mt-1 text-sm">
+                    <span className="text-gray-400">
+                      قیمت: {formatPrice(getItemPrice())}
+                    </span>
+                    <span className="text-gray-400">
+                      شناسه: #{String(getItemId()).substring(0, 8) || "نامشخص"}
+                    </span>
+                    {hasCourse && enrollment.course?.slug && (
+                      <span className="text-gray-400">
+                        اسلاگ: {enrollment.course.slug}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4 space-y-2 border border-white/5">
                 <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                   <User className="w-4 h-4" />
                   اطلاعات کاربر
                 </h3>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                    {enrollment.user.name.charAt(0).toUpperCase()}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                    {enrollment.user.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
-                  <div>
-                    <p className="text-white font-medium">
-                      {enrollment.user.name}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">
+                      {enrollment.user.name || "کاربر ناشناس"}
                     </p>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3" />
-                        {enrollment.user.email}
+                      <span className="flex items-center gap-1 truncate">
+                        <Mail className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">
+                          {enrollment.user.email || "ایمیل ثبت نشده"}
+                        </span>
                       </span>
                       {enrollment.user.phone && (
                         <span className="flex items-center gap-1">
@@ -301,22 +485,35 @@ export default function PaymentDetailsModal({
                 </div>
               </div>
 
-              {/* اطلاعات پرداخت */}
-              <div className="bg-white/5 rounded-xl p-4 space-y-2">
-                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                  {getPaymentMethodIcon(paymentDetails?.payment_method)}
-                  اطلاعات پرداخت
-                </h3>
+              <div className="bg-white/5 rounded-xl p-4 space-y-2 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                    {getPaymentMethodIcon(paymentDetails?.payment_method)}
+                    اطلاعات پرداخت
+                  </h3>
 
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-gray-500">مبلغ</p>
-                    <p className="text-white font-medium">
-                      {formatPrice(finalAmount)}
+                  {paymentDetails?.payment_method?.toLowerCase() === "bale" && (
+                    <button
+                      onClick={handleRefreshBale}
+                      disabled={isFetchingBale}
+                      className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors text-blue-400 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-4 h-4 ${isFetchingBale ? "animate-spin" : ""}`}
+                      />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <p className="text-gray-500 text-xs">مبلغ پرداختی</p>
+                    <p className="text-white font-medium text-base">
+                      {formatPrice(paymentDetails?.amount || enrollment.amount)}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-gray-500">تاریخ ثبت</p>
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <p className="text-gray-500 text-xs">تاریخ ثبت</p>
                     <p className="text-white text-xs">
                       {formatDate(
                         paymentDetails?.created_at || enrollment.created_at,
@@ -324,55 +521,115 @@ export default function PaymentDetailsModal({
                     </p>
                   </div>
 
-                  {/* روش پرداخت */}
-                  <div className="col-span-2">
-                    <p className="text-gray-500">روش پرداخت</p>
-                    <p className="text-white flex items-center gap-1">
+                  <div className="col-span-2 bg-white/5 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs">روش پرداخت</p>
+                    <p className="text-white font-medium flex items-center gap-2 mt-1">
                       {getPaymentMethodIcon(paymentDetails?.payment_method)}
                       {getPaymentMethodLabel(paymentDetails?.payment_method)}
                     </p>
                   </div>
 
-                  {/* کد پیگیری (فقط کارت به کارت) */}
                   {paymentDetails?.payment_method?.toLowerCase() ===
                     "card_to_card" &&
                     paymentDetails?.tracking_code && (
-                      <div className="col-span-2">
-                        <p className="text-gray-500">کد پیگیری</p>
-                        <p className="text-blue-400 font-mono text-sm">
+                      <div className="col-span-2 bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                        <div className="flex items-center justify-between">
+                          <p className="text-gray-500 text-xs">کد پیگیری</p>
+                          <button
+                            onClick={() =>
+                              handleCopy(paymentDetails.tracking_code)
+                            }
+                            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                          >
+                            {copied ? (
+                              <CheckCheck className="w-3 h-3 text-green-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-blue-400 font-mono text-sm font-bold mt-1">
                           {paymentDetails.tracking_code}
                         </p>
                       </div>
                     )}
 
-                  {/* شناسه تراکنش (فقط بله) */}
                   {paymentDetails?.payment_method?.toLowerCase() === "bale" &&
                     paymentDetails?.transaction_id && (
-                      <div className="col-span-2">
-                        <p className="text-gray-500">شناسه تراکنش</p>
-                        <p className="text-blue-400 font-mono text-sm">
+                      <div className="col-span-2 bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                        <div className="flex items-center justify-between">
+                          <p className="text-gray-500 text-xs">شناسه تراکنش</p>
+                          <button
+                            onClick={() =>
+                              handleCopy(paymentDetails.transaction_id)
+                            }
+                            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                          >
+                            {copied ? (
+                              <CheckCheck className="w-3 h-3 text-green-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-purple-400 font-mono text-sm font-bold mt-1">
                           {paymentDetails.transaction_id}
                         </p>
+                      </div>
+                    )}
+
+                  {paymentDetails?.payment_method?.toLowerCase() === "bale" &&
+                    baleCallbackData && (
+                      <div className="col-span-2 bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                        <p className="text-gray-500 text-xs">
+                          وضعیت تراکنش بله
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {(() => {
+                            const baleStatus = getBaleStatus();
+                            return baleStatus ? (
+                              <span
+                                className={`flex items-center gap-1 ${baleStatus.color}`}
+                              >
+                                {baleStatus.icon && (
+                                  <baleStatus.icon className="w-4 h-4" />
+                                )}
+                                <span className="font-medium">
+                                  {baleStatus.label}
+                                </span>
+                              </span>
+                            ) : null;
+                          })()}
+                          {baleCallbackData.payment_data?.ref_id && (
+                            <span className="text-gray-400 text-xs mr-2">
+                              Ref: {baleCallbackData.payment_data.ref_id}
+                            </span>
+                          )}
+                        </div>
+                        {baleCallbackData.payment_data?.card_pan && (
+                          <p className="text-gray-400 text-xs mt-1">
+                            شماره کارت: {baleCallbackData.payment_data.card_pan}
+                          </p>
+                        )}
                       </div>
                     )}
                 </div>
               </div>
 
-              {/* تصویر رسید (فقط کارت به کارت) */}
               {paymentDetails?.payment_method?.toLowerCase() ===
                 "card_to_card" &&
                 paymentDetails?.receipt_image_url && (
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                     <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
                       <FileImage className="w-4 h-4" />
                       تصویر رسید
                     </h3>
-                    <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-white/5">
+                    <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-white/5 group">
                       {!imageError ? (
                         <img
                           src={paymentDetails.receipt_image_url}
                           alt="تصویر رسید"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           onError={() => setImageError(true)}
                         />
                       ) : (
@@ -381,12 +638,11 @@ export default function PaymentDetailsModal({
                           <p className="text-sm">تصویر رسید موجود نیست</p>
                         </div>
                       )}
-                      {/* دکمه دانلود */}
                       <a
                         href={paymentDetails.receipt_image_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="absolute bottom-2 right-2 p-2 bg-black/60 hover:bg-black/80 rounded-lg transition-colors"
+                        className="absolute bottom-2 right-2 p-2 bg-black/60 hover:bg-black/80 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <Download className="w-4 h-4 text-white" />
                       </a>
@@ -394,45 +650,52 @@ export default function PaymentDetailsModal({
                   </div>
                 )}
 
-              {/* دکمه‌های اقدام */}
               {isWaitingVerify && (
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <GlassButton
                     variant="secondary"
                     size="md"
-                    onClick={() => {
-                      if (onReject) onReject(enrollment.id);
-                      onClose();
-                    }}
-                    className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30"
-                    icon={<XIcon className="w-4 h-4" />}
+                    onClick={handleReject}
+                    disabled={isProcessing}
+                    className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    icon={
+                      isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <XIcon className="w-4 h-4" />
+                      )
+                    }
                     iconPosition="left"
                   >
-                    رد پرداخت
+                    {isProcessing ? "در حال پردازش..." : "رد پرداخت"}
                   </GlassButton>
                   <GlassButton
                     variant="primary"
                     size="md"
-                    onClick={() => {
-                      if (onConfirm) onConfirm(enrollment.id);
-                      onClose();
-                    }}
-                    className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30"
-                    icon={<Check className="w-4 h-4" />}
+                    onClick={handleConfirm}
+                    disabled={isProcessing}
+                    className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    icon={
+                      isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )
+                    }
                     iconPosition="left"
                   >
-                    تایید پرداخت
+                    {isProcessing ? "در حال پردازش..." : "تایید پرداخت"}
                   </GlassButton>
                 </div>
               )}
 
-              {/* دکمه بستن */}
               <div className="pt-2">
                 <GlassButton
                   variant="white"
                   size="md"
                   onClick={onClose}
                   fullWidth
+                  disabled={isProcessing}
                 >
                   بستن
                 </GlassButton>

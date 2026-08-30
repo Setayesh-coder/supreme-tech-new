@@ -27,7 +27,7 @@ import {
   Timer,
   Lock,
   User,
-  Percent,
+  // Percent,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
@@ -43,7 +43,7 @@ interface Course {
   cover_image?: string;
   image?: string;
   price: number;
-  original_price: number; // ✅ اصلاح: orginal_price → original_price
+  original_price: number;
   discount_value: number;
   discount_type: "PERCENT" | "FIXED";
   duration_hours?: number;
@@ -181,10 +181,41 @@ export default function CourseDetail() {
       try {
         const foundCourse = await coursesAPI.getBySlug(slug);
 
+        // ✅ دیباگ برای دیدن داده‌های دریافتی
+        console.log("📦 داده‌های دریافتی از بک‌اند:", foundCourse);
+        console.log(
+          "💰 قیمت اصلی (original_price):",
+          (foundCourse as any).original_price,
+        );
+        console.log("💰 قیمت (price):", foundCourse.price);
+        console.log(
+          "💰 تخفیف (discount_value):",
+          (foundCourse as any).discount_value,
+        );
+        console.log("🔍 تمام کلیدها:", Object.keys(foundCourse));
+
         if (foundCourse) {
           const { enrolled, status } = await checkUserEnrollment(
             foundCourse.id,
           );
+
+          // ✅ اصلاح: دریافت درست original_price از بک‌اند
+          const originalPrice =
+            (foundCourse as any).original_price ||
+            (foundCourse as any).orginal_price || // املای اشتباه
+            foundCourse.price || // اگر نبود از price استفاده کن
+            0;
+
+          const discountValue = (foundCourse as any).discount_value || 0;
+
+          // ✅ محاسبه خودکار تخفیف اگر در بک‌اند نبود
+          const calculatedDiscount =
+            foundCourse.price > 0
+              ? Math.max(0, originalPrice - foundCourse.price)
+              : 0;
+
+          const finalDiscountValue =
+            discountValue > 0 ? discountValue : calculatedDiscount;
 
           const mappedCourse: Course = {
             ...foundCourse,
@@ -207,10 +238,11 @@ export default function CourseDetail() {
               (foundCourse as any).registration_end_date || undefined,
             class_start_date:
               (foundCourse as any).class_start_date || undefined,
-            original_price: (foundCourse as any).original_price || 0, // ✅ اصلاح
-            discount_value: (foundCourse as any).discount_value || 0,
+            original_price: originalPrice,
+            discount_value: finalDiscountValue,
             discount_type:
-              (foundCourse.discount_type as "PERCENT" | "FIXED") || "PERCENT",
+              (foundCourse.discount_type as "PERCENT" | "FIXED") ||
+              (finalDiscountValue > 0 ? "PERCENT" : "PERCENT"),
             event: (foundCourse as any).event
               ? {
                   id: (foundCourse as any).event.id,
@@ -219,6 +251,12 @@ export default function CourseDetail() {
                 }
               : undefined,
           };
+
+          console.log("✅ دوره mapping شده:", mappedCourse);
+          console.log("💰 قیمت اصلی نهایی:", mappedCourse.original_price);
+          console.log("💰 قیمت نهایی:", mappedCourse.price);
+          console.log("💰 تخفیف:", mappedCourse.discount_value);
+
           setCourse(mappedCourse);
         } else {
           setError("دوره یافت نشد");
@@ -309,7 +347,10 @@ export default function CourseDetail() {
   const isConfirmed = course.enrollmentStatus === "CONFIRMED";
 
   // ✅ محاسبه تخفیف با استفاده از original_price
-  const discountAmount = (course.original_price || 0) - (course.price || 0);
+  const discountAmount = Math.max(
+    0,
+    (course.original_price || 0) - (course.price || 0),
+  );
   const discountPercent =
     course.original_price > 0
       ? Math.round((discountAmount / course.original_price) * 100)
@@ -739,7 +780,7 @@ export default function CourseDetail() {
                   )}
                   {discountAmount > 0 && (
                     <div className="flex items-center gap-1 text-xs text-green-400">
-                      <Percent size={12} />
+                      {/* <Percent size={12} /> */}
                       {course.discount_type === "PERCENT"
                         ? `${discountPercent}% تخفیف`
                         : `${formatPrice(discountAmount)} تخفیف`}

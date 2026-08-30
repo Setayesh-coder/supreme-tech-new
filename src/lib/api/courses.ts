@@ -45,7 +45,6 @@ export interface CourseCreate {
   class_start_date?: string | null;
 }
 
-// ✅ اضافه کردن price به CourseUpdate
 export interface CourseUpdate {
   title?: string;
   slug?: string;

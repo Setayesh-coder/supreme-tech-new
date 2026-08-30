@@ -147,25 +147,12 @@ export default function CourseCreate() {
         }
       }
 
-      // ✅ محاسبه قیمت نهایی
-      let finalPrice = formData.original_price;
-      if (formData.discount_value > 0) {
-        if (formData.discount_type === "percentage") {
-          finalPrice =
-            formData.original_price -
-            (formData.original_price * formData.discount_value) / 100;
-        } else {
-          finalPrice = formData.original_price - formData.discount_value;
-        }
-        finalPrice = Math.max(0, finalPrice);
-      }
-
-      // ✅ ساخت داده با تایپ صحیح
+      // ✅ ساخت داده - بدون محاسبه قیمت در فرانت‌اند
       const courseData = {
         title: formData.title.trim(),
+        price: 0,
         slug: generateSlug(formData.title.trim()),
         original_price: Number(formData.original_price) || 0,
-        price: Math.round(finalPrice),
         discount_value: Number(formData.discount_value) || 0,
         discount_type: formData.discount_type,
         is_active: formData.is_active,
@@ -191,9 +178,9 @@ export default function CourseCreate() {
         }),
       };
 
-      console.log("📤 ارسال داده:", courseData);
+      console.log("📤 ارسال داده به بک‌اند:", courseData);
 
-      // ✅ ارسال به API
+      // ✅ ارسال به API (بک‌اند قیمت نهایی را محاسبه می‌کند)
       await coursesAPI.create(courseData);
       toast.success("✅ دوره با موفقیت ایجاد شد!");
       navigate("/admin/courses");
@@ -431,7 +418,7 @@ export default function CourseCreate() {
                 <option value="fixed">مبلغ ثابت (تومان)</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                قیمت نهایی = قیمت اصلی - تخفیف
+                ⚡ قیمت نهایی توسط سرور محاسبه می‌شود
               </p>
             </div>
 

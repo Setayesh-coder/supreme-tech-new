@@ -500,16 +500,16 @@ export default function EventDetail() {
                 </div>
 
                 {/* ✅ نمایش تعداد بازدید */}
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                {/* <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                   <Eye className="w-4 h-4 text-blue-400" />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">بازدید</p>
                     <p className="text-sm text-white">
                       {(event.views_count || 0).toLocaleString()} بازدید
                     </p>
-                  </div>
-                </div>
+                  </div> */}
               </div>
+              {/* </div> */}
 
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
                 <div className="flex items-center justify-between">

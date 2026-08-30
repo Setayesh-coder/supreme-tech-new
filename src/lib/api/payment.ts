@@ -1,6 +1,7 @@
 // src/lib/api/payment.ts
 import api from "./axios";
 import type { Order } from "../../types/cart";
+import type { BalePaymentCallback } from "../../types/cart";
 
 export const paymentsAPI = {
   /**
@@ -82,6 +83,31 @@ export const paymentsAPI = {
       return response.data;
     } catch (error) {
       console.error(`❌ خطا در دریافت جزئیات پرداخت ${enrollmentId}:`, error);
+      throw error;
+    }
+  },
+
+  getBalePaymentCallback: async (
+    transactionId: string,
+  ): Promise<BalePaymentCallback> => {
+    try {
+      const response = await api.get(`/bale/callback/${transactionId}`);
+      return response.data;
+    } catch (error) {
+      console.error("❌ خطا در دریافت callback بله:", error);
+      throw error;
+    }
+  },
+
+  // ✅ تایید پرداخت بله
+  verifyBalePayment: async (
+    transactionId: string,
+  ): Promise<{ status: string; message: string }> => {
+    try {
+      const response = await api.post(`/bale/verify/${transactionId}`);
+      return response.data;
+    } catch (error) {
+      console.error("❌ خطا در تایید پرداخت بله:", error);
       throw error;
     }
   },

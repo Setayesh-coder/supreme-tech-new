@@ -439,7 +439,6 @@ export default function CourseEnrollments() {
           </GlassButton>
         </div>
       </div>
-
       {/* اطلاعات دوره */}
       <LiquidGlassCard
         className="p-4 mb-6"
@@ -475,7 +474,6 @@ export default function CourseEnrollments() {
           </div>
         </div>
       </LiquidGlassCard>
-
       {/* فیلترها */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -498,7 +496,6 @@ export default function CourseEnrollments() {
           <option value="COMPLETED">📌 تکمیل شده</option>
         </select>
       </div>
-
       {/* لیست ثبت‌نام‌ها */}
       {filteredEnrollments.length === 0 ? (
         <LiquidGlassCard
@@ -601,35 +598,64 @@ export default function CourseEnrollments() {
         </div>
       )}
 
-      {/* ✅ مودال جزئیات پرداخت */}
-      <PaymentDetailsModal
-        isOpen={showPaymentModal}
-        onClose={() => {
-          setShowPaymentModal(false);
-          setSelectedEnrollment(null);
-        }}
-        enrollment={{
-          id: selectedEnrollment?.id || "",
-          user: {
-            name: selectedEnrollment?.user?.name || "",
-            email: selectedEnrollment?.user?.email || "",
-            phone: selectedEnrollment?.user?.phone || "",
-          },
-          created_at: selectedEnrollment?.created_at || "",
-          status: selectedEnrollment?.status || "",
-          paymentStatus: selectedEnrollment?.paymentStatus,
-          course_id: selectedEnrollment?.course_id,
-          event_id: selectedEnrollment?.event_id,
-          tracking_code: selectedEnrollment?.tracking_code,
-          receipt_image_url: selectedEnrollment?.receipt_image_url,
-          payment_method: selectedEnrollment?.payment_method,
-          amount: selectedEnrollment?.amount || selectedEnrollment?.price || 0,
-        }}
-        coursePrice={course?.price || 0}
-        courseTitle={course?.title || "دوره آموزشی"}
-        onConfirm={handleConfirmFromModal}
-        onReject={handleRejectFromModal}
-      />
+      {selectedEnrollment && (
+        <PaymentDetailsModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedEnrollment(null);
+          }}
+          enrollment={{
+            id: selectedEnrollment.id || "",
+            user_id:
+              selectedEnrollment.user_id || selectedEnrollment.user?.id || "",
+            user: {
+              id:
+                selectedEnrollment.user?.id || selectedEnrollment.user_id || "",
+              name: selectedEnrollment.user?.name || "کاربر ناشناس",
+              email: selectedEnrollment.user?.email || "ایمیل ثبت نشده",
+              phone: selectedEnrollment.user?.phone || "",
+            },
+            created_at:
+              selectedEnrollment.created_at || new Date().toISOString(),
+            updated_at:
+              selectedEnrollment.created_at || new Date().toISOString(),
+            status: (selectedEnrollment.status || "PENDING") as
+              | "PENDING"
+              | "WAITING"
+              | "CONFIRMED"
+              | "CANCELLED"
+              | "COMPLETED",
+            payment_status: (selectedEnrollment.paymentStatus || "PENDING") as
+              | "PENDING"
+              | "PAID"
+              | "UNPAID"
+              | "WAITING_VERIFY",
+            payment_method: (selectedEnrollment.payment_method ||
+              "card_to_card") as "card_to_card" | "bale",
+            amount: selectedEnrollment.amount || selectedEnrollment.price || 0,
+            tracking_code: selectedEnrollment.tracking_code || null,
+            receipt_image_url: selectedEnrollment.receipt_image_url || null,
+            transaction_id: selectedEnrollment.tracking_code || null,
+            course_id: selectedEnrollment.course_id || course?.id,
+            course: course
+              ? {
+                  id: course.id,
+                  title: course.title,
+                  price: course.price,
+                  cover_image: course.cover_image || "",
+                  slug: course.slug || "",
+                }
+              : undefined,
+            event_id: selectedEnrollment.event_id,
+          }}
+          coursePrice={course?.price || 0}
+          courseTitle={course?.title || "دوره آموزشی"}
+          onConfirm={handleConfirmFromModal}
+          onReject={handleRejectFromModal}
+          onRefresh={fetchData}
+        />
+      )}
     </div>
   );
 }
