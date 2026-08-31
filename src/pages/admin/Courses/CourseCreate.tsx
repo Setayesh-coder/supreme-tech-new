@@ -20,7 +20,7 @@ import {
   DollarSign,
   Percent,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface Event {
   id: string;
@@ -182,15 +182,15 @@ export default function CourseCreate() {
 
       // ✅ ارسال به API (بک‌اند قیمت نهایی را محاسبه می‌کند)
       await coursesAPI.create(courseData);
-      toast.success("✅ دوره با موفقیت ایجاد شد!");
+      toast.success(" دوره با موفقیت ایجاد شد!");
       navigate("/admin/courses");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
 
       // ✅ مدیریت خطاها
       if (err.message === "Network Error") {
         setError(
-          "❌ اتصال به سرور برقرار نیست. لطفاً اتصال اینترنت و سرور را بررسی کنید.",
+          " اتصال به سرور برقرار نیست. لطفاً اتصال اینترنت و سرور را بررسی کنید.",
         );
         toast.error("خطا در اتصال به سرور");
       } else if (err.response) {

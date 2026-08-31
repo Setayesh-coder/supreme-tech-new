@@ -17,7 +17,7 @@ import {
   Calendar,
   Hash,
 } from "lucide-react";
-import { toast } from "../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
@@ -64,9 +64,9 @@ export default function TicketDetail() {
       const updated = await ticketsAPI.getById(ticket.id);
       setTicket(updated);
       setReply("");
-      toast.success("✅ پیام با موفقیت ارسال شد");
+      toast.success(" پیام با موفقیت ارسال شد");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       toast.error(err.response?.data?.detail || "خطا در ارسال پیام");
     } finally {
       setSending(false);

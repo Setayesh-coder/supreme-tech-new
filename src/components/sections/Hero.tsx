@@ -1,3 +1,4 @@
+// src/components/sections/Hero.tsx
 import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -131,10 +132,9 @@ export default function Hero() {
         className="
           w-full
           px-3
-          pt-20
-          sm:px-5
-          sm:pt-24
-          lg:px-8
+          pt-16
+          sm:pt-20
+          lg:pt-24
         "
       >
         <div
@@ -142,9 +142,9 @@ export default function Hero() {
             mx-auto
             max-w-[1400px]
 
-            h-[380px]
-            sm:h-[440px]
-            lg:h-[580px]
+            h-[300px]
+            sm:h-[380px]
+            lg:h-[480px]
 
             rounded-[24px]
             sm:rounded-[32px]
@@ -177,15 +177,15 @@ export default function Hero() {
         w-full
 
         px-3
-        pt-20
+        pt-16
+        sm:pt-20
+        lg:pt-24
 
         sm:px-5
-        sm:pt-24
-
         lg:px-8
       "
     >
-      <div className="mx-auto max-w-[1400px] ">
+      <div className="mx-auto max-w-[1400px]">
         {/* =================================================
             HERO
         ================================================== */}
@@ -208,13 +208,12 @@ export default function Hero() {
             shadow-[0_25px_80px_rgba(0,0,0,0.35)]
 
             /*
-             * موبایل همچنان مستطیلی
+             * نسبت تصویر تنظیم‌شده برای لپ‌تاپ
              */
             aspect-[4/3]
-
             sm:aspect-[16/9]
-
-            lg:aspect-[16/7]
+            lg:aspect-[21/9]
+            xl:aspect-[21/8]
           "
         >
           {/* =================================================
@@ -321,45 +320,42 @@ export default function Hero() {
           {/* =================================================
               CONTENT
           ================================================== */}
-          {/* =================================================
-    CONTENT
-================================================= */}
 
           <div
             className="
-    absolute
-    inset-0
-    z-10
+              absolute
+              inset-0
+              z-10
 
-    flex
-    items-center
-    justify-center
+              flex
+              items-center
+              justify-center
 
-    -translate-y-[4%]
-    sm:-translate-y-[5%]
-    lg:-translate-y-[6%]
+              -translate-y-[2%]
+              sm:-translate-y-[3%]
+              lg:-translate-y-[4%]
 
-    pointer-events-none
-  "
+              pointer-events-none
+            "
           >
             <div
               className="
-      w-full
-      max-w-[900px]
+                w-full
+                max-w-[900px]
 
-      px-5
-      sm:px-8
-      lg:px-12
+                px-5
+                sm:px-8
+                lg:px-12
 
-      flex
-      flex-col
-      items-center
-      justify-center
+                flex
+                flex-col
+                items-center
+                justify-center
 
-      text-center
+                text-center
 
-      pointer-events-auto
-    "
+                pointer-events-auto
+              "
             >
               {/* =================================================
                   TAGLINE
@@ -383,7 +379,7 @@ export default function Hero() {
                     transition={{
                       duration: 0.4,
                     }}
-                    className="mb-3 sm:mb-4"
+                    className="mb-2 sm:mb-3 lg:mb-4"
                   >
                     <LiquidGlassCard
                       blurIntensity="lg"
@@ -398,6 +394,9 @@ export default function Hero() {
                         sm:px-4
                         sm:py-1.5
 
+                        lg:px-5
+                        lg:py-2
+
                         bg-white/10
 
                         border
@@ -408,6 +407,7 @@ export default function Hero() {
                         className="
                           text-[9px]
                           sm:text-xs
+                          lg:text-sm
 
                           font-medium
 
@@ -447,14 +447,14 @@ export default function Hero() {
                   className="
                     max-w-[700px]
 
-                    text-[27px]
+                    text-2xl
                     leading-[1.35]
 
-                    sm:text-4xl
+                    sm:text-3xl
                     sm:leading-[1.4]
 
-                    lg:text-5xl
-                    xl:text-6xl
+                    lg:text-4xl
+                    xl:text-5xl
 
                     font-bold
 
@@ -493,18 +493,20 @@ export default function Hero() {
                       delay: 0.08,
                     }}
                     className="
-                      mt-2
-                      sm:mt-3
+                      mt-1.5
+                      sm:mt-2
+                      lg:mt-3
 
                       max-w-[650px]
 
-                      text-sm
-                      leading-6
+                      text-xs
+                      leading-5
 
-                      sm:text-lg
-                      sm:leading-8
+                      sm:text-base
+                      sm:leading-7
 
-                      lg:text-xl
+                      lg:text-lg
+                      xl:text-xl
 
                       font-medium
 
@@ -542,18 +544,18 @@ export default function Hero() {
                       delay: 0.14,
                     }}
                     className="
-                      mt-2
+                      mt-1.5
 
                       hidden
                       sm:block
 
                       max-w-[570px]
 
-                      text-sm
-                      leading-7
+                      text-xs
+                      leading-6
 
-                      lg:text-base
-                      lg:leading-8
+                      lg:text-sm
+                      lg:leading-7
 
                       text-white/70
                     "
@@ -562,43 +564,42 @@ export default function Hero() {
                   </motion.p>
                 </AnimatePresence>
               )}
-
-              {/* =================================================
-                  BUTTON
-              ================================================== */}
             </div>
           </div>
 
           {/* =================================================
-    BOTTOM CONTROLS
-================================================= */}
+              BOTTOM CONTROLS
+          ================================================== */}
 
           <div
             className="
-    absolute
-    bottom-5
-    left-5
-    right-5 sm:bottom-7
-    sm:left-7
-    sm:right-7
+              absolute
+              bottom-4
+              left-4
+              right-4
 
-    lg:bottom-8
-    lg:left-8
-    lg:right-8
+              sm:bottom-6
+              sm:left-6
+              sm:right-6
 
-    z-20
+              lg:bottom-8
+              lg:left-8
+              lg:right-8
 
-    flex
-    items-center
-    justify-between
+              z-20
 
-    gap-4
-  "
+              flex
+              items-center
+              justify-between
+
+              gap-3
+              sm:gap-4
+            "
             dir="rtl"
           >
             {/* ===============================================
-      CTA — RIGHT
-  ================================================ */}
+                CTA — RIGHT
+            ================================================ */}
 
             <motion.div
               initial={{
@@ -618,14 +619,17 @@ export default function Hero() {
                 icon={
                   <ArrowLeft
                     className="
-            h-4
-            w-4
+                      h-3.5
+                      w-3.5
 
-            transition-transform
-            duration-300
+                      sm:h-4
+                      sm:w-4
 
-            group-hover:-translate-x-1
-          "
+                      transition-transform
+                      duration-300
+
+                      group-hover:-translate-x-1
+                    "
                   />
                 }
                 iconPosition="right"
@@ -637,34 +641,38 @@ export default function Hero() {
                   window.location.href = link;
                 }}
                 className="
-        text-xs
-        sm:text-sm
+                  text-[10px]
+                  sm:text-xs
+                  lg:text-sm
 
-        px-4
-        py-2
+                  px-3
+                  py-1.5
 
-        sm:px-5
-        sm:py-2.5
+                  sm:px-4
+                  sm:py-2
 
-        bg-white/10
+                  lg:px-5
+                  lg:py-2.5
 
-        border
-        border-white/20
+                  bg-white/10
 
-        backdrop-blur-xl
+                  border
+                  border-white/20
 
-        hover:bg-white/20
+                  backdrop-blur-xl
 
-        whitespace-nowrap
-      "
+                  hover:bg-white/20
+
+                  whitespace-nowrap
+                "
               >
                 {currentSlide.button_text || "مشاهده خدمات"}
               </GlassButton>
             </motion.div>
 
             {/* ===============================================
-      SLIDER CONTROLS — LEFT
-  ================================================ */}
+                SLIDER CONTROLS — LEFT
+            ================================================ */}
 
             {slides.length > 1 && (
               <motion.div
@@ -681,10 +689,11 @@ export default function Hero() {
                   delay: 0.25,
                 }}
                 className="
-        flex
-        items-center
-        gap-2
-      "
+                  flex
+                  items-center
+                  gap-1.5
+                  sm:gap-2
+                "
                 dir="ltr"
               >
                 {/* PREVIOUS */}
@@ -699,36 +708,42 @@ export default function Hero() {
                     borderRadius="100px"
                     glowIntensity="sm"
                     className="
-            flex
-            h-8
-            w-8
+                      flex
+                      h-7
+                      w-7
 
-            sm:h-10
-            sm:w-10
+                      sm:h-9
+                      sm:w-9
 
-            items-center
-            justify-center
+                      lg:h-10
+                      lg:w-10
 
-            bg-black/20
+                      items-center
+                      justify-center
 
-            border
-            border-white/15
+                      bg-black/20
 
-            hover:bg-white/10
+                      border
+                      border-white/15
 
-            transition
-          "
+                      hover:bg-white/10
+
+                      transition
+                    "
                   >
                     <ChevronRight
                       className="
-              h-3.5
-              w-3.5
+                        h-3
+                        w-3
 
-              sm:h-4
-              sm:w-4
+                        sm:h-3.5
+                        sm:w-3.5
 
-              text-white
-            "
+                        lg:h-4
+                        lg:w-4
+
+                        text-white
+                      "
                     />
                   </LiquidGlassCard>
                 </button>
@@ -737,10 +752,10 @@ export default function Hero() {
 
                 <div
                   className="
-          flex
-          items-center
-          gap-1
-        "
+                    flex
+                    items-center
+                    gap-1
+                  "
                 >
                   {slides.map((slide, index) => (
                     <button
@@ -752,15 +767,19 @@ export default function Hero() {
                     >
                       <span
                         className={`
-                block
-                h-1
-                rounded-full
+                          block
+                          h-1
+                          rounded-full
 
-                transition-all
-                duration-300
+                          transition-all
+                          duration-300
 
-                ${index === currentIndex ? "w-7 bg-white" : "w-1.5 bg-white/35"}
-              `}
+                          ${
+                            index === currentIndex
+                              ? "w-6 sm:w-7 bg-white"
+                              : "w-1.5 bg-white/35"
+                          }
+                        `}
                       />
                     </button>
                   ))}
@@ -778,36 +797,42 @@ export default function Hero() {
                     borderRadius="100px"
                     glowIntensity="sm"
                     className="
-            flex
-            h-8
-            w-8
+                      flex
+                      h-7
+                      w-7
 
-            sm:h-10
-            sm:w-10
+                      sm:h-9
+                      sm:w-9
 
-            items-center
-            justify-center
+                      lg:h-10
+                      lg:w-10
 
-            bg-black/20
+                      items-center
+                      justify-center
 
-            border
-            border-white/15
+                      bg-black/20
 
-            hover:bg-white/10
+                      border
+                      border-white/15
 
-            transition
-          "
+                      hover:bg-white/10
+
+                      transition
+                    "
                   >
                     <ChevronLeft
                       className="
-              h-3.5
-              w-3.5
+                        h-3
+                        w-3
 
-              sm:h-4
-              sm:w-4
+                        sm:h-3.5
+                        sm:w-3.5
 
-              text-white
-            "
+                        lg:h-4
+                        lg:w-4
+
+                        text-white
+                      "
                     />
                   </LiquidGlassCard>
                 </button>

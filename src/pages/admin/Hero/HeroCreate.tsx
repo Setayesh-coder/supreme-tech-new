@@ -15,7 +15,7 @@ import {
   X,
   Upload,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function HeroCreate() {
   const navigate = useNavigate();

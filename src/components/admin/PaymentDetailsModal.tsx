@@ -28,7 +28,7 @@ import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
 import { paymentsAPI } from "../../lib/api/payment";
 import type { Enrollment, BalePaymentCallback } from "../../types/cart";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface PaymentDetailsModalProps {
   isOpen: boolean;

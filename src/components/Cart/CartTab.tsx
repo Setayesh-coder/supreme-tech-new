@@ -9,10 +9,9 @@ import { EmptyCart } from "./EmptyCart";
 import { LoadingSkeleton } from "../skeletons/LoadingSkeleton";
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { PaymentMethodModal } from "../payment/PaymentMethodModal";
-// ✅ ایمپورت کامپوننت‌های پرداخت
 import BalePayment from "../payment/BalePayment";
 import CardToCardPayment from "../payment/CardToCardPayment";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 import { ShoppingCart, RefreshCw } from "lucide-react";
 
 interface CartTabProps {
@@ -66,10 +65,10 @@ export const CartTab: React.FC<CartTabProps> = ({
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("✅ سبد خرید به‌روزرسانی شد");
+      toast.success(" سبد خرید به‌روزرسانی شد");
       onRefresh?.();
     } catch (error) {
-      toast.error("❌ خطا در به‌روزرسانی سبد خرید");
+      toast.error(" خطا در به‌روزرسانی سبد خرید");
     } finally {
       setIsRefreshing(false);
     }
@@ -87,10 +86,10 @@ export const CartTab: React.FC<CartTabProps> = ({
         if (externalCart !== undefined && onRefresh) {
           await onRefresh();
         }
-        toast.success("✅ آیتم از سبد خرید حذف شد");
+        toast.success(" آیتم از سبد خرید حذف شد");
       } catch (error) {
-        console.error("❌ خطا در حذف:", error);
-        toast.error("❌ خطا در حذف آیتم");
+        console.error(" خطا در حذف:", error);
+        toast.error(" خطا در حذف آیتم");
       }
     },
     [onRemoveFromCart, removeFromCart, refetch, externalCart, onRefresh],
@@ -132,7 +131,7 @@ export const CartTab: React.FC<CartTabProps> = ({
       .filter(Boolean);
 
     if (enrollmentIds.length === 0) {
-      toast.error("❌ شناسه ثبت‌نام یافت نشد");
+      toast.error(" شناسه ثبت‌نام یافت نشد");
       return;
     }
 
@@ -183,7 +182,7 @@ export const CartTab: React.FC<CartTabProps> = ({
     await refetch();
     if (onRefresh) await onRefresh();
 
-    toast.success("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
+    toast.success(" پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
     navigate("/profile");
   }, [refetch, onRefresh, navigate]);
 

@@ -25,7 +25,7 @@ import {
   Mail,
 } from "lucide-react";
 import { AdminLayout } from "../AdminLayout";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function TicketList() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -66,7 +66,7 @@ export default function TicketList() {
     setRefreshing(true);
     await fetchTickets();
     setRefreshing(false);
-    toast.success("✅ تیکت‌ها به‌روزرسانی شدند");
+    toast.success(" تیکت‌ها به‌روزرسانی شدند");
   };
 
   // ✅ handleDelete - باز کردن Confirm Dialog
@@ -82,7 +82,7 @@ export default function TicketList() {
     try {
       await ticketsAPI.delete(deleteTargetId);
       setTickets(tickets.filter((t) => t.id !== deleteTargetId));
-      toast.success("✅ تیکت با موفقیت حذف شد");
+      toast.success(" تیکت با موفقیت حذف شد");
     } catch (err: any) {
       console.error("❌ خطا:", err);
       toast.error(err.response?.data?.detail || "خطا در حذف تیکت");
@@ -119,9 +119,9 @@ export default function TicketList() {
       setSelectedTicket(updated);
 
       await fetchTickets();
-      toast.success("✅ پیام با موفقیت ارسال شد");
+      toast.success(" پیام با موفقیت ارسال شد");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       toast.error(err.response?.data?.detail || "خطا در ارسال پیام");
     } finally {
       setSending(false);

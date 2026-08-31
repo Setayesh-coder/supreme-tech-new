@@ -5,7 +5,7 @@ import { GlassButton } from "../../components/ui/GlassButton";
 import { Mail, Phone, MapPin, Send, Copy, MessageCircle } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { messagesAPI } from "../../lib/api/messages";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (

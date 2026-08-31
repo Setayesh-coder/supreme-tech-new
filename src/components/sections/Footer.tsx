@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Send, MessageCircle, Heart } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 // آیکون اینستاگرام با SVG
 const InstagramIcon = () => (

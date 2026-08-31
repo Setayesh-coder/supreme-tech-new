@@ -16,6 +16,29 @@ interface CoursePreRegisterModalProps {
   onSuccess?: () => void;
 }
 
+// ✅ لیست فیلدهای اجباری
+const REQUIRED_FIELDS: (keyof CoursePreRegisterData)[] = [
+  "field_of_study",
+  "university",
+  "goal",
+  "referral_source",
+];
+
+// ✅ لیست فیلدهای شرطی اجباری
+const CONDITIONAL_REQUIRED_FIELDS: {
+  condition: (data: CoursePreRegisterData) => boolean;
+  fields: (keyof CoursePreRegisterData)[];
+}[] = [
+  {
+    condition: (data) => data.has_experience === true,
+    fields: ["experience_level"],
+  },
+  {
+    condition: (data) => data.has_laptop === true,
+    fields: ["os_type"],
+  },
+];
+
 export default function CoursePreRegisterModal({
   isOpen,
   onClose,
@@ -38,6 +61,9 @@ export default function CoursePreRegisterModal({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CoursePreRegisterData, string>>
+  >({});
   const [, setStep] = useState(1);
 
   // 🔄 Reset فرم وقتی بسته می‌شود
@@ -56,6 +82,7 @@ export default function CoursePreRegisterModal({
       });
       setError("");
       setSuccess(false);
+      setErrors({});
       setStep(1);
     }
   }, [isOpen, course_id]);
@@ -72,15 +99,82 @@ export default function CoursePreRegisterModal({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+
+    // ✅ پاک کردن خطای مربوط به این فیلد
+    if (errors[name as keyof CoursePreRegisterData]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
+  };
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cartUpdated"));
+  }
+
+  // ✅ تابع اعتبارسنجی
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof CoursePreRegisterData, string>> = {};
+    let isValid = true;
+
+    // ✅ بررسی فیلدهای اجباری عمومی
+    for (const field of REQUIRED_FIELDS) {
+      const value = formData[field];
+      if (!value || (typeof value === "string" && value.trim() === "")) {
+        newErrors[field] = "این فیلد اجباری است";
+        isValid = false;
+      }
+    }
+
+    // ✅ بررسی فیلدهای شرطی اجباری
+    for (const { condition, fields } of CONDITIONAL_REQUIRED_FIELDS) {
+      if (condition(formData)) {
+        for (const field of fields) {
+          const value = formData[field];
+          if (!value || (typeof value === "string" && value.trim() === "")) {
+            newErrors[field] = "این فیلد اجباری است";
+            isValid = false;
+          }
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // ✅ بررسی آیا فیلد خطا دارد
+  const hasError = (field: keyof CoursePreRegisterData): boolean => {
+    return !!errors[field];
+  };
+
+  // ✅ دریافت پیام خطا
+  const getError = (field: keyof CoursePreRegisterData): string | undefined => {
+    return errors[field];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ اعتبارسنجی فرم
+    if (!validateForm()) {
+      // اسکرول به اولین خطا
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          (element as HTMLElement).focus();
+        }
+      }
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      // ✅ فقط به بک‌اند ارسال کن - بدون localStorage
       const response = await enrollmentsAPI.preRegister({
         course_id: course_id,
         field_of_study: formData.field_of_study?.trim() || "",
@@ -92,27 +186,24 @@ export default function CoursePreRegisterModal({
         goal: formData.goal?.trim() || "",
         referral_source: formData.referral_source?.trim() || "",
       });
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("cartUpdated"));
       }
       console.log("✅ پاسخ سرور:", response);
 
-      // ✅ موفقیت - فقط notify می‌کنیم
       setSuccess(true);
 
-      // ✅ تابع onSuccess را صدا می‌زنیم تا والد (مثلاً Profile) داده‌ها را از بک‌اند دوباره دریافت کند
       if (onSuccess) {
         onSuccess();
       }
 
-      // بستن مودال بعد از 2 ثانیه
       setTimeout(() => {
         onClose();
       }, 2000);
     } catch (err: any) {
       console.error("❌ خطا:", err);
 
-      // نمایش پیام خطای مناسب
       if (err.response?.status === 401) {
         setError("❌ نشست شما منقضی شده است. لطفاً دوباره وارد شوید.");
         setTimeout(() => {
@@ -132,6 +223,13 @@ export default function CoursePreRegisterModal({
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ کلاس خطا برای input
+  const errorInputClass = (field: keyof CoursePreRegisterData) => {
+    return hasError(field)
+      ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/20"
+      : "border-white/20 focus:border-blue-500";
   };
 
   if (!isOpen) return null;
@@ -179,34 +277,46 @@ export default function CoursePreRegisterModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* ===== رشته تحصیلی ===== */}
+              {/* ===== رشته تحصیلی (اجباری) ===== */}
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-1">
-                  رشته تحصیلی
+                  رشته تحصیلی <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   name="field_of_study"
                   value={formData.field_of_study}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-2.5 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none transition-colors ${errorInputClass("field_of_study")}`}
                   placeholder="مثلاً: مهندسی کامپیوتر"
                 />
+                {hasError("field_of_study") && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {getError("field_of_study")}
+                  </p>
+                )}
               </div>
 
-              {/* ===== دانشگاه ===== */}
+              {/* ===== دانشگاه (اجباری) ===== */}
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-1">
-                  دانشگاه / موسسه
+                  دانشگاه / موسسه <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   name="university"
                   value={formData.university}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-2.5 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none transition-colors ${errorInputClass("university")}`}
                   placeholder="نام دانشگاه یا موسسه"
                 />
+                {hasError("university") && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {getError("university")}
+                  </p>
+                )}
               </div>
 
               {/* ===== تجربه کاری ===== */}
@@ -227,17 +337,17 @@ export default function CoursePreRegisterModal({
                 </label>
               </div>
 
-              {/* ===== سطح تجربه ===== */}
+              {/* ===== سطح تجربه (شرطی اجباری) ===== */}
               {formData.has_experience && (
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    سطح تجربه
+                    سطح تجربه <span className="text-red-400">*</span>
                   </label>
                   <select
                     name="experience_level"
                     value={formData.experience_level}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    className={`w-full px-4 py-2.5 bg-white/10 border rounded-xl text-white focus:outline-none transition-colors ${errorInputClass("experience_level")}`}
                   >
                     <option value="">انتخاب کنید</option>
                     <option value="مبتدی">مبتدی</option>
@@ -245,6 +355,12 @@ export default function CoursePreRegisterModal({
                     <option value="پیشرفته">پیشرفته</option>
                     <option value="حرفه‌ای">حرفه‌ای</option>
                   </select>
+                  {hasError("experience_level") && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {getError("experience_level")}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -266,51 +382,64 @@ export default function CoursePreRegisterModal({
                 </label>
               </div>
 
-              {/* ===== سیستم عامل ===== */}
+              {/* ===== سیستم عامل (شرطی اجباری) ===== */}
               {formData.has_laptop && (
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    سیستم عامل
+                    سیستم عامل <span className="text-red-400">*</span>
                   </label>
                   <select
                     name="os_type"
                     value={formData.os_type}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    className={`w-full px-4 py-2.5 bg-white/10 border rounded-xl text-white focus:outline-none transition-colors ${errorInputClass("os_type")}`}
                   >
                     <option value="">انتخاب کنید</option>
                     <option value="Windows">Windows</option>
                     <option value="macOS">macOS</option>
                     <option value="Linux">Linux</option>
                   </select>
+                  {hasError("os_type") && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {getError("os_type")}
+                    </p>
+                  )}
                 </div>
               )}
 
-              {/* ===== هدف از ثبت‌نام ===== */}
+              {/* ===== هدف از ثبت‌نام (اجباری) ===== */}
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-1">
-                  هدف از ثبت‌نام
+                  هدف از ثبت‌نام <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   name="goal"
                   value={formData.goal}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                  className={`w-full px-4 py-2.5 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none transition-colors resize-none ${errorInputClass("goal")}`}
                   placeholder="چرا می‌خواهید در این دوره شرکت کنید؟"
                 />
+                {hasError("goal") && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {getError("goal")}
+                  </p>
+                )}
               </div>
 
-              {/* ===== منبع آشنایی ===== */}
+              {/* ===== منبع آشنایی (اجباری) ===== */}
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-1">
-                  از کجا با ما آشنا شدید؟
+                  از کجا با ما آشنا شدید؟{" "}
+                  <span className="text-red-400">*</span>
                 </label>
                 <select
                   name="referral_source"
                   value={formData.referral_source}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-2.5 bg-white/10 border rounded-xl text-white focus:outline-none transition-colors ${errorInputClass("referral_source")}`}
                 >
                   <option value="">انتخاب کنید</option>
                   <option value="اینستاگرام">اینستاگرام</option>
@@ -319,6 +448,12 @@ export default function CoursePreRegisterModal({
                   <option value="دوستان">دوستان</option>
                   <option value="سایر">سایر</option>
                 </select>
+                {hasError("referral_source") && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {getError("referral_source")}
+                  </p>
+                )}
               </div>
 
               {/* خطا */}

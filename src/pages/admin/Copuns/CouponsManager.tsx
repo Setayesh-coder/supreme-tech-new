@@ -5,7 +5,7 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { PersianDatePicker } from "../../../components/ui/PersianDatePicker";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 import {
   Plus,
   Loader2,
@@ -172,12 +172,12 @@ export default function CouponsManager() {
 
       await couponsAPI.create(createData);
 
-      toast.success("✅ کد تخفیف با موفقیت ایجاد شد!");
+      toast.success(" کد تخفیف با موفقیت ایجاد شد!");
       setShowCreateModal(false);
       resetForm();
       await fetchCoupons();
     } catch (err: any) {
-      console.error("❌ خطا در ایجاد کد تخفیف:", err);
+      console.error(" خطا در ایجاد کد تخفیف:", err);
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
         toast.error(detail.map((d: any) => d.msg).join(", "));
@@ -196,10 +196,10 @@ export default function CouponsManager() {
 
     try {
       await couponsAPI.updateStatus(couponId, isActive);
-      toast.success(`✅ کد تخفیف ${isActive ? "فعال" : "غیرفعال"} شد!`);
+      toast.success(` کد تخفیف ${isActive ? "فعال" : "غیرفعال"} شد!`);
       await fetchCoupons();
     } catch (err: any) {
-      console.error("❌ خطا در تغییر وضعیت:", err);
+      console.error(" خطا در تغییر وضعیت:", err);
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
         toast.error(detail.map((d: any) => d.msg).join(", "));
@@ -225,10 +225,10 @@ export default function CouponsManager() {
 
     try {
       await couponsAPI.delete(deleteTarget.id);
-      toast.success(`✅ کد تخفیف "${deleteTarget.code}" با موفقیت غیرفعال شد!`);
+      toast.success(`کد تخفیف "${deleteTarget.code}" با موفقیت غیرفعال شد!`);
       await fetchCoupons();
     } catch (err: any) {
-      console.error("❌ خطا در غیرفعال کردن کد تخفیف:", err);
+      console.error(" خطا در غیرفعال کردن کد تخفیف:", err);
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
         toast.error(detail.map((d: any) => d.msg).join(", "));

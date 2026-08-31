@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { ticketsAPI } from "../../lib/api/tickets";
 import type { Ticket as TicketType, TicketMessage } from "../../types/ticket";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface TicketsTabProps {
   tickets: TicketType[];
@@ -165,9 +165,9 @@ export function TicketsTab({
       if (onRefresh) {
         onRefresh();
       }
-      toast.success("✅ پیام با موفقیت ارسال شد");
+      toast.success(" پیام با موفقیت ارسال شد");
     } catch (err: any) {
-      console.error("❌ خطا در ارسال پیام:", err);
+      console.error(" خطا در ارسال پیام:", err);
       toast.error(err.response?.data?.detail || "خطا در ارسال پیام");
     } finally {
       setSending(false);
@@ -186,7 +186,7 @@ export function TicketsTab({
   const handleRefreshMessages = async () => {
     if (!selectedTicket) return;
     await fetchTicketMessages(selectedTicket.id);
-    toast.success("✅ پیام‌ها به‌روزرسانی شدند");
+    toast.success(" پیام‌ها به‌روزرسانی شدند");
   };
 
   if (loading) {

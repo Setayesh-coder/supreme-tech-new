@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { BlogPostSkeleton } from "../../components/skeletons/BlogPostSkeleton";
 import { getImageUrl } from "../../lib/constants";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 import { statsAPI } from "../../lib/api/stats";
 
 // آیکون‌ها

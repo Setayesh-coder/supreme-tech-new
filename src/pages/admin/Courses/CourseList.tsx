@@ -5,6 +5,7 @@ import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { coursesAPI } from "../../../lib/api/courses";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 import {
   Loader2,
   BookOpen,
@@ -20,7 +21,7 @@ import {
   XCircle,
   X,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface Course {
   id: string;
@@ -80,14 +81,23 @@ export default function CourseList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این دوره مطمئن هستید؟")) return;
-    try {
-      await coursesAPI.delete(id);
-      setCourses(courses.filter((c) => c.id !== id));
-      setTotalCount((prev) => prev - 1);
-    } catch (err) {
-      toast.error("خطا در حذف دوره");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این دوره مطمئن هستید؟",
+      description: "همه اطلاعات و جلسات مرتبط با این دوره حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await coursesAPI.delete(id);
+          setCourses(courses.filter((c) => c.id !== id));
+          setTotalCount((prev) => prev - 1);
+          toast.success("✅ دوره با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف دوره");
+        }
+      },
+    });
   };
 
   const handleImageError = (courseId: string) => {

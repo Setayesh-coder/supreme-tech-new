@@ -13,7 +13,7 @@ import { messagesAPI, type Message } from "../../lib/api/messages";
 import { uploadAPI } from "../../lib/api/upload";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 import {
   ProfileHeader,
   ProfileTabs,
@@ -385,7 +385,7 @@ export default function Profile() {
         setTickets(Array.isArray(data) ? data : []);
       }
     } catch (err: any) {
-      console.error("❌ خطا در دریافت تیکت‌ها:", err);
+      console.error(" خطا در دریافت تیکت‌ها:", err);
       if (isMounted.current) {
         toast.error("خطا در دریافت تیکت‌ها");
       }
@@ -766,9 +766,9 @@ export default function Profile() {
             // ✅ رفرش کل پروفایل برای به‌روزرسانی همه داده‌ها
             await fetchProfile();
 
-            toast.success("✅ آیتم از سبد خرید حذف شد");
+            toast.success(" آیتم از سبد خرید حذف شد");
           } catch (err: any) {
-            console.error("❌ خطا در حذف از سبد خرید:", err);
+            console.error(" خطا در حذف از سبد خرید:", err);
             toast.error(
               err.response?.data?.detail || err.message || "خطا در حذف آیتم",
             );
@@ -799,7 +799,7 @@ export default function Profile() {
         try {
           await ticketsAPI.delete(id);
           setTickets((prev) => prev.filter((t) => t.id !== id));
-          toast.success("✅ تیکت با موفقیت حذف شد");
+          toast.success(" تیکت با موفقیت حذف شد");
         } catch (err) {
           toast.error("خطا در حذف تیکت");
         }

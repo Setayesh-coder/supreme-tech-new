@@ -18,7 +18,8 @@ import {
   Send,
   AlertCircle,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../ui/confirm-toast";
 
 // ✅ تایپ‌های محلی برای UI
 interface MessageUI extends Message {
@@ -67,7 +68,7 @@ export default function MessageList() {
       setMessages(mappedMessages);
       setTotal(response.total);
     } catch (err: any) {
-      toast.error("❌ خطا در دریافت پیام‌ها:", err);
+      toast.error(" خطا در دریافت پیام‌ها:", err);
       setError(err.response?.data?.detail || "خطا در دریافت پیام‌ها");
     } finally {
       setLoading(false);
@@ -104,19 +105,28 @@ export default function MessageList() {
     }
   };
 
-  // ✅ حذف پیام
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این پیام مطمئن هستید؟")) return;
-    try {
-      await messagesAPI.delete(id);
-      setMessages(messages.filter((m) => m.id !== id));
-      if (selectedMessage?.id === id) {
-        setSelectedMessage(null);
-        setShowDetail(false);
-      }
-    } catch (err) {
-      toast.error("خطا در حذف پیام");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این پیام مطمئن هستید؟",
+      description:
+        "این عمل غیرقابل بازگشت است و پیام به طور کامل حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await messagesAPI.delete(id);
+          setMessages(messages.filter((m) => m.id !== id));
+          if (selectedMessage?.id === id) {
+            setSelectedMessage(null);
+            setShowDetail(false);
+          }
+          toast.success("✅ پیام با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف پیام");
+        }
+      },
+    });
   };
 
   // ✅ مشاهده جزئیات پیام
@@ -127,8 +137,6 @@ export default function MessageList() {
       handleMarkAsRead(message.id);
     }
   };
-
-  // ✅ ارسال پاسخ// src/components/admin/Messages/MessageList.tsx
 
   // ✅ اصلاح تابع handleSendReply
   const handleSendReply = async () => {
@@ -552,7 +560,7 @@ export default function MessageList() {
                     onClick={handleSendReply}
                     disabled={!replyText.trim() || sendingReply}
                   >
-                    ارسال پاسخ
+                    پاسخ داده شد
                   </GlassButton>
                 </div>
               </div>

@@ -127,7 +127,7 @@ export default function EventCreate() {
       toast.success(" رویداد با موفقیت ایجاد شد!");
       navigate("/admin/events");
     } catch (err: any) {
-      toast.error("❌ خطا:", err);
+      toast.error(" خطا:", err);
 
       let errorMessage = "خطا در ایجاد رویداد";
       if (err.response?.data?.detail) {

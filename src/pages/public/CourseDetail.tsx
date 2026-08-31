@@ -7,7 +7,7 @@ import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import ShareButton from "../../components/ui/ShareButton";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 import {
   Calendar,
   Clock,
@@ -252,10 +252,10 @@ export default function CourseDetail() {
               : undefined,
           };
 
-          console.log("✅ دوره mapping شده:", mappedCourse);
-          console.log("💰 قیمت اصلی نهایی:", mappedCourse.original_price);
-          console.log("💰 قیمت نهایی:", mappedCourse.price);
-          console.log("💰 تخفیف:", mappedCourse.discount_value);
+          // console.log("✅ دوره mapping شده:", mappedCourse);
+          // console.log("💰 قیمت اصلی نهایی:", mappedCourse.original_price);
+          // console.log("💰 قیمت نهایی:", mappedCourse.price);
+          // console.log("💰 تخفیف:", mappedCourse.discount_value);
 
           setCourse(mappedCourse);
         } else {
@@ -296,9 +296,9 @@ export default function CourseDetail() {
         enrolledCount: (course.enrolledCount || 0) + 1,
       });
 
-      toast.success("✅ پیش‌ثبت‌نام با موفقیت انجام شد!");
+      toast.success(" پیش‌ثبت‌نام با موفقیت انجام شد!");
     } catch (error) {
-      console.error("❌ خطا در به‌روزرسانی وضعیت:", error);
+      console.error(" خطا در به‌روزرسانی وضعیت:", error);
       toast.error("خطا در ثبت‌نام");
     }
   };
@@ -431,7 +431,7 @@ export default function CourseDetail() {
               <div className="absolute top-3 right-3 md:top-4 md:right-4 flex flex-wrap gap-1.5 md:gap-2">
                 {course.isFeatured && (
                   <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium bg-yellow-500/90 text-white backdrop-blur-sm shadow-lg">
-                    ⭐ ویژه
+                    ویژه
                   </span>
                 )}
                 {course.level && (

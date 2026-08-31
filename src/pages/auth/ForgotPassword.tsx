@@ -5,7 +5,7 @@ import { authAPI } from "../../lib/api/auth";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { Phone, Key, ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ export default function ForgotPassword() {
       await authAPI.requestOTP(phone);
       setStep("reset");
       setTimer(180);
-      toast.success("✅ کد تایید به شماره شما ارسال شد");
+      toast.success(" کد تایید به شماره شما ارسال شد");
 
       const interval = setInterval(() => {
         setTimer((prev) => {
@@ -71,7 +71,7 @@ export default function ForgotPassword() {
     try {
       // ✅ ارسال همزمان OTP و رمز جدید
       await authAPI.resetPasswordWithOTP(phone, otpCode, newPassword);
-      toast.success("✅ رمز عبور با موفقیت تغییر کرد");
+      toast.success(" رمز عبور با موفقیت تغییر کرد");
       navigate("/login");
     } catch (err: any) {
       toast.error(
@@ -90,7 +90,7 @@ export default function ForgotPassword() {
     try {
       await authAPI.requestOTP(phone);
       setTimer(180);
-      toast.success("✅ کد تایید مجدداً ارسال شد");
+      toast.success(" کد تایید مجدداً ارسال شد");
 
       const interval = setInterval(() => {
         setTimer((prev) => {

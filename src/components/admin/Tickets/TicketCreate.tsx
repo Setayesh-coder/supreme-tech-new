@@ -4,8 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { ticketsAPI } from "../../../lib/api/tickets";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
-import { ArrowLeft, Save, Ticket, AlertCircle, CheckCircle } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import {
+  ArrowLeft,
+  Save,
+  Ticket,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function TicketCreate() {
   const navigate = useNavigate();
@@ -30,14 +36,14 @@ export default function TicketCreate() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // ✅ اعتبارسنجی
     if (!formData.title.trim()) {
-      toast.error("❌ عنوان تیکت الزامی است");
+      toast.error(" عنوان تیکت الزامی است");
       return;
     }
     if (!formData.description.trim()) {
-      toast.error("❌ متن پیام الزامی است");
+      toast.error(" متن پیام الزامی است");
       return;
     }
 
@@ -53,14 +59,14 @@ export default function TicketCreate() {
         priority: formData.priority,
       });
 
-      setSuccess("✅ تیکت با موفقیت ایجاد شد!");
-      toast.success("✅ تیکت با موفقیت ایجاد شد");
-      
+      setSuccess(" تیکت با موفقیت ایجاد شد!");
+      toast.success(" تیکت با موفقیت ایجاد شد");
+
       setTimeout(() => {
         navigate("/admin/tickets");
       }, 1500);
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       const errorMsg = err.response?.data?.detail || "خطا در ایجاد تیکت";
       setError(errorMsg);
       toast.error(errorMsg);
@@ -104,7 +110,7 @@ export default function TicketCreate() {
               <span>{error}</span>
             </div>
           )}
-          
+
           {/* موفقیت */}
           {success && (
             <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 flex items-center gap-2">
@@ -170,7 +176,8 @@ export default function TicketCreate() {
                 disabled={loading}
               />
               <p className="text-xs text-gray-500 mt-1">
-                توضیحات کامل و دقیق را وارد کنید تا تیم پشتیبانی بهتر بتواند کمک کند
+                توضیحات کامل و دقیق را وارد کنید تا تیم پشتیبانی بهتر بتواند کمک
+                کند
               </p>
             </div>
 

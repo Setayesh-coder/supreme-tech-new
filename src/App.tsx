@@ -1,10 +1,11 @@
-// src/App.tsx - نسخه کامل با QueryClientProvider
+// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { HelmetProvider } from "react-helmet-async";
-import { Toaster } from "./components/ui/Toaster";
+// import { Toaster } from "./components/ui/Toaster";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 // Layouts
 import Layout from "./components/layout/Layout";
@@ -35,7 +36,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import BlogListAdmin from "./pages/admin/Blog/BlogList";
 import BlogCreate from "./pages/admin/Blog/BlogCreate";
 import BlogEdit from "./pages/admin/Blog/BlogEdit";
-import CourseList from "./pages/admin/Courses/CourseList";
+import CourseListAdmin from "./pages/admin/Courses/CourseList";
 import OrdersList from "./pages/admin/Payments/OrdersList";
 import CourseCreate from "./pages/admin/Courses/CourseCreate";
 import CourseEdit from "./pages/admin/Courses/CourseEdit";
@@ -68,6 +69,7 @@ import CouponsManager from "./pages/admin/Copuns/CouponsManager";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Stats from "./pages/admin/Stats";
+import { SonnerProvider } from "./components/ui/sonner-provider";
 
 // ✅ تنظیم QueryClient
 const queryClient = new QueryClient({
@@ -85,9 +87,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
-        <Toaster />
+        {/* <Toaster /> */}
+        <SonnerProvider />
         <SettingsProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               {/* ============================================================
                 عمومی (با Layout)
@@ -113,6 +117,7 @@ function App() {
                 <Route path="/tickets/:id" element={<TicketDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
+
               {/* ============================================================
                 Admin
                 ============================================================ */}
@@ -132,7 +137,7 @@ function App() {
                     <Dashboard />
                   </ProtectedRoute>
                 }
-              />{" "}
+              />
               <Route
                 path="/admin/stats"
                 element={
@@ -141,6 +146,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* بلاگ */}
               <Route
                 path="/admin/blog"
@@ -166,6 +172,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* رویدادها */}
               <Route
                 path="/admin/events"
@@ -199,6 +206,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* دوره‌ها */}
               <Route
                 path="/admin/payments/orders"
@@ -220,7 +228,7 @@ function App() {
                 path="/admin/courses"
                 element={
                   <ProtectedRoute allowedRoles={["ADMIN"]}>
-                    <CourseList />
+                    <CourseListAdmin />
                   </ProtectedRoute>
                 }
               />
@@ -248,6 +256,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* کارمندان */}
               <Route
                 path="/admin/employees"
@@ -273,6 +282,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* کاربران */}
               <Route
                 path="/admin/users"
@@ -282,6 +292,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* تیم */}
               <Route
                 path="/admin/team"
@@ -291,6 +302,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* همکاران */}
               <Route
                 path="/admin/partners"
@@ -316,6 +328,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* تیکت‌ها */}
               <Route
                 path="/admin/tickets"
@@ -341,6 +354,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* پیام‌ها */}
               <Route
                 path="/admin/messages"
@@ -350,6 +364,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* پروفایل ادمین */}
               <Route
                 path="/admin/profile"
@@ -359,6 +374,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* تنظیمات */}
               <Route
                 path="/admin/settings"
@@ -376,6 +392,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               {/* Hero */}
               <Route
                 path="/admin/hero"
@@ -401,6 +418,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

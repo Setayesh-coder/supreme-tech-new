@@ -8,7 +8,7 @@ import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { BlogEditor } from "../../../components/admin/BlogEditor";
 import { ArrowLeft, Save, X, Plus, Upload, Loader2 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function BlogCreate() {
   const navigate = useNavigate();
@@ -116,10 +116,10 @@ export default function BlogCreate() {
       await blogAPI.create(data);
 
       // ✅ پیام موفقیت
-      toast.success("✅ پست با موفقیت ایجاد شد!");
+      toast.success(" پست با موفقیت ایجاد شد!");
       navigate("/admin/blog");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
 
       // ✅ نمایش خطای دقیق
       let errorMessage = "خطا در ایجاد پست";

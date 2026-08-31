@@ -7,7 +7,7 @@ import { GlassButton } from "../../components/ui/GlassButton";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 import CourseList from "../../components/sections/CourseList";
 import ShareButton from "../../components/ui/ShareButton";
-import { statsAPI } from "../../lib/api/stats"; // ✅ اضافه کردن
+import { statsAPI } from "../../lib/api/stats";
 import {
   Calendar,
   MapPin,
@@ -19,7 +19,7 @@ import {
   Tag,
   CalendarDays,
   Info,
-  Eye,
+  // Eye,
   Share2,
   Copy,
   Check,
@@ -27,7 +27,7 @@ import {
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import CountdownTimer from "../../components/ui/CountdownTimer";
 import { motion } from "framer-motion";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface Event {
   id: string;
@@ -48,7 +48,7 @@ interface Event {
   featured: boolean;
   is_active: boolean;
   meetingLink?: string;
-  views_count?: number; // ✅ اضافه کردن
+  views_count?: number;
   _count?: {
     enrollments: number;
   };
@@ -161,7 +161,7 @@ export default function EventDetail() {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success("✅ لینک رویداد کپی شد!");
+      toast.success(" لینک رویداد کپی شد!");
     } catch (err) {
       console.error("خطا در کپی کردن", err);
       toast.error("خطا در کپی کردن لینک");
@@ -349,10 +349,10 @@ export default function EventDetail() {
                     </span>
                   )}
                   {/* ✅ نمایش تعداد بازدید */}
-                  <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                  {/* <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                     <Eye size={14} className="md:w-4 md:h-4" />
                     {(event.views_count || 0).toLocaleString()} بازدید
-                  </span>
+                  </span> */}
                 </div>
               </div>
             </div>

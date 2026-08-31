@@ -15,7 +15,8 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
 export default function HeroList() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
@@ -42,13 +43,23 @@ export default function HeroList() {
 
   const handleDelete = async (id: string) => {
     if (!id) return;
-    if (!confirm("آیا از حذف این اسلاید مطمئن هستید؟")) return;
-    try {
-      await heroAPI.delete(id);
-      setSlides(slides.filter((s) => s.id !== id));
-    } catch (err) {
-      toast.error("خطا در حذف اسلاید");
-    }
+
+    showConfirmToast({
+      title: "آیا از حذف این اسلاید مطمئن هستید؟",
+      description: "این اسلاید از هیرو حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await heroAPI.delete(id);
+          setSlides(slides.filter((s) => s.id !== id));
+          toast.success("✅ اسلاید با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف اسلاید");
+        }
+      },
+    });
   };
 
   const handleReorder = async (id: string, direction: "up" | "down") => {

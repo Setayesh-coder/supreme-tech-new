@@ -5,7 +5,7 @@ import { authAPI } from "../../lib/api/auth";
 import { LiquidGlassCard } from "../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../components/ui/GlassButton";
 import { Phone, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -33,13 +33,13 @@ export default function Login() {
       });
 
       if (response && response.token) {
-        toast.success("✅ ورود با موفقیت انجام شد");
+        toast.success(" ورود با موفقیت انجام شد");
         navigate("/profile", { replace: true });
       } else {
         setError("خطا در ورود، لطفاً دوباره تلاش کنید");
       }
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError(err?.response?.data?.detail || err?.message || "خطا در ورود");
     } finally {
       setLoading(false);

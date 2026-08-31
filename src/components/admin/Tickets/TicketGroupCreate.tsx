@@ -16,7 +16,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -112,15 +112,15 @@ export default function TicketGroupCreate() {
 
     // ✅ اعتبارسنجی
     if (!formData.title.trim()) {
-      toast.error("❌ عنوان تیکت الزامی است");
+      toast.error(" عنوان تیکت الزامی است");
       return;
     }
     if (!formData.description.trim()) {
-      toast.error("❌ متن پیام الزامی است");
+      toast.error(" متن پیام الزامی است");
       return;
     }
     if (selectedUsers.length === 0) {
-      toast.error("❌ حداقل یک کاربر را انتخاب کنید");
+      toast.error(" حداقل یک کاربر را انتخاب کنید");
       return;
     }
 
@@ -137,8 +137,8 @@ export default function TicketGroupCreate() {
         user_ids: selectedUsers, // ✅ تغییر از members به user_ids
       });
 
-      setSuccess("✅ تیکت گروهی با موفقیت ایجاد شد!");
-      toast.success("✅ تیکت گروهی با موفقیت ایجاد شد");
+      setSuccess(" تیکت گروهی با موفقیت ایجاد شد!");
+      toast.success(" تیکت گروهی با موفقیت ایجاد شد");
 
       setTimeout(() => {
         navigate("/admin/tickets");

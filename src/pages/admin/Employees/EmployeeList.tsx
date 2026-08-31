@@ -5,6 +5,7 @@ import { employeesAPI } from "../../../lib/api/employees";
 import type { EmployeePublic } from "../../../lib/api/employees";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 import {
   Users,
   Plus,
@@ -22,7 +23,7 @@ import {
   Building2,
   Briefcase,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 // ✅ تایپ توسعه‌یافته برای نمایش در لیست (با فیلدهای اضافی از API)
 interface EmployeeListItem extends EmployeePublic {
@@ -69,15 +70,23 @@ export default function EmployeeList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این کارمند مطمئن هستید؟")) return;
-    try {
-      await employeesAPI.delete(id);
-      setEmployees(employees.filter((e) => e.id !== id));
-    } catch (err) {
-      toast.error("خطا در حذف کارمند");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این کارمند مطمئن هستید؟",
+      description: "این عمل غیرقابل بازگشت است.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await employeesAPI.delete(id);
+          setEmployees(employees.filter((e) => e.id !== id));
+          toast.success("✅ کارمند با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف کارمند");
+        }
+      },
+    });
   };
-
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       await employeesAPI.update(id, { is_active: !currentStatus });

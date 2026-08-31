@@ -24,7 +24,8 @@ import {
   Timer,
   Eye,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
 // ✅ تایپ کاربر
 interface User {
@@ -127,36 +128,49 @@ export default function CourseEnrollments() {
 
   // ✅ تابع تایید پرداخت
   const handleConfirmPayment = async (enrollmentId: string) => {
-    if (!confirm("آیا از تایید پرداخت این کاربر مطمئن هستید؟")) return;
-
-    setUpdating(enrollmentId);
-    try {
-      await enrollmentsAPI.updateStatus(enrollmentId, "CONFIRMED");
-      await fetchData();
-      toast.success("✅ پرداخت با موفقیت تایید شد!");
-    } catch (err) {
-      console.error("❌ خطا در تایید پرداخت:", err);
-      toast.error("❌ خطا در تایید پرداخت");
-    } finally {
-      setUpdating(null);
-    }
+    showConfirmToast({
+      title: "آیا از تایید پرداخت این کاربر مطمئن هستید؟",
+      description: "پس از تایید، کاربر به دوره دسترسی پیدا خواهد کرد.",
+      variant: "warning",
+      confirmText: "بله، تایید شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        setUpdating(enrollmentId);
+        try {
+          await enrollmentsAPI.updateStatus(enrollmentId, "CONFIRMED");
+          await fetchData();
+          toast.success("✅ پرداخت با موفقیت تایید شد!");
+        } catch (err) {
+          console.error("❌ خطا در تایید پرداخت:", err);
+          toast.error("❌ خطا در تایید پرداخت");
+        } finally {
+          setUpdating(null);
+        }
+      },
+    });
   };
-
   // ✅ تابع رد پرداخت
   const handleRejectPayment = async (enrollmentId: string) => {
-    if (!confirm("آیا از رد پرداخت این کاربر مطمئن هستید؟")) return;
-
-    setUpdating(enrollmentId);
-    try {
-      await enrollmentsAPI.updateStatus(enrollmentId, "CANCELLED");
-      await fetchData();
-      toast.success("✅ پرداخت با موفقیت رد شد!");
-    } catch (err) {
-      console.error("❌ خطا در رد پرداخت:", err);
-      toast.error("❌ خطا در رد پرداخت");
-    } finally {
-      setUpdating(null);
-    }
+    showConfirmToast({
+      title: "آیا از رد پرداخت این کاربر مطمئن هستید؟",
+      description: "پس از رد، کاربر به دوره دسترسی نخواهد داشت.",
+      variant: "danger",
+      confirmText: "بله، رد شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        setUpdating(enrollmentId);
+        try {
+          await enrollmentsAPI.updateStatus(enrollmentId, "CANCELLED");
+          await fetchData();
+          toast.success("✅ پرداخت با موفقیت رد شد!");
+        } catch (err) {
+          console.error("❌ خطا در رد پرداخت:", err);
+          toast.error("❌ خطا در رد پرداخت");
+        } finally {
+          setUpdating(null);
+        }
+      },
+    });
   };
 
   // ✅ تابع مشاهده جزئیات پرداخت
@@ -432,7 +446,7 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              toast.info("📥 قابلیت خروجی گرفتن در حال توسعه است...");
+              toast.info(" قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
             خروجی Excel

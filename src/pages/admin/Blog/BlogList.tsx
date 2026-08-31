@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { blogAPI } from "../../../lib/api/blog";
-
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 import type { BlogPost } from "../../../lib/api/blog";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
@@ -17,7 +17,7 @@ import {
   BookOpen,
   X,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function BlogListAdmin() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -44,13 +44,22 @@ export default function BlogListAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این پست مطمئن هستید؟")) return;
-    try {
-      await blogAPI.delete(id);
-      setPosts(posts.filter((p) => p.id !== id));
-    } catch (err) {
-      toast.error("خطا در حذف پست");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این پست مطمئن هستید؟",
+      description: "این عمل غیرقابل بازگشت است و پست به طور کامل حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await blogAPI.delete(id);
+          setPosts(posts.filter((p) => p.id !== id));
+          toast.success("✅ پست با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف پست");
+        }
+      },
+    });
   };
 
   // ✅ تغییر: استفاده از summary به جای excerpt

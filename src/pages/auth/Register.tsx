@@ -14,7 +14,7 @@ import {
   Mail,
   Key,
 } from "lucide-react";
-import { toast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -51,7 +51,7 @@ export default function Register() {
       setStep("otp");
       setTimer(60);
 
-      toast.success("✅ کد تایید به شماره شما ارسال شد");
+      toast.success(" کد تایید به شماره شما ارسال شد");
 
       const interval = setInterval(() => {
         setTimer((prev) => {
@@ -82,7 +82,7 @@ export default function Register() {
     try {
       await authAPI.verifyOTP(phone, otpCode);
       setStep("register");
-      toast.success("✅ کد تایید شد، اطلاعات ثبت‌نام را کامل کنید");
+      toast.success(" کد تایید شد، اطلاعات ثبت‌نام را کامل کنید");
     } catch (err: any) {
       toast.error(
         err?.response?.data?.detail || err?.message || "کد تایید نامعتبر است",
@@ -125,13 +125,13 @@ export default function Register() {
       });
 
       if (response && response.token) {
-        toast.success("✅ ثبت‌نام با موفقیت انجام شد");
+        toast.success(" ثبت‌نام با موفقیت انجام شد");
         navigate("/profile", { replace: true });
       } else {
         setError("خطا در ثبت‌نام، لطفاً دوباره تلاش کنید");
       }
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
       setError(err?.response?.data?.detail || err?.message || "خطا در ثبت‌نام");
     } finally {
       setLoading(false);

@@ -8,6 +8,7 @@ import { usersAPI } from "../../../lib/api/users";
 import { coursesAPI } from "../../../lib/api/courses";
 import PaymentDetailsModal from "../../../components/admin/PaymentDetailsModal";
 import type { Order } from "../../../types/cart";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 import {
   Loader2,
   ShoppingBag,
@@ -25,7 +26,7 @@ import {
   Timer,
   // BookOpen,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface OrderWithUser extends Order {
   user: {
@@ -192,20 +193,32 @@ export default function OrdersList() {
   };
 
   const handleVerifyOrder = async (orderId: string, approved: boolean) => {
-    if (!confirm(`آیا از ${approved ? "تایید" : "رد"} این سفارش مطمئن هستید؟`))
-      return;
+    const actionText = approved ? "تایید" : "رد";
 
-    setProcessing(orderId);
-    try {
-      await paymentsAPI.verifyOrder(orderId, approved);
-      await fetchOrders();
-      toast.success(`✅ سفارش با موفقیت ${approved ? "تایید" : "رد"} شد!`);
-    } catch (err: any) {
-      console.error("❌ خطا:", err);
-      toast.error(err.response?.data?.detail || "خطا در تایید سفارش");
-    } finally {
-      setProcessing(null);
-    }
+    showConfirmToast({
+      title: `آیا از ${actionText} این سفارش مطمئن هستید؟`,
+      description: approved
+        ? "پس از تایید، سفارش نهایی می‌شود."
+        : "پس از رد، سفارش لغو می‌شود.",
+      variant: approved ? "warning" : "danger",
+      confirmText: `بله، ${actionText} شود`,
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        setProcessing(orderId);
+        try {
+          await paymentsAPI.verifyOrder(orderId, approved);
+          await fetchOrders();
+          toast.success(`✅ سفارش با موفقیت ${actionText} شد!`);
+        } catch (err: any) {
+          console.error("❌ خطا:", err);
+          toast.error(
+            err.response?.data?.detail || `❌ خطا در ${actionText} سفارش`,
+          );
+        } finally {
+          setProcessing(null);
+        }
+      },
+    });
   };
 
   const handleViewDetails = (order: OrderWithUser) => {

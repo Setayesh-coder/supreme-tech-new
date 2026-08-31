@@ -17,7 +17,8 @@ import {
   Users,
   Search,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
 interface Event {
   id: string;
@@ -135,13 +136,22 @@ export default function EventList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این رویداد مطمئن هستید؟")) return;
-    try {
-      await eventsAPI.delete(id);
-      setEvents(events.filter((e) => e.id !== id));
-    } catch (err) {
-      toast.error("خطا در حذف رویداد");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این رویداد مطمئن هستید؟",
+      description: "همه اطلاعات مرتبط با این رویداد حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await eventsAPI.delete(id);
+          setEvents(events.filter((e) => e.id !== id));
+          toast.success("✅ رویداد با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف رویداد");
+        }
+      },
+    });
   };
 
   const handleImageError = (eventId: string) => {

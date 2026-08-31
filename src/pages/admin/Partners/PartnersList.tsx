@@ -5,7 +5,8 @@ import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { Plus, Edit, Trash2, ExternalLink, Eye, EyeOff } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
 interface Partner {
   id: string;
@@ -39,17 +40,25 @@ export default function PartnersList() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این همکار مطمئن هستید؟")) return;
-
-    try {
-      await partnersAPI.delete(id);
-      setPartners(partners.filter((p) => p.id !== id));
-    } catch (err) {
-      toast.error("خطا در حذف همکار");
-      console.error(err);
-    }
-  };
+const handleDelete = async (id: string) => {
+  showConfirmToast({
+    title: "آیا از حذف این همکار مطمئن هستید؟",
+    description: "این عمل غیرقابل بازگشت است.",
+    variant: "danger",
+    confirmText: "بله، حذف شود",
+    cancelText: "انصراف",
+    onConfirm: async () => {
+      try {
+        await partnersAPI.delete(id);
+        setPartners(partners.filter((p) => p.id !== id));
+        toast.success("✅ همکار با موفقیت حذف شد");
+      } catch (err) {
+        console.error(err);
+        toast.error("❌ خطا در حذف همکار");
+      }
+    },
+  });
+};
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {

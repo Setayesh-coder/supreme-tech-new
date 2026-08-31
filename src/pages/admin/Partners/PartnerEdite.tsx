@@ -7,7 +7,7 @@ import { GlassButton } from "../../../components/ui/GlassButton";
 import { partnersAPI } from "../../../lib/api/partners";
 import { uploadAPI } from "../../../lib/api/upload";
 import { ArrowLeft, Save, X, Loader2, Building2 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 export default function PartnerEdit() {
   const { id } = useParams<{ id: string }>();

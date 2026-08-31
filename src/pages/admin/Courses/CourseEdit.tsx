@@ -20,7 +20,7 @@ import {
   DollarSign,
   Percent,
 } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
 
 interface Event {
   id: string;
@@ -95,7 +95,7 @@ export default function CourseEdit() {
           setImagePreview(course.cover_image);
         }
       } catch (err) {
-        console.error("❌ خطا:", err);
+        console.error(" خطا:", err);
         toast.error("خطا در دریافت اطلاعات دوره");
         navigate("/admin/courses");
       } finally {
@@ -212,10 +212,10 @@ export default function CourseEdit() {
 
       console.log("📤 ارسال داده:", courseData);
       await coursesAPI.update(id!, courseData);
-      toast.success("✅ دوره با موفقیت بروزرسانی شد!");
+      toast.success(" دوره با موفقیت بروزرسانی شد!");
       navigate("/admin/courses");
     } catch (err: any) {
-      console.error("❌ خطا:", err);
+      console.error(" خطا:", err);
 
       if (err.response) {
         console.log("📥 وضعیت:", err.response.status);

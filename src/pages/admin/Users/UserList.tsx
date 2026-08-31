@@ -25,7 +25,8 @@ import {
   Clock,
 } from "lucide-react";
 import { AdminListSkeleton } from "../../../components/skeletons/AdminListSkeleton";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
 interface User {
   id: string;
@@ -167,14 +168,23 @@ export default function UserList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این کاربر مطمئن هستید؟")) return;
-    try {
-      await usersAPI.delete(id);
-      setUsers(users.filter((u) => u.id !== id));
-      setTotalUsers(totalUsers - 1);
-    } catch (err) {
-      toast.error("خطا در حذف کاربر");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این کاربر مطمئن هستید؟",
+      description: "تمام اطلاعات کاربر حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await usersAPI.delete(id);
+          setUsers(users.filter((u) => u.id !== id));
+          setTotalUsers(totalUsers - 1);
+          toast.success("✅ کاربر با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف کاربر");
+        }
+      },
+    });
   };
 
   const openRoleModal = (user: User) => {

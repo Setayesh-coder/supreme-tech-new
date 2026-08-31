@@ -1,7 +1,7 @@
 // src/hooks/useCart.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cartAPI } from "../lib/api/cart";
-import { toast } from "./use-toast";
+import { toast } from "sonner";
 import type { CartResponse, DisplayCartItem } from "../types/cart";
 
 // ✅ تبدیل داده به فرمت نمایش
@@ -93,11 +93,11 @@ export const useCart = () => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cart"] });
       await refetch();
-      toast.success("✅ به سبد خرید اضافه شد");
+      toast.success(" به سبد خرید اضافه شد");
     },
     onError: (err: any, _variables, context) => {
       queryClient.setQueryData(["cart"], context?.previousCart);
-      toast.error(err.response?.data?.detail || "❌ خطا در افزودن به سبد خرید");
+      toast.error(err.response?.data?.detail || " خطا در افزودن به سبد خرید");
     },
   });
 
@@ -160,11 +160,11 @@ export const useCart = () => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cart"] });
       await refetch();
-      toast.success("✅ از سبد خرید حذف شد");
+      toast.success(" از سبد خرید حذف شد");
     },
     onError: (err: any, _variables, context) => {
       queryClient.setQueryData(["cart"], context?.previousCart);
-      toast.error(err.response?.data?.detail || "❌ خطا در حذف از سبد خرید");
+      toast.error(err.response?.data?.detail || " خطا در حذف از سبد خرید");
     },
   });
 
@@ -174,10 +174,10 @@ export const useCart = () => {
     onSuccess: async (data) => {
       queryClient.setQueryData(["cart"], data);
       await refetch();
-      toast.success("✅ کد تخفیف اعمال شد");
+      toast.success(" کد تخفیف اعمال شد");
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.detail || "❌ کد تخفیف نامعتبر است");
+      toast.error(err.response?.data?.detail || " کد تخفیف نامعتبر است");
     },
   });
 
@@ -187,10 +187,10 @@ export const useCart = () => {
     onSuccess: async (data) => {
       queryClient.setQueryData(["cart"], data);
       await refetch();
-      toast.success("✅ کد تخفیف حذف شد");
+      toast.success(" کد تخفیف حذف شد");
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.detail || "❌ خطا در حذف کد تخفیف");
+      toast.error(err.response?.data?.detail || " خطا در حذف کد تخفیف");
     },
   });
 

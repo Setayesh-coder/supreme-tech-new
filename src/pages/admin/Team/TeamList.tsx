@@ -6,7 +6,8 @@ import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { LiquidGlassCard } from "../../../components/ui/LiquidGlassCard";
 import { GlassButton } from "../../../components/ui/GlassButton";
 import { Plus, Edit, Trash2, Loader2, Search } from "lucide-react";
-import { toast } from "../../../hooks/use-toast";
+import { toast } from "sonner";
+import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
 interface TeamMember {
   id: string;
@@ -46,14 +47,22 @@ export default function TeamList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("آیا از حذف این عضو مطمئن هستید؟")) return;
-    try {
-      // ✅ فقط یک پارامتر (id)
-      await teamAPI.delete(id);
-      setMembers(members.filter((m) => m.id !== id));
-    } catch (err) {
-      toast.error("خطا در حذف عضو");
-    }
+    showConfirmToast({
+      title: "آیا از حذف این عضو مطمئن هستید؟",
+      description: "این عضو از تیم حذف خواهد شد.",
+      variant: "danger",
+      confirmText: "بله، حذف شود",
+      cancelText: "انصراف",
+      onConfirm: async () => {
+        try {
+          await teamAPI.delete(id);
+          setMembers(members.filter((m) => m.id !== id));
+          toast.success("✅ عضو با موفقیت حذف شد");
+        } catch (err) {
+          toast.error("❌ خطا در حذف عضو");
+        }
+      },
+    });
   };
 
   const filteredMembers = members.filter(
