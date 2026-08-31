@@ -24,7 +24,6 @@ import {
   CreditCard,
   Bot,
   Timer,
-  // BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -107,9 +106,7 @@ export default function OrdersList() {
       };
     }
   };
-  // src/pages/admin/Payments/OrdersList.tsx
 
-  // ✅ اصلاح fetchOrders برای دریافت اطلاعات کامل دوره‌ها
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -127,13 +124,11 @@ export default function OrdersList() {
 
       const ordersWithDetails = await Promise.all(
         data.map(async (order: Order) => {
-          // دریافت اطلاعات کاربر
           let userData = order.user;
           if (!userData || !userData.id || !userData.name) {
             userData = await fetchUserData(order.user_id);
           }
 
-          // ✅ دریافت اطلاعات کامل دوره‌ها
           let coursesData: any[] = [];
           if (order.courses_snapshot && Array.isArray(order.courses_snapshot)) {
             const validCourseIds = order.courses_snapshot.filter(
@@ -160,7 +155,6 @@ export default function OrdersList() {
             }
           }
 
-          // ✅ اگر courses وجود دارد ولی courses_snapshot خالی است
           if (
             order.courses &&
             order.courses.length > 0 &&
@@ -236,7 +230,6 @@ export default function OrdersList() {
     setShowPaymentModal(false);
   };
 
-  // ✅ اصلاح: تابع تشخیص روش پرداخت با normalize کردن
   const getPaymentMethodLabel = (method?: string) => {
     if (!method) return "نامشخص";
 
@@ -253,7 +246,6 @@ export default function OrdersList() {
     }
   };
 
-  // ✅ اصلاح: آیکون روش پرداخت با normalize کردن
   const getPaymentMethodIcon = (method?: string) => {
     if (!method) return <Wallet className="w-4 h-4" />;
 
@@ -268,6 +260,24 @@ export default function OrdersList() {
       default:
         return <Wallet className="w-4 h-4" />;
     }
+  };
+
+  // ✅ توابع تشخیص وضعیت
+  const shouldShowActionButtons = (order: OrderWithUser) => {
+    const status = order.status?.toLowerCase();
+    return status === "waiting_for_approval" || status === "waiting";
+  };
+
+  const isCompleted = (order: OrderWithUser) => {
+    const status = order.status?.toLowerCase();
+    return (
+      status === "confirmed" || status === "completed" || status === "paid"
+    );
+  };
+
+  const isPending = (order: OrderWithUser) => {
+    const status = order.status?.toLowerCase();
+    return status === "pending";
   };
 
   const getStatusColor = (status: string) => {
@@ -285,6 +295,9 @@ export default function OrdersList() {
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
       case "rejected":
         return "text-red-400 bg-red-500/20 border-red-500/30";
+      case "confirmed":
+      case "completed":
+        return "text-green-400 bg-green-500/20 border-green-500/30";
       default:
         return "text-gray-400 bg-gray-500/20 border-gray-500/30";
     }
@@ -305,6 +318,9 @@ export default function OrdersList() {
         return "رد شده";
       case "cancelled":
         return "لغو شده";
+      case "confirmed":
+      case "completed":
+        return "تکمیل شده";
       default:
         return status || "نامشخص";
     }
@@ -325,6 +341,9 @@ export default function OrdersList() {
         return <XCircle className="w-4 h-4" />;
       case "rejected":
         return <XCircle className="w-4 h-4" />;
+      case "confirmed":
+      case "completed":
+        return <CheckCircle className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;
     }
@@ -430,6 +449,7 @@ export default function OrdersList() {
             <option value="failed">❌ ناموفق</option>
             <option value="cancelled">🚫 لغو شده</option>
             <option value="rejected">🚫 رد شده</option>
+            <option value="confirmed">✅ تکمیل شده</option>
           </select>
         </div>
 
@@ -462,9 +482,9 @@ export default function OrdersList() {
         ) : (
           <div className="space-y-4">
             {filteredOrders.map((order) => {
-              const isWaitingForApproval =
-                order.status?.toLowerCase() === "waiting_for_approval" ||
-                order.status?.toLowerCase() === "waiting";
+              const showActions = shouldShowActionButtons(order);
+              const completed = isCompleted(order);
+              const pending = isPending(order);
 
               const statusColor = getStatusColor(order.status);
               const StatusIcon = getStatusIcon(order.status);
@@ -473,8 +493,20 @@ export default function OrdersList() {
               const userEmail = order.user?.email || "ایمیل ثبت نشده";
               const userPhone = order.user?.phone || "";
 
-              const displayPrice =
+              const displayOriginalPrice =
+                order.total_original_price || order.final_amount || 0;
+              const displayFinalPrice =
                 order.final_amount || order.total_original_price || 0;
+              const hasDiscount = displayOriginalPrice > displayFinalPrice;
+              const discountPercent =
+                displayOriginalPrice > 0
+                  ? Math.round(
+                      ((displayOriginalPrice - displayFinalPrice) /
+                        displayOriginalPrice) *
+                        100,
+                    )
+                  : 0;
+
               const courses = order.courses || [];
 
               return (
@@ -526,16 +558,30 @@ export default function OrdersList() {
                       </div>
                     </div>
 
+                    {/* قیمت اصلی و قابل پرداخت */}
                     <div className="flex flex-wrap items-center gap-4 text-sm">
                       <span className="flex items-center gap-1 text-gray-400">
                         <Wallet className="w-4 h-4" />
-                        مبلغ:{" "}
-                        <span className="text-white font-medium">
-                          {formatPrice(displayPrice)}
+                        قیمت اصلی:
+                        <span className="text-gray-400 line-through">
+                          {formatPrice(displayOriginalPrice)}
                         </span>
                       </span>
+                      <span className="flex items-center gap-1 text-white font-medium">
+                        مبلغ قابل پرداخت:
+                        <span className="text-green-400">
+                          {formatPrice(displayFinalPrice)}
+                        </span>
+                      </span>
+                      {hasDiscount && (
+                        <span className="text-green-400 text-xs">
+                          تخفیف: {discountPercent}%
+                        </span>
+                      )}
+                    </div>
 
-                      {/* ✅ اصلاح: نمایش درست روش پرداخت */}
+                    {/* روش پرداخت */}
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
                       <span className="flex items-center gap-1 text-gray-400">
                         {getPaymentMethodIcon(order.payment_method)}
                         روش:{" "}
@@ -566,8 +612,10 @@ export default function OrdersList() {
                       </div>
                     )}
 
+                    {/* ✅ دکمه‌ها با منطق صحیح */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
-                      {isWaitingForApproval && (
+                      {/* ✅ فقط "در انتظار تایید ادمین" دکمه دارد */}
+                      {showActions && (
                         <>
                           <GlassButton
                             variant="primary"
@@ -596,6 +644,31 @@ export default function OrdersList() {
                         </>
                       )}
 
+                      {/* ✅ وضعیت تکمیل شده */}
+                      {completed && (
+                        <span className="text-green-400 text-sm flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4" />
+                          تکمیل شده
+                        </span>
+                      )}
+
+                      {/* ✅ وضعیت در انتظار پرداخت - بدون دکمه */}
+                      {pending && (
+                        <span className="text-yellow-400 text-sm flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          در انتظار پرداخت
+                        </span>
+                      )}
+
+                      {/* ✅ وضعیت‌های دیگر (رد/لغو/ناموفق) */}
+                      {!showActions && !completed && !pending && (
+                        <span className="text-gray-400 text-sm flex items-center gap-1">
+                          <XCircle className="w-4 h-4" />
+                          {getStatusLabel(order.status)}
+                        </span>
+                      )}
+
+                      {/* دکمه جزئیات - همیشه نمایش داده می‌شود */}
                       <GlassButton
                         variant="secondary"
                         size="sm"
@@ -651,11 +724,15 @@ export default function OrdersList() {
             >
               <p className="text-2xl font-bold text-green-400">
                 {
-                  orders.filter((o) => o.status?.toLowerCase() === "paid")
-                    .length
+                  orders.filter(
+                    (o) =>
+                      o.status?.toLowerCase() === "paid" ||
+                      o.status?.toLowerCase() === "confirmed" ||
+                      o.status?.toLowerCase() === "completed",
+                  ).length
                 }
               </p>
-              <p className="text-gray-400 text-sm">پرداخت شده</p>
+              <p className="text-gray-400 text-sm">تکمیل شده</p>
             </LiquidGlassCard>
             <LiquidGlassCard
               className="p-4 text-center"
@@ -697,7 +774,9 @@ export default function OrdersList() {
           payment_status:
             selectedOrder?.status?.toLowerCase() === "waiting_for_approval"
               ? "WAITING_VERIFY"
-              : selectedOrder?.status?.toLowerCase() === "paid"
+              : selectedOrder?.status?.toLowerCase() === "paid" ||
+                  selectedOrder?.status?.toLowerCase() === "confirmed" ||
+                  selectedOrder?.status?.toLowerCase() === "completed"
                 ? "PAID"
                 : "PENDING",
           payment_method:
@@ -711,13 +790,13 @@ export default function OrdersList() {
           receipt_image_url: selectedOrder?.receipt_image_url || null,
           transaction_id: selectedOrder?.tracking_code || null,
 
-          // ✅ تنظیم course_id از courses یا courses_snapshot
+          // ✅ اصلاح: دریافت course_id از selectedOrder
           course_id: (() => {
-            // اول از courses
+            // 1. از courses
             if (selectedOrder?.courses && selectedOrder.courses.length > 0) {
-              return selectedOrder.courses[0].id;
+              return selectedOrder.courses[0].id || null;
             }
-            // بعد از courses_snapshot
+            // 2. از courses_snapshot
             if (
               selectedOrder?.courses_snapshot &&
               selectedOrder.courses_snapshot.length > 0
@@ -734,41 +813,43 @@ export default function OrdersList() {
             return null;
           })(),
 
-          // ✅ تنظیم course کامل از courses_snapshot
+          // ✅ اصلاح: دریافت اطلاعات course از selectedOrder
           course: (() => {
-            // اول از courses
+            // 1. از courses
             if (selectedOrder?.courses && selectedOrder.courses.length > 0) {
               const course = selectedOrder.courses[0];
               return {
-                id: course.id,
+                id: course.id || "",
                 title: course.title || "دوره آموزشی",
                 price: course.price || 0,
+                original_price:
+                  (course as any).original_price || course.price || 0,
                 cover_image: (course as any).cover_image || "",
                 slug: (course as any).slug || "",
               };
             }
-
-            // بعد از courses_snapshot
+            // 2. از courses_snapshot
             if (
               selectedOrder?.courses_snapshot &&
               selectedOrder.courses_snapshot.length > 0
             ) {
               const first = selectedOrder.courses_snapshot[0];
 
-              // اگر رشته است
               if (typeof first === "string") {
-                // ✅ سعی می‌کنیم اطلاعات دوره رو از API بگیریم
-                // ولی فعلاً با اطلاعات موجود کار می‌کنیم
+                // ✅ فقط از شناسه استفاده کن، چون اطلاعات کامل نداریم
                 return {
                   id: first,
                   title: `دوره ${first.substring(0, 8)}`,
                   price: selectedOrder.final_amount || 0,
+                  original_price:
+                    selectedOrder.total_original_price ||
+                    selectedOrder.final_amount ||
+                    0,
                   cover_image: "",
                   slug: "",
                 };
               }
 
-              // اگر شیء است
               if (first && typeof first === "object") {
                 const obj = first as Record<string, any>;
                 const id = obj.id || obj.course_id || obj._id || "";
@@ -779,12 +860,12 @@ export default function OrdersList() {
                     obj.name ||
                     `دوره ${String(id).substring(0, 8)}`,
                   price: obj.price || 0,
+                  original_price: obj.original_price || obj.price || 0,
                   cover_image: obj.cover_image || obj.image || "",
                   slug: obj.slug || "",
                 };
               }
             }
-
             return undefined;
           })(),
           updated_at: selectedOrder?.updated_at || new Date().toISOString(),

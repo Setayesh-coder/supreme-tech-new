@@ -39,6 +39,7 @@ interface PaymentDetailsModalProps {
   onRefresh?: () => void;
   coursePrice?: number;
   courseTitle?: string;
+  original_price?: number;
 }
 
 export default function PaymentDetailsModal({
@@ -145,9 +146,9 @@ export default function PaymentDetailsModal({
       },
       COMPLETED: {
         label: "تکمیل شده",
-        color: "text-blue-400",
+        color: "text-green-400",
         icon: CheckCircle,
-        bg: "bg-blue-500/20",
+        bg: "bg-green-500/20",
       },
       WAITING: {
         label: "در انتظار تایید",
@@ -190,10 +191,39 @@ export default function PaymentDetailsModal({
   const paymentStatus = getPaymentStatusLabel(enrollment.payment_status);
   const StatusIcon = status.icon;
 
-  const isWaitingVerify =
+  // ✅ محاسبه مبلغ قابل پرداخت و تخفیف
+  const calculatePrices = () => {
+    const originalPrice =
+      // enrollment.course?.original_price ||
+      enrollment.course?.price || enrollment.amount || 0;
+    const finalPrice = enrollment.amount || enrollment.course?.price || 0;
+    const discountAmount = originalPrice - finalPrice;
+    const discountPercent =
+      originalPrice > 0
+        ? Math.round((discountAmount / originalPrice) * 100)
+        : 0;
+
+    return { originalPrice, finalPrice, discountAmount, discountPercent };
+  };
+
+  const { originalPrice, finalPrice, discountAmount, discountPercent } =
+    calculatePrices();
+
+  // ✅ تشخیص وضعیت‌ها
+  const isCompleted =
+    enrollment.status === "COMPLETED" ||
+    enrollment.status === "CONFIRMED" ||
+    enrollment.payment_status === "PAID";
+
+  const isPending =
+    enrollment.payment_status === "PENDING" || enrollment.status === "PENDING";
+
+  const isWaitingForApproval =
     enrollment.payment_status === "WAITING_VERIFY" ||
-    enrollment.status === "WAITING" ||
-    enrollment.status === "PENDING";
+    enrollment.status === "WAITING";
+
+  // ✅ نمایش دکمه‌های تایید/رد فقط در حالت "در انتظار تایید ادمین"
+  const showActionButtons = isWaitingForApproval && !isCompleted && !isPending;
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "نامشخص";
@@ -247,57 +277,44 @@ export default function PaymentDetailsModal({
     }
   };
 
-  // ✅ اصلاح: تشخیص بهتر اطلاعات محصول
   const hasCourse = !!enrollment.course;
   const hasEvent = !!enrollment.event;
   const hasCourseId = !!enrollment.course_id;
   const hasEventId = !!enrollment.event_id;
 
-  // ✅ دریافت عنوان محصول از منابع مختلف
   const getItemTitle = () => {
-    // اولویت 1: اطلاعات کامل course
     if (hasCourse && enrollment.course?.title) {
       return enrollment.course.title;
     }
-    // اولویت 2: اطلاعات کامل event
     if (hasEvent && enrollment.event?.title) {
       return enrollment.event.title;
     }
-    // اولویت 3: از course_id (اگر رشته است)
     if (hasCourseId && typeof enrollment.course_id === "string") {
       return `دوره ${enrollment.course_id.substring(0, 8)}`;
     }
-    // اولویت 4: از event_id (اگر رشته است)
     if (hasEventId && typeof enrollment.event_id === "string") {
       return `رویداد ${enrollment.event_id.substring(0, 8)}`;
     }
-    // اولویت 5: از نام کاربر
     if (enrollment.user?.name) {
       return `سفارش ${enrollment.user.name}`;
     }
     return "محصول نامشخص";
   };
 
-  // ✅ دریافت قیمت محصول از منابع مختلف
-  const getItemPrice = () => {
-    if (hasCourse && enrollment.course?.price !== undefined) {
-      return enrollment.course.price;
-    }
-    if (hasEvent && enrollment.event?.price !== undefined) {
-      return enrollment.event.price;
-    }
-    // اگر قیمت نداریم، از amount استفاده کن
-    return enrollment.amount || 0;
+  const getItemId = () => {
+    if (hasCourse) return enrollment.course?.id || enrollment.course_id;
+    if (hasEvent) return enrollment.event?.id || enrollment.event_id;
+    if (enrollment.course_id) return enrollment.course_id;
+    if (enrollment.event_id) return enrollment.event_id;
+    return enrollment.id;
   };
 
-  // ✅ دریافت آیکون محصول
   const getItemIcon = () => {
     if (hasCourse) return <BookOpen className="w-4 h-4" />;
     if (hasEvent) return <Calendar className="w-4 h-4" />;
     return <Tag className="w-4 h-4" />;
   };
 
-  // ✅ دریافت نوع محصول
   const getItemType = () => {
     if (hasCourse) return "دوره";
     if (hasEvent) return "رویداد";
@@ -305,15 +322,6 @@ export default function PaymentDetailsModal({
     if (hasEventId) return "رویداد";
     if (enrollment.user?.name) return "سفارش";
     return "محصول";
-  };
-
-  // ✅ دریافت شناسه محصول
-  const getItemId = () => {
-    if (hasCourse) return enrollment.course?.id || enrollment.course_id;
-    if (hasEvent) return enrollment.event?.id || enrollment.event_id;
-    if (enrollment.course_id) return enrollment.course_id;
-    if (enrollment.event_id) return enrollment.event_id;
-    return enrollment.id;
   };
 
   const handleCopy = (text: string) => {
@@ -424,8 +432,66 @@ export default function PaymentDetailsModal({
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-medium ${paymentStatus.color} ${paymentStatus.bg}`}
                 >
-                  💳 {paymentStatus.label}
+                  {paymentStatus.label}
                 </span>
+              </div>
+
+              {/* ✅ بخش قیمت با تخفیف */}
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+                <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                  <Wallet className="w-4 h-4" />
+                  اطلاعات مالی
+                </h3>
+
+                <div className="space-y-2">
+                  {/* قیمت اصلی */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-sm">قیمت اصلی</span>
+                    <span className="text-gray-400 line-through">
+                      {formatPrice(originalPrice)}
+                    </span>
+                  </div>
+
+                  {/* تخفیف */}
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-400 text-sm">تخفیف</span>
+                      <span className="text-green-400">
+                        {discountPercent}% ({formatPrice(discountAmount)})
+                      </span>
+                    </div>
+                  )}
+
+                  {/* مبلغ قابل پرداخت */}
+                  <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                    <span className="text-white font-medium">
+                      مبلغ قابل پرداخت
+                    </span>
+                    <span className="text-2xl font-bold text-white">
+                      {formatPrice(finalPrice)}
+                    </span>
+                  </div>
+
+                  {/* وضعیت پرداخت */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-400">وضعیت پرداخت</span>
+                    <span
+                      className={`font-medium ${
+                        isCompleted
+                          ? "text-green-400"
+                          : isPending
+                            ? "text-yellow-400"
+                            : "text-blue-400"
+                      }`}
+                    >
+                      {isCompleted
+                        ? "تکمیل شده"
+                        : isPending
+                          ? "در انتظار پرداخت"
+                          : "در انتظار تایید"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* ✅ بخش اطلاعات محصول */}
@@ -440,20 +506,24 @@ export default function PaymentDetailsModal({
                   </p>
                   <div className="flex flex-wrap items-center gap-4 mt-1 text-sm">
                     <span className="text-gray-400">
-                      قیمت: {formatPrice(getItemPrice())}
+                      قیمت اصلی: {formatPrice(originalPrice)}
                     </span>
+                    <span className="text-green-400">
+                      قیمت نهایی: {formatPrice(finalPrice)}
+                    </span>
+                    {discountAmount > 0 && (
+                      <span className="text-green-400">
+                        تخفیف: {discountPercent}%
+                      </span>
+                    )}
                     <span className="text-gray-400">
                       شناسه: #{String(getItemId()).substring(0, 8) || "نامشخص"}
                     </span>
-                    {hasCourse && enrollment.course?.slug && (
-                      <span className="text-gray-400">
-                        اسلاگ: {enrollment.course.slug}
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
 
+              {/* ✅ بخش اطلاعات کاربر */}
               <div className="bg-white/5 rounded-xl p-4 space-y-2 border border-white/5">
                 <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                   <User className="w-4 h-4" />
@@ -485,6 +555,7 @@ export default function PaymentDetailsModal({
                 </div>
               </div>
 
+              {/* ✅ بخش اطلاعات پرداخت */}
               <div className="bg-white/5 rounded-xl p-4 space-y-2 border border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
@@ -499,7 +570,9 @@ export default function PaymentDetailsModal({
                       className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors text-blue-400 disabled:opacity-50"
                     >
                       <RefreshCw
-                        className={`w-4 h-4 ${isFetchingBale ? "animate-spin" : ""}`}
+                        className={`w-4 h-4 ${
+                          isFetchingBale ? "animate-spin" : ""
+                        }`}
                       />
                     </button>
                   )}
@@ -650,7 +723,8 @@ export default function PaymentDetailsModal({
                   </div>
                 )}
 
-              {isWaitingVerify && (
+              {/* ✅ دکمه‌های تایید/رد - فقط در حالت "در انتظار تایید ادمین" */}
+              {showActionButtons && (
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <GlassButton
                     variant="secondary"
@@ -686,6 +760,32 @@ export default function PaymentDetailsModal({
                   >
                     {isProcessing ? "در حال پردازش..." : "تایید پرداخت"}
                   </GlassButton>
+                </div>
+              )}
+
+              {/* ✅ نمایش پیام تکمیل شده */}
+              {isCompleted && !isWaitingForApproval && !isPending && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
+                  <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                  <p className="text-green-400 font-medium">
+                    این پرداخت تکمیل شده است
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    کاربر به دوره دسترسی کامل دارد
+                  </p>
+                </div>
+              )}
+
+              {/* ✅ نمایش پیام در انتظار پرداخت */}
+              {isPending && !isWaitingForApproval && !isCompleted && (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                  <Clock className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+                  <p className="text-yellow-400 font-medium">
+                    در انتظار پرداخت
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    کاربر هنوز پرداخت را انجام نداده است
+                  </p>
                 </div>
               )}
 
