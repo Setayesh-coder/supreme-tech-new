@@ -37,7 +37,7 @@ export default function TicketGroupCreate() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
-    description: "", // ✅ تغییر از message به description
+    message: "", // ✅ تغییر از message به description
     department: "",
     priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL",
   });
@@ -115,7 +115,7 @@ export default function TicketGroupCreate() {
       toast.error(" عنوان تیکت الزامی است");
       return;
     }
-    if (!formData.description.trim()) {
+    if (!formData.message.trim()) {
       toast.error(" متن پیام الزامی است");
       return;
     }
@@ -131,7 +131,7 @@ export default function TicketGroupCreate() {
     try {
       await ticketsAPI.createGroup({
         title: formData.title,
-        description: formData.description, // ✅ ارسال description
+        message: formData.message, // ✅ ارسال description
         department: formData.department || undefined,
         priority: formData.priority,
         user_ids: selectedUsers, // ✅ تغییر از members به user_ids
@@ -246,7 +246,7 @@ export default function TicketGroupCreate() {
               </label>
               <textarea
                 name="description"
-                value={formData.description}
+                value={formData.message}
                 onChange={handleChange}
                 rows={5}
                 placeholder="توضیحات کامل را وارد کنید..."
