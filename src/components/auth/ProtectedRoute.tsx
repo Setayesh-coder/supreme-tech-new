@@ -18,13 +18,29 @@ export function ProtectedRoute({
   const adminStr = localStorage.getItem("admin");
   const employeeStr = localStorage.getItem("employee");
 
+  // ✅ اصلاح: اگر توکن نداره، به لاگین عمومی بره (نه ادمین)
   if (!token) {
-    return <Navigate to="/admin/login" replace />;
+    // بررسی کنیم که آیا کاربر در مسیر ادمین هست یا نه
+    const isAdminPath = window.location.pathname.startsWith("/admin");
+
+    if (isAdminPath) {
+      return <Navigate to="/admin/login" replace />;
+    }
+
+    // ✅ مسیرهای عمومی به login معمولی
+    return <Navigate to="/login" replace />;
   }
 
+  // ✅ اگر توکن داره ولی اطلاعات کاربر وجود نداره
   if (!userStr && !adminStr && !employeeStr) {
     localStorage.removeItem("token");
-    return <Navigate to="/admin/login" replace />;
+
+    // بررسی مسیر ادمین
+    const isAdminPath = window.location.pathname.startsWith("/admin");
+    if (isAdminPath) {
+      return <Navigate to="/admin/login" replace />;
+    }
+    return <Navigate to="/login" replace />;
   }
 
   try {
@@ -47,24 +63,17 @@ export function ProtectedRoute({
       role = user.role || "USER";
     }
 
-    // ✅ استفاده از isAdmin و isEmployee برای تعیین دسترسی‌های ویژه
     const isAdminUser = isAdmin;
     const isEmployeeUser = isEmployee;
 
-    // // لاگ برای دیباگ
-    // console.log(
-    //   ` نقش: ${role}, ادمین: ${isAdminUser}, کارمند: ${isEmployeeUser}`,
-    // );
-
     // چک کردن allowedRoles
     if (allowedRoles && allowedRoles.length > 0) {
-      // استفاده از isAdmin و isEmployee برای تعیین نقش
       let userRole = "USER";
       if (isAdminUser) userRole = "ADMIN";
       else if (isEmployeeUser) userRole = "EMPLOYEE";
 
       if (!allowedRoles.includes(userRole as any)) {
-        console.warn(` دسترسی غیرمجاز: نقش ${userRole} مجاز نیست`);
+        console.warn(`⚠️ دسترسی غیرمجاز: نقش ${userRole} مجاز نیست`);
         return <AccessDenied />;
       }
     }
@@ -73,7 +82,6 @@ export function ProtectedRoute({
     if (requiredRole) {
       let hasRequiredRole = false;
 
-      // استفاده از isAdmin و isEmployee برای چک کردن دسترسی
       if (requiredRole === "ADMIN" && isAdminUser) {
         hasRequiredRole = true;
       } else if (requiredRole === "EMPLOYEE" && isEmployeeUser) {
@@ -89,27 +97,25 @@ export function ProtectedRoute({
 
       if (!hasRequiredRole) {
         console.warn(
-          ` دسترسی غیرمجاز: نقش ${role} برای ${requiredRole} لازم است`,
+          `⚠️ دسترسی غیرمجاز: نقش ${role} برای ${requiredRole} لازم است`,
         );
         return <AccessDenied />;
       }
     }
 
-    // استفاده از isAdmin و isEmployee برای نمایش اطلاعات در console
-    // const accessType = isAdminUser
-    //   ? "ادمین"
-    //   : isEmployeeUser
-    //     ? "کارمند"
-    //     : "کاربر عادی";
-    // // console.log(` دسترسی مجاز برای ${accessType} با نقش ${role}`);
-
     return <>{children}</>;
   } catch (error) {
-    console.error(" خطا در ProtectedRoute:", error);
+    console.error("❌ خطا در ProtectedRoute:", error);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("admin");
     localStorage.removeItem("employee");
-    return <Navigate to="/admin/login" replace />;
+
+    // بررسی مسیر ادمین
+    const isAdminPath = window.location.pathname.startsWith("/admin");
+    if (isAdminPath) {
+      return <Navigate to="/admin/login" replace />;
+    }
+    return <Navigate to="/login" replace />;
   }
 }

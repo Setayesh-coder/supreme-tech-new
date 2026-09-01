@@ -28,10 +28,12 @@ export interface CreateMessageRequest {
 export interface ReplyMessageRequest {
   reply: string;
 }
-export interface statusMessage {
-  is_read: boolean;
-  is_replied: boolean;
+
+export interface StatusMessageRequest {
+  is_read?: boolean;
+  is_replied?: boolean;
 }
+
 export interface MessagesResponse {
   total: number;
   page: number;
@@ -41,7 +43,7 @@ export interface MessagesResponse {
 
 export const messagesAPI = {
   /**
-   * ارسال فرم تماس فوری (عمومی)
+   * 📤 ارسال فرم تماس فوری (عمومی)
    * POST /api/v1/messages
    */
   create: async (data: CreateMessageRequest): Promise<Message> => {
@@ -51,7 +53,7 @@ export const messagesAPI = {
   },
 
   /**
-   * دریافت لیست تمامی پیام‌های دریافت شده (ویژه ادمین)
+   * 📋 دریافت لیست تمامی پیام‌های دریافت شده (ویژه ادمین)
    * GET /api/v1/messages
    */
   getAll: async (params?: {
@@ -69,7 +71,7 @@ export const messagesAPI = {
   },
 
   /**
-   * دریافت جزئیات یک پیام مشخص (ویژه ادمین)
+   * 📄 دریافت جزئیات یک پیام مشخص (ویژه ادمین)
    * GET /api/v1/messages/{id}
    */
   getById: async (id: string): Promise<Message> => {
@@ -81,7 +83,7 @@ export const messagesAPI = {
   },
 
   /**
-   * حذف پیام (ویژه ادمین)
+   * 🗑️ حذف پیام (ویژه ادمین)
    * DELETE /api/v1/messages/{id}
    */
   delete: async (id: string): Promise<void> => {
@@ -92,55 +94,7 @@ export const messagesAPI = {
   },
 
   /**
-   * ⚠️ پاسخ به پیام - مسیر صحیح را بررسی کنید
-   * اگر مسیر درست نیست، این متد را غیرفعال کنید
-   */
-  reply: async (id: string, data: ReplyMessageRequest): Promise<Message> => {
-    const token = localStorage.getItem("token") || "";
-
-    // ✅ تلاش با مسیرهای مختلف
-    try {
-      // مسیر 1: /messages/{id}/reply
-      const response = await api.post(`/messages/${id}/reply`, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error: any) {
-      // اگر مسیر 1 کار نکرد، مسیر 2 را امتحان کن
-      if (error.response?.status === 404) {
-        console.log("🔄 تلاش با مسیر جایگزین...");
-        try {
-          // مسیر 2: /messages/{id}
-          const response = await api.patch(`/messages/${id}`, data, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return response.data;
-        } catch (innerError: any) {
-          throw innerError;
-        }
-      }
-      throw error;
-    }
-  },
-
-  /**
-   * علامت‌گذاری به عنوان پاسخ داده شده
-   * PATCH /api/v1/messages/{id}/replied
-   */
-  markAsReplied: async (id: string): Promise<Message> => {
-    const token = localStorage.getItem("token") || "";
-    const response = await api.patch(
-      `/messages/${id}/replied`,
-      {},
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
-  },
-
-  /**
-   * علامت‌گذاری به عنوان خوانده شده
+   * ✅ تغییر وضعیت خوانده‌شده (ویژه ادمین)
    * PATCH /api/v1/messages/{id}/read
    */
   markAsRead: async (id: string): Promise<Message> => {
@@ -155,11 +109,56 @@ export const messagesAPI = {
     return response.data;
   },
 
-  status: async (id: string, data: statusMessage): Promise<Message> => {
+  /**
+   * ✅ تغییر وضعیت دستی پیام (ویژه ادمین)
+   * PATCH /api/v1/messages/{id}/status
+   *
+   * @param id - شناسه پیام
+   * @param data - شامل is_read و/یا is_replied
+   */
+  updateStatus: async (
+    id: string,
+    data: StatusMessageRequest,
+  ): Promise<Message> => {
     const token = localStorage.getItem("token") || "";
     const response = await api.patch(`/messages/${id}/status`, data, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
+  },
+
+  /**
+   * ⚠️ پاسخ به پیام (اگر اندپوینت جداگانه دارید)
+   * در صورت عدم وجود، از updateStatus استفاده کنید
+   */
+  reply: async (id: string, data: ReplyMessageRequest): Promise<Message> => {
+    const token = localStorage.getItem("token") || "";
+
+    // ✅ تلاش با مسیرهای مختلف
+    try {
+      // مسیر 1: /messages/{id}/reply
+      const response = await api.post(`/messages/${id}/reply`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      // اگر مسیر 1 کار نکرد، از updateStatus استفاده کن
+      if (error.response?.status === 404) {
+        console.log("🔄 مسیر reply پیدا نشد، استفاده از updateStatus...");
+        return await messagesAPI.updateStatus(id, {
+          is_replied: true,
+          ...data,
+        });
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * 📌 علامت‌گذاری به عنوان پاسخ داده شده (ساده‌شده)
+   * از updateStatus استفاده میکنه
+   */
+  markAsReplied: async (id: string): Promise<Message> => {
+    return await messagesAPI.updateStatus(id, { is_replied: true });
   },
 };

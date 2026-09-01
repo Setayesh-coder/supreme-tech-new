@@ -19,7 +19,9 @@ export default function Login() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (error) setError("");
   };
+  // src/pages/auth/Login.tsx
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,15 +34,36 @@ export default function Login() {
         password: formData.password,
       });
 
-      if (response && response.token) {
-        toast.success(" ورود با موفقیت انجام شد");
-        navigate("/profile", { replace: true });
+      if (response?.token) {
+        toast.success("✅ ورود با موفقیت انجام شد");
+
+        const userRole = response.user?.role?.toUpperCase() || "USER";
+
+        if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          navigate("/profile", { replace: true });
+        }
       } else {
-        setError("خطا در ورود، لطفاً دوباره تلاش کنید");
+        setError("❌ خطا در ورود، لطفاً دوباره تلاش کنید");
       }
     } catch (err: any) {
-      console.error(" خطا:", err);
-      setError(err?.response?.data?.detail || err?.message || "خطا در ورود");
+      console.error("❌ خطا:", err);
+
+      // ✅ مدیریت خطاها
+      if (err.response?.status === 401) {
+        setError("❌ شماره تلفن یا رمز عبور اشتباه است");
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError(err.message || "❌ خطا در ورود");
+      }
+
+      // ✅ حذف توکن‌های احتمالی
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("phone");
+      localStorage.removeItem("admin");
     } finally {
       setLoading(false);
     }
@@ -72,8 +95,9 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4">
-              {error}
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
+              <span>❌</span>
+              <span>{error}</span>
             </div>
           )}
 

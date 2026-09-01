@@ -28,11 +28,14 @@ export const authAPI = {
   verifyOTP: async (phone: string, code: string) => {
     try {
       const response = await api.post("/users/verify-otp", { phone, code });
+
+      // ✅ فقط در صورت موفقیت، توکن رو ذخیره کن
       if (response.data?.token) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("phone", phone);
       }
+
       console.log("✅ OTP تایید شد:", response.data);
       return response.data;
     } catch (error) {
@@ -80,15 +83,23 @@ export const authAPI = {
   }) => {
     try {
       const response = await api.post("/users/register", data);
-      if (response.data?.token) {
+
+      // ✅ فقط در صورت موفقیت (status 2xx)
+      if (
+        response.status >= 200 &&
+        response.status < 300 &&
+        response.data?.token
+      ) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("phone", data.phone);
+        console.log("✅ ثبت‌نام موفق:", response.data);
       }
-      console.log("✅ ثبت‌نام موفق:", response.data);
+
       return response.data;
     } catch (error) {
       console.error("❌ خطا در ثبت‌نام:", error);
+      // ❌ اینجا توکن ذخیره نکن
       throw error;
     }
   },
@@ -100,15 +111,25 @@ export const authAPI = {
   loginUser: async (data: { phone: string; password: string }) => {
     try {
       const response = await api.post("/users/login", data);
-      if (response.data?.token) {
+
+      // ✅ فقط در صورت موفقیت (status 2xx)
+      if (
+        response.status >= 200 &&
+        response.status < 300 &&
+        response.data?.token
+      ) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("phone", data.phone);
+        console.log("✅ ورود موفق:", response.data);
+      } else {
+        console.warn("⚠️ ورود ناموفق:", response.status, response.data);
       }
-      console.log("✅ ورود موفق:", response.data);
+
       return response.data;
     } catch (error) {
       console.error("❌ خطا در ورود:", error);
+      // ❌ اینجا توکن ذخیره نکن
       throw error;
     }
   },

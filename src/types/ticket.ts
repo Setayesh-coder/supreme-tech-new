@@ -44,14 +44,14 @@ export interface TicketMessage {
 
 export interface TicketCreate {
   title: string;
-  description: string;
+  message: string;
   department?: string;
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL";
 }
 
 export interface TicketGroupCreate {
   title: string;
-  description: string;
+  message: string;
   user_ids: string[];
   department?: string;
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL";

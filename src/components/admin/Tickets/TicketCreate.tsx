@@ -16,11 +16,11 @@ import { toast } from "sonner";
 export default function TicketCreate() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState<string | null>(null); // ✅ حتماً string باشه
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
-    description: "", // ✅ تغییر از message به description
+    message: "", // ✅ تغییر به message
     department: "",
     priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL",
   });
@@ -31,7 +31,8 @@ export default function TicketCreate() {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,37 +40,64 @@ export default function TicketCreate() {
 
     // ✅ اعتبارسنجی
     if (!formData.title.trim()) {
-      toast.error(" عنوان تیکت الزامی است");
+      toast.error("❌ عنوان تیکت الزامی است");
       return;
     }
-    if (!formData.description.trim()) {
-      toast.error(" متن پیام الزامی است");
+    if (!formData.message.trim()) {
+      toast.error("❌ متن پیام الزامی است");
       return;
     }
 
     setLoading(true);
-    setError("");
-    setSuccess("");
+    setError(null);
+    setSuccess(false);
 
     try {
-      await ticketsAPI.create({
+      console.log("📤 ارسال داده:", {
         title: formData.title,
-        description: formData.description, // ✅ ارسال description
+        message: formData.message,
         department: formData.department || undefined,
         priority: formData.priority,
       });
 
-      setSuccess(" تیکت با موفقیت ایجاد شد!");
-      toast.success(" تیکت با موفقیت ایجاد شد");
+      await ticketsAPI.create({
+        title: formData.title,
+        message: formData.message,
+        department: formData.department || undefined,
+        priority: formData.priority,
+      });
+
+      setSuccess(true);
+      toast.success("✅ تیکت با موفقیت ایجاد شد");
 
       setTimeout(() => {
         navigate("/admin/tickets");
       }, 1500);
     } catch (err: any) {
-      console.error(" خطا:", err);
-      const errorMsg = err.response?.data?.detail || "خطا در ایجاد تیکت";
-      setError(errorMsg);
-      toast.error(errorMsg);
+      console.error("❌ خطا در ایجاد تیکت:", err);
+
+      // ✅ تبدیل خطا به رشته
+      let errorMessage = "خطا در ایجاد تیکت";
+
+      if (err.response?.status === 422) {
+        const detail = err.response?.data?.detail;
+        if (Array.isArray(detail)) {
+          // ✅ استخراج پیام‌ها از آرایه
+          errorMessage = detail.map((d: any) => d.msg || d).join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        } else if (detail && typeof detail === "object") {
+          // ✅ اگر شیء بود، به رشته تبدیل کن
+          errorMessage = Object.values(detail).flat().join(", ");
+        }
+      } else if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage); // ✅ همیشه string
+      toast.error(`❌ ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -83,6 +111,7 @@ export default function TicketCreate() {
           <button
             onClick={() => navigate("/admin/tickets")}
             className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            disabled={loading}
           >
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
@@ -103,19 +132,18 @@ export default function TicketCreate() {
           blurIntensity="lg"
           glowIntensity="md"
         >
-          {/* خطا */}
+          {/* ✅ نمایش خطا به صورت امن */}
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* موفقیت */}
           {success && (
             <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl mb-4 flex items-center gap-2">
               <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{success}</span>
+              <span>✅ تیکت با موفقیت ایجاد شد!</span>
             </div>
           )}
 
@@ -131,13 +159,12 @@ export default function TicketCreate() {
                 value={formData.title}
                 onChange={handleChange}
                 placeholder="مثال: مشکل در ورود به سیستم"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 required
                 disabled={loading}
+                minLength={3}
+                maxLength={100}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                عنوانی کوتاه و گویا برای تیکت خود وارد کنید
-              </p>
             </div>
 
             {/* دپارتمان */}
@@ -149,7 +176,7 @@ export default function TicketCreate() {
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading}
               >
                 <option value="">انتخاب دپارتمان...</option>
@@ -160,25 +187,23 @@ export default function TicketCreate() {
               </select>
             </div>
 
-            {/* پیام */}
+            {/* پیام - با name="message" */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 متن پیام <span className="text-red-400">*</span>
               </label>
               <textarea
-                name="description"
-                value={formData.description}
+                name="message"
+                value={formData.message}
                 onChange={handleChange}
                 rows={6}
                 placeholder="توضیحات کامل مشکل خود را وارد کنید..."
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                 required
                 disabled={loading}
+                minLength={10}
+                maxLength={2000}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                توضیحات کامل و دقیق را وارد کنید تا تیم پشتیبانی بهتر بتواند کمک
-                کند
-              </p>
             </div>
 
             {/* اولویت */}
@@ -190,7 +215,7 @@ export default function TicketCreate() {
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading}
               >
                 <option value="LOW">🟢 کم</option>
@@ -199,9 +224,6 @@ export default function TicketCreate() {
                 <option value="URGENT">🔴 فوری</option>
                 <option value="CRITICAL">🔥 بحرانی</option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                در صورت فوری بودن مشکل، اولویت را بالا انتخاب کنید
-              </p>
             </div>
 
             {/* دکمه‌ها */}

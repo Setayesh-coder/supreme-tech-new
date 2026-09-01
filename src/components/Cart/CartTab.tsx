@@ -26,7 +26,7 @@ export const CartTab: React.FC<CartTabProps> = ({
   onRefresh,
   externalCart,
   externalLoading,
-  //   standalone = false,
+  // standalone = false,
   onRemoveFromCart,
 }) => {
   const navigate = useNavigate();
@@ -54,7 +54,6 @@ export const CartTab: React.FC<CartTabProps> = ({
     title: string;
   } | null>(null);
 
-  // ✅ State برای نمایش کامپوننت‌های پرداخت
   const [showBalePayment, setShowBalePayment] = useState(false);
   const [showCardToCard, setShowCardToCard] = useState(false);
 
@@ -65,34 +64,42 @@ export const CartTab: React.FC<CartTabProps> = ({
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success(" سبد خرید به‌روزرسانی شد");
+      toast.success("✅ سبد خرید به‌روزرسانی شد");
       onRefresh?.();
     } catch (error) {
-      toast.error(" خطا در به‌روزرسانی سبد خرید");
+      toast.error("❌ خطا در به‌روزرسانی سبد خرید");
     } finally {
       setIsRefreshing(false);
     }
   }, [refetch, onRefresh]);
 
+  // ✅ اصلاح: حذف با مدیریت صحیح Confirm
   const handleRemove = useCallback(
     async (id: string) => {
       try {
         if (onRemoveFromCart) {
+          // ✅ والد (Profile) کار حذف و Confirm رو انجام میده
           await onRemoveFromCart(id);
+          // ✅ بعد از حذف، رفرش کن
+          if (onRefresh) {
+            await onRefresh();
+          }
+          // ✅ toast رو والد خودش میزنه، اینجا نیازی نیست
         } else {
+          // ✅ حالت standalone (بدون والد)
           removeFromCart(id);
           await refetch();
+          toast.success("✅ آیتم از سبد خرید حذف شد");
         }
-        if (externalCart !== undefined && onRefresh) {
-          await onRefresh();
-        }
-        toast.success(" آیتم از سبد خرید حذف شد");
       } catch (error) {
-        console.error(" خطا در حذف:", error);
-        toast.error(" خطا در حذف آیتم");
+        console.error("❌ خطا در حذف:", error);
+        // ✅ فقط اگه والد نباشه، toast خطا نشون بده
+        if (!onRemoveFromCart) {
+          toast.error("❌ خطا در حذف آیتم");
+        }
       }
     },
-    [onRemoveFromCart, removeFromCart, refetch, externalCart, onRefresh],
+    [onRemoveFromCart, removeFromCart, refetch, onRefresh],
   );
 
   const handleApplyCoupon = useCallback(
@@ -131,7 +138,7 @@ export const CartTab: React.FC<CartTabProps> = ({
       .filter(Boolean);
 
     if (enrollmentIds.length === 0) {
-      toast.error(" شناسه ثبت‌نام یافت نشد");
+      toast.error("❌ شناسه ثبت‌نام یافت نشد");
       return;
     }
 
@@ -149,30 +156,25 @@ export const CartTab: React.FC<CartTabProps> = ({
     setShowPaymentModal(true);
   }, [items, totalPrice]);
 
-  // ✅ انتخاب روش پرداخت بله - نمایش کامپوننت BalePayment
   const handleSelectBale = useCallback(() => {
     setShowPaymentModal(false);
     setShowBalePayment(true);
   }, []);
 
-  // ✅ انتخاب روش کارت به کارت - نمایش کامپوننت CardToCardPayment
   const handleSelectCardToCard = useCallback(() => {
     setShowPaymentModal(false);
     setShowCardToCard(true);
   }, []);
 
-  // ✅ بازگشت از پرداخت
   const handlePaymentBack = useCallback(() => {
     setShowBalePayment(false);
     setShowCardToCard(false);
     setPaymentData(null);
-    // باز کردن مجدد مودال انتخاب روش
     if (items.length > 0) {
       setShowPaymentModal(true);
     }
   }, [items]);
 
-  // ✅ موفقیت در پرداخت
   const handlePaymentSuccess = useCallback(async () => {
     setShowBalePayment(false);
     setShowCardToCard(false);
@@ -182,7 +184,7 @@ export const CartTab: React.FC<CartTabProps> = ({
     await refetch();
     if (onRefresh) await onRefresh();
 
-    toast.success(" پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
+    toast.success("✅ پرداخت با موفقیت انجام شد! منتظر تایید ادمین باشید.");
     navigate("/profile");
   }, [refetch, onRefresh, navigate]);
 
@@ -196,7 +198,6 @@ export const CartTab: React.FC<CartTabProps> = ({
 
   const isFree = (totalPrice ?? 0) === 0 && items.length > 0;
 
-  // ✅ اگر کاربر پرداخت بله رو انتخاب کرده
   if (showBalePayment && paymentData) {
     return (
       <div className="max-w-lg mx-auto">
@@ -205,13 +206,11 @@ export const CartTab: React.FC<CartTabProps> = ({
           amount={paymentData.amount}
           onSuccess={handlePaymentSuccess}
           onBack={handlePaymentBack}
-          //   description={paymentData.title}
         />
       </div>
     );
   }
 
-  // ✅ اگر کاربر پرداخت کارت به کارت رو انتخاب کرده
   if (showCardToCard && paymentData) {
     return (
       <div className="max-w-lg mx-auto">

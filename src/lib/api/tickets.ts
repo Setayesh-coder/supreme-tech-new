@@ -114,9 +114,22 @@ export const ticketsAPI = {
   /**
    * ➕ ایجاد تیکت جدید
    */
+  // src/lib/api/tickets.ts
+
+  // ✅ اصلاح: اضافه کردن فیلدهای مورد نیاز بک‌اند
   create: async (data: TicketCreate): Promise<Ticket> => {
     try {
-      const response = await api.post("/tickets", data);
+      // ✅ اطمینان از ارسال فیلدهای صحیح
+      const payload = {
+        title: data.title,
+        message: data.message, // ✅ بک‌اند message می‌خواد
+        department: data.department || "general",
+        priority: data.priority || "MEDIUM",
+        // اگر بک‌اند userId می‌خواد:
+        // userId: data.userId || localStorage.getItem('userId'),
+      };
+
+      const response = await api.post("/tickets", payload);
       console.log("✅ تیکت جدید ایجاد شد:", response.data);
       return await enrichTicketWithUser(response.data);
     } catch (error) {
@@ -124,7 +137,6 @@ export const ticketsAPI = {
       throw error;
     }
   },
-
   /**
    * 👥 ایجاد تیکت گروهی (ادمین)
    */

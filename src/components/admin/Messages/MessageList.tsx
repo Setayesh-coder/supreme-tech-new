@@ -11,19 +11,17 @@ import {
   Trash2,
   Loader2,
   RefreshCw,
-  Reply,
   User,
   Phone,
   Calendar,
-  Send,
   AlertCircle,
+  Reply,
 } from "lucide-react";
 import { toast } from "sonner";
 import { showConfirmToast } from "../../ui/confirm-toast";
 
 // ✅ تایپ‌های محلی برای UI
 interface MessageUI extends Message {
-  // تبدیل is_read به boolean برای راحتی
   isRead: boolean;
   isReplied: boolean;
 }
@@ -36,9 +34,6 @@ export default function MessageList() {
     null,
   );
   const [showDetail, setShowDetail] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [showReplyModal, setShowReplyModal] = useState(false);
-  const [sendingReply, setSendingReply] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
@@ -47,7 +42,6 @@ export default function MessageList() {
     fetchMessages();
   }, [page]);
 
-  // ✅ دریافت پیام‌ها با صفحه‌بندی و فیلتر
   const fetchMessages = async () => {
     try {
       setLoading(true);
@@ -58,24 +52,25 @@ export default function MessageList() {
         size: limit,
       });
 
-      // تبدیل داده‌های API به فرمت UI
       const mappedMessages = response.items.map((msg) => ({
         ...msg,
         isRead: msg.is_read || false,
-        isReplied: !!msg.reply, // اگر reply وجود داشته باشد، پاسخ داده شده است
+        isReplied: msg.is_replied || false,
       }));
 
       setMessages(mappedMessages);
       setTotal(response.total);
     } catch (err: any) {
-      toast.error(" خطا در دریافت پیام‌ها:", err);
+      console.error("❌ خطا در دریافت پیام‌ها:", err);
       setError(err.response?.data?.detail || "خطا در دریافت پیام‌ها");
+      toast.error("❌ خطا در دریافت پیام‌ها");
     } finally {
       setLoading(false);
     }
   };
 
   // ✅ علامت‌گذاری به عنوان خوانده شده
+  // PATCH /api/v1/messages/{id}/read
   const handleMarkAsRead = async (id: string) => {
     try {
       await messagesAPI.markAsRead(id);
@@ -85,26 +80,31 @@ export default function MessageList() {
       if (selectedMessage?.id === id) {
         setSelectedMessage({ ...selectedMessage, isRead: true });
       }
+      toast.success("✅ پیام با موفقیت خوانده شد");
     } catch (err) {
-      toast.error("خطا در بروزرسانی وضعیت");
+      toast.error("❌ خطا در بروزرسانی وضعیت خوانده شده");
     }
   };
 
   // ✅ علامت‌گذاری به عنوان پاسخ داده شده
+  // PATCH /api/v1/messages/{id}/status
   const handleMarkAsReplied = async (id: string) => {
     try {
-      await messagesAPI.markAsReplied(id);
+      await messagesAPI.updateStatus(id, { is_replied: true });
       setMessages(
         messages.map((m) => (m.id === id ? { ...m, isReplied: true } : m)),
       );
       if (selectedMessage?.id === id) {
         setSelectedMessage({ ...selectedMessage, isReplied: true });
       }
+      toast.success("✅ پیام با موفقیت پاسخ داده شد");
     } catch (err) {
-      toast.error("خطا در بروزرسانی وضعیت");
+      toast.error("❌ خطا در بروزرسانی وضعیت پاسخ داده شده");
     }
   };
 
+  // ✅ حذف پیام با Confirm Dialog
+  // DELETE /api/v1/messages/{id}
   const handleDelete = async (id: string) => {
     showConfirmToast({
       title: "آیا از حذف این پیام مطمئن هستید؟",
@@ -129,7 +129,6 @@ export default function MessageList() {
     });
   };
 
-  // ✅ مشاهده جزئیات پیام
   const handleViewMessage = (message: MessageUI) => {
     setSelectedMessage(message);
     setShowDetail(true);
@@ -138,70 +137,6 @@ export default function MessageList() {
     }
   };
 
-  // ✅ اصلاح تابع handleSendReply
-  const handleSendReply = async () => {
-    if (!selectedMessage || !replyText.trim()) return;
-
-    setSendingReply(true);
-    try {
-      console.log("📤 ارسال پاسخ:", {
-        id: selectedMessage.id,
-        reply: replyText,
-      });
-
-      // ✅ ارسال پاسخ به API
-      await messagesAPI.reply(selectedMessage.id, {
-        reply: replyText,
-      });
-
-      // ✅ علامت پاسخ داده شده
-      await messagesAPI.markAsReplied(selectedMessage.id);
-
-      // ✅ آپدیت UI
-      setMessages(
-        messages.map((m) =>
-          m.id === selectedMessage.id
-            ? {
-                ...m,
-                isReplied: true,
-                reply: replyText,
-                replied_at: new Date().toISOString(),
-              }
-            : m,
-        ),
-      );
-      setSelectedMessage({
-        ...selectedMessage,
-        isReplied: true,
-        reply: replyText,
-        replied_at: new Date().toISOString(),
-      });
-      setReplyText("");
-      setShowReplyModal(false);
-
-      console.log("✅ پاسخ با موفقیت ارسال شد!");
-
-      // ✅ رفرش لیست
-      await fetchMessages();
-    } catch (error: any) {
-      console.error(" خطا در ارسال پاسخ:", error);
-
-      // ✅ نمایش پیام خطا به کاربر
-      let errorMessage = "خطا در ارسال پاسخ";
-      if (error.response?.status === 404) {
-        errorMessage =
-          "مسیر ارسال پاسخ در سرور یافت نشد. لطفاً با پشتیبانی تماس بگیرید.";
-      } else if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      }
-
-      toast.error(` ${errorMessage}`);
-    } finally {
-      setSendingReply(false);
-    }
-  };
-
-  // ✅ دریافت وضعیت نمایشی
   const getStatusInfo = (message: MessageUI) => {
     if (message.isReplied) {
       return {
@@ -218,7 +153,7 @@ export default function MessageList() {
       };
     }
     return {
-      label: "در انتظار",
+      label: "خوانده نشده",
       color: "bg-yellow-500/20 text-yellow-400",
       icon: <AlertCircle className="w-3 h-3" />,
     };
@@ -406,25 +341,6 @@ export default function MessageList() {
                   {selectedMessage.project_description}
                 </div>
 
-                {/* پاسخ موجود */}
-                {selectedMessage.reply && (
-                  <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
-                    <p className="text-green-400 text-sm font-medium mb-1">
-                      پاسخ ارسال شده:
-                    </p>
-                    <p className="text-gray-300 text-sm whitespace-pre-wrap">
-                      {selectedMessage.reply}
-                    </p>
-                    {selectedMessage.replied_at && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(selectedMessage.replied_at).toLocaleString(
-                          "fa-IR",
-                        )}
-                      </p>
-                    )}
-                  </div>
-                )}
-
                 {/* وضعیت */}
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span
@@ -443,8 +359,9 @@ export default function MessageList() {
                   )}
                 </div>
 
-                {/* دکمه‌ها */}
+                {/* ✅ فقط دو دکمه: خوانده شد و پاسخ داده شد */}
                 <div className="flex flex-wrap gap-2">
+                  {/* دکمه خوانده شد */}
                   {!selectedMessage.isRead && (
                     <GlassButton
                       variant="primary"
@@ -457,22 +374,12 @@ export default function MessageList() {
                     </GlassButton>
                   )}
 
-                  <GlassButton
-                    variant="success"
-                    size="sm"
-                    icon={<Reply size={16} />}
-                    iconPosition="left"
-                    onClick={() => setShowReplyModal(true)}
-                    disabled={selectedMessage.isReplied}
-                  >
-                    {selectedMessage.isReplied ? "پاسخ داده شد" : "ارسال پاسخ"}
-                  </GlassButton>
-
+                  {/* دکمه پاسخ داده شد */}
                   {!selectedMessage.isReplied && (
                     <GlassButton
-                      variant="white"
+                      variant="success"
                       size="sm"
-                      icon={<Check size={16} />}
+                      icon={<Reply size={16} />}
                       iconPosition="left"
                       onClick={() => handleMarkAsReplied(selectedMessage.id)}
                     >
@@ -480,6 +387,7 @@ export default function MessageList() {
                     </GlassButton>
                   )}
 
+                  {/* دکمه حذف - با Confirm Dialog */}
                   <GlassButton
                     variant="danger"
                     size="sm"
@@ -507,67 +415,6 @@ export default function MessageList() {
           </div>
         </div>
       </div>
-
-      {/* مودال پاسخ */}
-      {showReplyModal && selectedMessage && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-lg w-full">
-            <LiquidGlassCard
-              className="p-6"
-              borderRadius="20px"
-              blurIntensity="xl"
-              glowIntensity="lg"
-            >
-              <h2 className="text-xl font-bold text-white mb-4 text-center">
-                <Send className="w-6 h-6 inline-block ml-2" />
-                ارسال پاسخ
-              </h2>
-              <p className="text-gray-400 text-sm text-center mb-4">
-                پاسخ خود را برای "{selectedMessage.name}" ارسال کنید
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-1">
-                    متن پاسخ
-                  </label>
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    rows={5}
-                    placeholder="متن پاسخ خود را وارد کنید..."
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <GlassButton
-                    variant="white"
-                    size="md"
-                    className="flex-1"
-                    onClick={() => {
-                      setShowReplyModal(false);
-                      setReplyText("");
-                    }}
-                  >
-                    انصراف
-                  </GlassButton>
-                  <GlassButton
-                    variant="primary"
-                    size="md"
-                    className="flex-1"
-                    loading={sendingReply}
-                    onClick={handleSendReply}
-                    disabled={!replyText.trim() || sendingReply}
-                  >
-                    پاسخ داده شد
-                  </GlassButton>
-                </div>
-              </div>
-            </LiquidGlassCard>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }

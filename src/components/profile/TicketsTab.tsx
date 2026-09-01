@@ -26,7 +26,7 @@ interface TicketsTabProps {
   loading: boolean;
   onCreateTicket: () => void;
   onViewTicket?: (id: string) => void;
-  onDeleteTicket: (id: string) => void;
+  onDeleteTicket: (id: string, title: string) => void; // ✅ اضافه کردن title
   onRefresh?: () => void;
 }
 
@@ -34,6 +34,7 @@ export function TicketsTab({
   tickets,
   loading,
   onCreateTicket,
+  // onViewTicket,
   onDeleteTicket,
   onRefresh,
 }: TicketsTabProps) {
@@ -44,7 +45,7 @@ export function TicketsTab({
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
 
-  // ✅ وضعیت‌های تیکت (هماهنگ با بک‌اند)
+  // ✅ وضعیت‌های تیکت
   const getStatusLabel = (status: string) => {
     const labels: Record<
       string,
@@ -79,7 +80,6 @@ export function TicketsTab({
     return labels[status?.toLowerCase()] || labels.open;
   };
 
-  // ✅ اولویت‌های تیکت (هماهنگ با بک‌اند)
   const getPriorityLabel = (priority: string) => {
     const labels: Record<string, { label: string; color: string }> = {
       LOW: { label: "کم", color: "text-blue-400" },
@@ -106,7 +106,6 @@ export function TicketsTab({
     }
   };
 
-  // ✅ دریافت پیام‌های تیکت از سرور
   const fetchTicketMessages = async (ticketId: string) => {
     setMessagesLoading(true);
     try {
@@ -122,35 +121,28 @@ export function TicketsTab({
     }
   };
 
-  // ✅ مشاهده تیکت
   const handleViewTicket = async (ticket: TicketType) => {
     setSelectedTicket(ticket);
     setShowDetail(true);
     setReply("");
 
-    // دریافت پیام‌های تیکت
     const updatedTicket = await fetchTicketMessages(ticket.id);
     if (updatedTicket) {
       setSelectedTicket(updatedTicket);
     }
   };
 
-  // ✅ ارسال پیام جدید (با sendMessage)
   const handleSendMessage = async () => {
     if (!reply.trim() || !selectedTicket) return;
 
     setSending(true);
     try {
-      // ✅ استفاده از sendMessage به جای addMessage
       const newMessage = await ticketsAPI.sendMessage(selectedTicket.id, {
         message: reply.trim(),
       });
-      console.log("✅ پیام ارسال شد:", newMessage);
 
-      // ✅ به‌روزرسانی لیست پیام‌ها با پیام جدید
       setTicketMessages((prev) => [...prev, newMessage]);
 
-      // ✅ به‌روزرسانی تیکت انتخاب شده
       setSelectedTicket((prev) => {
         if (!prev) return null;
         return {
@@ -160,21 +152,16 @@ export function TicketsTab({
       });
 
       setReply("");
-
-      // رفرش لیست تیکت‌ها
-      if (onRefresh) {
-        onRefresh();
-      }
-      toast.success(" پیام با موفقیت ارسال شد");
+      if (onRefresh) onRefresh();
+      toast.success("✅ پیام با موفقیت ارسال شد");
     } catch (err: any) {
-      console.error(" خطا در ارسال پیام:", err);
+      console.error("❌ خطا در ارسال پیام:", err);
       toast.error(err.response?.data?.detail || "خطا در ارسال پیام");
     } finally {
       setSending(false);
     }
   };
 
-  // ✅ بستن مودال و پاک کردن state
   const handleCloseDetail = () => {
     setShowDetail(false);
     setSelectedTicket(null);
@@ -182,11 +169,10 @@ export function TicketsTab({
     setReply("");
   };
 
-  // ✅ رفرش دستی پیام‌ها
   const handleRefreshMessages = async () => {
     if (!selectedTicket) return;
     await fetchTicketMessages(selectedTicket.id);
-    toast.success(" پیام‌ها به‌روزرسانی شدند");
+    toast.success("✅ پیام‌ها به‌روزرسانی شدند");
   };
 
   if (loading) {
@@ -326,9 +312,8 @@ export function TicketsTab({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm("آیا از حذف این تیکت مطمئن هستید؟")) {
-                            onDeleteTicket(ticket.id);
-                          }
+                          // ✅ فقط والد رو صدا بزن
+                          onDeleteTicket(ticket.id, ticket.title);
                         }}
                         className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all duration-300"
                       >
@@ -353,7 +338,7 @@ export function TicketsTab({
         )}
       </LiquidGlassCard>
 
-      {/* مودال جزئیات تیکت */}
+      {/* ✅ مودال جزئیات تیکت */}
       {showDetail && selectedTicket && (
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -369,6 +354,7 @@ export function TicketsTab({
               blurIntensity="lg"
               glowIntensity="md"
             >
+              {/* ... محتوای مودال مثل قبل ... */}
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white">
@@ -389,7 +375,6 @@ export function TicketsTab({
                     <button
                       onClick={handleRefreshMessages}
                       className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-                      title="بروزرسانی پیام‌ها"
                     >
                       <RefreshCw className="w-5 h-5 text-white/60 hover:text-white" />
                     </button>
@@ -436,7 +421,6 @@ export function TicketsTab({
                   </p>
                 ) : (
                   ticketMessages.map((msg) => {
-                    // ✅ استفاده از user_id به جای sender_id
                     const isAdmin = msg.user_id !== selectedTicket.creator_id;
                     const senderName =
                       msg.user?.name || (isAdmin ? "پشتیبانی" : "شما");
@@ -467,7 +451,7 @@ export function TicketsTab({
                 )}
               </div>
 
-              {/* ارسال پیام - بررسی با lowercase */}
+              {/* ارسال پیام */}
               {selectedTicket.status?.toLowerCase() !== "closed" && (
                 <div className="flex gap-2">
                   <input
