@@ -228,3 +228,310 @@ supreme-tech-new
 └─ vite.config.ts
 
 ```
+
+```
+supreme-tech-new
+├─ README.md
+├─ convert-api.sh
+├─ index.html
+├─ lib
+│  └─ utils.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.js
+├─ public
+│  ├─ assets
+│  │  ├─ ai-background-hero.webp
+│  │  ├─ ai-face-hero.webp
+│  │  ├─ ai-hero-new.webp
+│  │  ├─ ai-hero.webp
+│  │  ├─ ai-robot-hero.webp
+│  │  ├─ blog-ai-agent-what-is-it.webp
+│  │  ├─ blog-ai-agents-productivity.webp
+│  │  ├─ blog-elecyar-ai-agent.webp
+│  │  ├─ blog-ram-price-ai.webp
+│  │  ├─ favicon-96x96.webp
+│  │  ├─ service-analytics-cyber.webp
+│  │  ├─ service-analytics.webp
+│  │  ├─ service-business-cyber.webp
+│  │  ├─ service-business.webp
+│  │  ├─ service-creative-cyber.webp
+│  │  ├─ service-creative.webp
+│  │  ├─ slide-analytics.webp
+│  │  ├─ slide-consultation.webp
+│  │  ├─ slide-content-creation.webp
+│  │  ├─ slide-lumen-ai-final.webp
+│  │  ├─ slide-lumen-ai-new.webp
+│  │  ├─ slide-lumen-ai-themed.webp
+│  │  ├─ slide-lumen-ai-updated.webp
+│  │  ├─ slide-lumen-ai.webp
+│  │  ├─ slide-time-saving-new.webp
+│  │  ├─ slide-time-saving-updated.webp
+│  │  ├─ slide-time-saving.webp
+│  │  └─ slides
+│  │     ├─ ai-background-hero.webp
+│  │     ├─ ai-face-hero.webp
+│  │     ├─ ai-hero-new.webp
+│  │     ├─ ai-hero.webp
+│  │     ├─ ai-robot-hero.webp
+│  │     ├─ blog-ai-agent-what-is-it.webp
+│  │     ├─ blog-ai-agents-productivity.webp
+│  │     ├─ blog-elecyar-ai-agent.webp
+│  │     ├─ blog-ram-price-ai.webp
+│  │     ├─ favicon-96x96.webp
+│  │     ├─ favicon.svg
+│  │     ├─ service-analytics-cyber.webp
+│  │     ├─ service-analytics.webp
+│  │     ├─ service-business-cyber.webp
+│  │     ├─ service-business.webp
+│  │     ├─ service-creative-cyber.webp
+│  │     ├─ service-creative.webp
+│  │     ├─ slide-analytics.webp
+│  │     ├─ slide-consultation.webp
+│  │     ├─ slide-content-creation.webp
+│  │     ├─ slide-lumen-ai-final.webp
+│  │     ├─ slide-lumen-ai-new.webp
+│  │     ├─ slide-lumen-ai-themed.webp
+│  │     ├─ slide-lumen-ai-updated.webp
+│  │     ├─ slide-lumen-ai.webp
+│  │     ├─ slide-time-saving-new.webp
+│  │     ├─ slide-time-saving-updated.webp
+│  │     └─ slide-time-saving.webp
+│  ├─ favicon
+│  │  ├─ apple-touch-icon.png
+│  │  ├─ favicon-96x96.png
+│  │  ├─ favicon.ico
+│  │  ├─ favicon.svg
+│  │  ├─ site.webmanifest
+│  │  ├─ web-app-manifest-192x192.png
+│  │  └─ web-app-manifest-512x512.png
+│  ├─ favicon.ico
+│  └─ slides
+│     ├─ ai-background-hero.webp
+│     ├─ ai-face-hero.webp
+│     ├─ ai-hero-new.webp
+│     ├─ ai-hero.webp
+│     ├─ ai-robot-hero.webp
+│     ├─ blog-ai-agent-what-is-it.webp
+│     ├─ blog-ai-agents-productivity.webp
+│     ├─ blog-elecyar-ai-agent.webp
+│     ├─ blog-ram-price-ai.webp
+│     ├─ favicon-96x96.webp
+│     ├─ favicon.svg
+│     ├─ service-analytics-cyber.webp
+│     ├─ service-analytics.webp
+│     ├─ service-business-cyber.webp
+│     ├─ service-business.webp
+│     ├─ service-creative-cyber.webp
+│     ├─ service-creative.webp
+│     ├─ slide-analytics.webp
+│     ├─ slide-consultation.webp
+│     ├─ slide-content-creation.webp
+│     ├─ slide-lumen-ai-final.webp
+│     ├─ slide-lumen-ai-new.webp
+│     ├─ slide-lumen-ai-themed.webp
+│     ├─ slide-lumen-ai-updated.webp
+│     ├─ slide-lumen-ai.webp
+│     ├─ slide-time-saving-new.webp
+│     ├─ slide-time-saving-updated.webp
+│     └─ slide-time-saving.webp
+├─ src
+│  ├─ App.tsx
+│  ├─ components
+│  │  ├─ Cart
+│  │  │  ├─ CartItem.tsx
+│  │  │  ├─ CartSummary.tsx
+│  │  │  ├─ CartTab.tsx
+│  │  │  ├─ CouponInput.tsx
+│  │  │  └─ EmptyCart.tsx
+│  │  ├─ SEO
+│  │  │  └─ MetaTags.tsx
+│  │  ├─ ScrollToTop.tsx
+│  │  ├─ admin
+│  │  │  ├─ AdminLayout.tsx
+│  │  │  ├─ BlogEditor.tsx
+│  │  │  ├─ DailyChartRecharts.tsx
+│  │  │  ├─ Messages
+│  │  │  │  └─ MessageList.tsx
+│  │  │  ├─ PaymentDetailsModal.tsx
+│  │  │  └─ Tickets
+│  │  │     ├─ TicketCreate.tsx
+│  │  │     ├─ TicketGroupCreate.tsx
+│  │  │     └─ TicketList.tsx
+│  │  ├─ auth
+│  │  │  └─ ProtectedRoute.tsx
+│  │  ├─ course
+│  │  │  └─ CoursePreRegisterModal.tsx
+│  │  ├─ payment
+│  │  │  ├─ BalePayment.tsx
+│  │  │  ├─ CardToCardPayment.tsx
+│  │  │  ├─ PaymentMethodModal.tsx
+│  │  │  └─ PaymentModal.tsx
+│  │  ├─ profile
+│  │  │  ├─ CartTab.tsx
+│  │  │  ├─ EnrollmentsTab.tsx
+│  │  │  ├─ PaymentModal.tsx
+│  │  │  ├─ ProfileHeader.tsx
+│  │  │  ├─ ProfileInfo.tsx
+│  │  │  ├─ ProfileStats.tsx
+│  │  │  ├─ ProfileTabs.tsx
+│  │  │  ├─ TicketsTab.tsx
+│  │  │  └─ index.ts
+│  │  ├─ sections
+│  │  │  ├─ Approach.tsx
+│  │  │  ├─ Contact.tsx
+│  │  │  ├─ CourseList.tsx
+│  │  │  ├─ EmployeesSection.tsx
+│  │  │  ├─ Footer.tsx
+│  │  │  ├─ Hero.tsx
+│  │  │  ├─ HeroStats.tsx
+│  │  │  ├─ Partners.tsx
+│  │  │  └─ Services.tsx
+│  │  ├─ skeletons
+│  │  │  ├─ AdminListSkeleton.tsx
+│  │  │  ├─ BlogListSkeleton.tsx
+│  │  │  ├─ BlogPostSkeleton.tsx
+│  │  │  ├─ DashboardSkeleton.tsx
+│  │  │  ├─ EventDetailSkeleton.tsx
+│  │  │  ├─ EventSkeletons.tsx
+│  │  │  └─ LoadingSkeleton.tsx
+│  │  └─ ui
+│  │     ├─ BankCard.tsx
+│  │     ├─ Button.tsx
+│  │     ├─ Card.tsx
+│  │     ├─ CountdownTimer.tsx
+│  │     ├─ GlassBirthdayPicker.tsx
+│  │     ├─ GlassButton.tsx
+│  │     ├─ ImageUpload.tsx
+│  │     ├─ Input.tsx
+│  │     ├─ LikeButton.tsx
+│  │     ├─ LiquidGlassCard.tsx
+│  │     ├─ LiquidToast.tsx
+│  │     ├─ OptimizedImage.tsx
+│  │     ├─ PersianDatePicker.tsx
+│  │     ├─ SafeImage.tsx
+│  │     ├─ SectionHeader.tsx
+│  │     ├─ ShareButton.tsx
+│  │     ├─ Toaster.tsx
+│  │     ├─ confirm-toast.tsx
+│  │     └─ sonner-provider.tsx
+│  ├─ constants
+│  │  ├─ blog.ts
+│  │  ├─ data.ts
+│  │  ├─ index.ts
+│  │  ├─ partners.ts
+│  │  └─ slides.ts
+│  ├─ contexts
+│  │  └─ SettingsContext.tsx
+│  ├─ hooks
+│  │  ├─ use-toast.tsx
+│  │  ├─ useCart.ts
+│  │  └─ useCoursePreRegister.ts
+│  ├─ index.css
+│  ├─ lib
+│  │  ├─ api
+│  │  │  ├─ admin.ts
+│  │  │  ├─ auth.ts
+│  │  │  ├─ axios.ts
+│  │  │  ├─ blog.ts
+│  │  │  ├─ cart.ts
+│  │  │  ├─ client.ts
+│  │  │  ├─ coupons.ts
+│  │  │  ├─ courses.ts
+│  │  │  ├─ employees.ts
+│  │  │  ├─ enrollments.ts
+│  │  │  ├─ events.ts
+│  │  │  ├─ hero.ts
+│  │  │  ├─ index.ts
+│  │  │  ├─ messages.ts
+│  │  │  ├─ partners.ts
+│  │  │  ├─ payment.ts
+│  │  │  ├─ settings.ts
+│  │  │  ├─ stats.ts
+│  │  │  ├─ team.ts
+│  │  │  ├─ tickets.ts
+│  │  │  ├─ upload.ts
+│  │  │  └─ users.ts
+│  │  ├─ constants.ts
+│  │  └─ utils.ts
+│  ├─ main.tsx
+│  ├─ pages
+│  │  ├─ About.tsx
+│  │  ├─ AccessDenied.tsx
+│  │  ├─ Approach.tsx
+│  │  ├─ Cart.tsx
+│  │  ├─ Contact.tsx
+│  │  ├─ Home.tsx
+│  │  ├─ NotFound.tsx
+│  │  ├─ Profile
+│  │  │  └─ Profile.tsx
+│  │  ├─ Services.tsx
+│  │  ├─ TicketCreate.tsx
+│  │  ├─ TicketDetail.tsx
+│  │  ├─ admin
+│  │  │  ├─ Blog
+│  │  │  │  ├─ BlogCreate.tsx
+│  │  │  │  ├─ BlogEdit.tsx
+│  │  │  │  └─ BlogList.tsx
+│  │  │  ├─ Copuns
+│  │  │  │  └─ CouponsManager.tsx
+│  │  │  ├─ Courses
+│  │  │  │  ├─ CourseCreate.tsx
+│  │  │  │  ├─ CourseEdit.tsx
+│  │  │  │  ├─ CourseEnrollments.tsx
+│  │  │  │  └─ CourseList.tsx
+│  │  │  ├─ Dashboard.tsx
+│  │  │  ├─ Dashboard.tsx.backup
+│  │  │  ├─ Employees
+│  │  │  │  ├─ EmployeeCreate.tsx
+│  │  │  │  ├─ EmployeeEdit.tsx
+│  │  │  │  └─ EmployeeList.tsx
+│  │  │  ├─ Events
+│  │  │  │  ├─ EventCreate.tsx
+│  │  │  │  ├─ EventEdit.tsx
+│  │  │  │  ├─ EventEnrollments.tsx
+│  │  │  │  └─ EventList.tsx
+│  │  │  ├─ Help.tsx
+│  │  │  ├─ Hero
+│  │  │  │  ├─ HeroCreate.tsx
+│  │  │  │  ├─ HeroEdit.tsx
+│  │  │  │  └─ HeroList.tsx
+│  │  │  ├─ Login.tsx
+│  │  │  ├─ Partners
+│  │  │  │  ├─ PartnerCreate.tsx
+│  │  │  │  ├─ PartnerEdite.tsx
+│  │  │  │  └─ PartnersList.tsx
+│  │  │  ├─ Payments
+│  │  │  │  └─ OrdersList.tsx
+│  │  │  ├─ Profile.tsx
+│  │  │  ├─ Settings
+│  │  │  │  └─ Settings.tsx
+│  │  │  ├─ Stats.tsx
+│  │  │  ├─ Team
+│  │  │  │  └─ TeamList.tsx
+│  │  │  └─ Users
+│  │  │     └─ UserList.tsx
+│  │  ├─ auth
+│  │  │  ├─ ForgotPassword.tsx
+│  │  │  ├─ Login.tsx
+│  │  │  └─ Register.tsx
+│  │  └─ public
+│  │     ├─ BlogList.tsx
+│  │     ├─ BlogPost.tsx
+│  │     ├─ CourseDetail.tsx
+│  │     ├─ EventDetail.tsx
+│  │     └─ Events.tsx
+│  └─ types
+│     ├─ cart.ts
+│     ├─ index.ts
+│     ├─ payment.ts
+│     └─ ticket.ts
+├─ tailwind.config.js
+├─ tsconfig.app.json
+├─ tsconfig.json
+├─ tsconfig.node.json
+└─ vite.config.ts
+
+```
+
+<!-- Add a comment for Strix test -->
