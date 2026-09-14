@@ -77,8 +77,9 @@ const getEventTypeLabel = (type: string) => {
   return types[type] || type;
 };
 
-const getDaysLeft = (dateString: string) => {
-  const diffMs = new Date(dateString).getTime() - Date.now();
+// ✅ محاسبه روزهای باقی‌مانده بین دو تاریخ
+const getDaysDiff = (targetDate: string) => {
+  const diffMs = new Date(targetDate).getTime() - Date.now();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
 
@@ -89,7 +90,6 @@ export default function EventDetail() {
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState(false);
 
-  // ✅ اضافه کردن state برای کپی لینک
   const [copied, setCopied] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -118,7 +118,6 @@ export default function EventDetail() {
         };
         setEvent(mappedEvent);
 
-        // ✅ ثبت بازدید رویداد
         await trackEventView();
       } catch (err) {
         console.error(" خطا:", err);
@@ -130,7 +129,6 @@ export default function EventDetail() {
     fetchEvent();
   }, [slug]);
 
-  // ✅ تابع ثبت بازدید رویداد
   const trackEventView = async () => {
     if (viewTracked || !slug) return;
 
@@ -155,7 +153,6 @@ export default function EventDetail() {
     }
   };
 
-  // ✅ تابع کپی لینک
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -168,7 +165,6 @@ export default function EventDetail() {
     }
   };
 
-  // ✅ تابع اشتراک‌گذاری
   const handleShare = (platform: string) => {
     const url = encodeURIComponent(window.location.href);
     const title = encodeURIComponent(event?.title || "");
@@ -245,9 +241,20 @@ export default function EventDetail() {
   }
 
   const imageUrl = getImageUrl(event.image || event.cover_image);
-  const daysLeft = getDaysLeft(event.start_date);
-  const isPast = new Date(event.end_date) < new Date();
-  const eventDate = new Date(event.start_date);
+
+  // ✅ محاسبه دقیق وضعیت رویداد
+  const now = new Date();
+  const startDate = new Date(event.start_date);
+  const endDate = new Date(event.end_date);
+
+  const isUpcoming = startDate > now; // هنوز شروع نشده
+  const isOngoing = startDate <= now && endDate >= now; // در حال برگزاری
+  const isPast = endDate < now; // به پایان رسیده
+
+  // روزهای باقی‌مانده تا شروع (فقط برای رویدادهای آینده معنی دارد)
+  const daysToStart = getDaysDiff(event.start_date);
+  // روزهای باقی‌مانده تا پایان (برای رویداد در حال برگزاری)
+  const daysToEnd = getDaysDiff(event.end_date);
 
   return (
     <section className="py-6 px-3 md:py-12 md:px-6 relative overflow-hidden min-h-screen">
@@ -348,11 +355,6 @@ export default function EventDetail() {
                       {event.location}
                     </span>
                   )}
-                  {/* ✅ نمایش تعداد بازدید */}
-                  {/* <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
-                    <Eye size={14} className="md:w-4 md:h-4" />
-                    {(event.views_count || 0).toLocaleString()} بازدید
-                  </span> */}
                 </div>
               </div>
             </div>
@@ -409,7 +411,8 @@ export default function EventDetail() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            {!isPast && eventDate > new Date() && (
+            {/* ✅ کانتم‌داون فقط برای رویدادهای آینده */}
+            {isUpcoming && (
               <LiquidGlassCard
                 className="p-4 md:p-6"
                 borderRadius="24px"
@@ -418,7 +421,7 @@ export default function EventDetail() {
                 shadowIntensity="lg"
               >
                 <div className="text-center">
-                  <CountdownTimer targetDate={eventDate} />
+                  <CountdownTimer targetDate={startDate} />
                   <p className="text-xs md:text-sm text-gray-400 mt-2 flex items-center justify-center gap-1.5 rtl:flex-row-reverse">
                     <Hourglass className="w-3.5 h-3.5" />
                     <span>زمان باقی‌مانده تا شروع رویداد</span>
@@ -498,33 +501,33 @@ export default function EventDetail() {
                     </p>
                   </div>
                 </div>
-
-                {/* ✅ نمایش تعداد بازدید */}
-                {/* <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <Eye className="w-4 h-4 text-blue-400" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">بازدید</p>
-                    <p className="text-sm text-white">
-                      {(event.views_count || 0).toLocaleString()} بازدید
-                    </p>
-                  </div> */}
               </div>
-              {/* </div> */}
 
+              {/* ✅ بخش وضعیت - اصلاح‌شده */}
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400">وضعیت</span>
+
                   {isPast ? (
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
                       به پایان رسیده
                     </span>
-                  ) : daysLeft <= 7 ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">
-                      {daysLeft === 0 ? "امروز" : `${daysLeft} روز مانده`}
-                    </span>
-                  ) : (
+                  ) : isOngoing ? (
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
                       در حال برگزاری
+                      {daysToEnd > 0 && ` (${daysToEnd} روز باقی‌مانده)`}
+                    </span>
+                  ) : daysToStart === 0 ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">
+                      امروز
+                    </span>
+                  ) : daysToStart > 0 && daysToStart <= 7 ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">
+                      {daysToStart} روز مانده
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+                      {daysToStart} روز مانده
                     </span>
                   )}
                 </div>
