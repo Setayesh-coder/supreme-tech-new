@@ -33,9 +33,9 @@ export default function HeroStats() {
         relative
         z-20
 
-        mt-4
-        sm:mt-5
-        lg:mt-6
+        mt-6
+        sm:mt-7
+        lg:mt-8
 
         px-1
         sm:px-6

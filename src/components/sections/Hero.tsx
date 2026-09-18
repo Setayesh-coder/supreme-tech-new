@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { LiquidGlassCard } from "../ui/LiquidGlassCard";
 import { GlassButton } from "../ui/GlassButton";
-import HeroStats from "./HeroStats";
+// import HeroStats from "./HeroStats";
 
 import { heroAPI } from "../../lib/api/hero";
 import type { HeroSlide } from "../../lib/api/hero";
@@ -192,29 +192,23 @@ export default function Hero() {
 
         <div
           className="
-            group
-            relative
-            overflow-hidden
+    group
+    relative
+    overflow-hidden
 
-            rounded-[24px]
-            sm:rounded-[30px]
-            lg:rounded-[40px]
+    rounded-[24px]
+    sm:rounded-[30px]
+    lg:rounded-[40px]
 
-            border
-            border-white/10
+    border
+    border-white/10
 
-            bg-slate-950
+    bg-slate-950
 
-            shadow-[0_25px_80px_rgba(0,0,0,0.35)]
+    shadow-[0_25px_80px_rgba(0,0,0,0.35)]
 
-            /*
-             * نسبت تصویر تنظیم‌شده برای لپ‌تاپ
-             */
-            aspect-[4/3]
-            sm:aspect-[16/9]
-            lg:aspect-[21/9]
-            xl:aspect-[21/8]
-          "
+    aspect-video
+  "
         >
           {/* =================================================
               BACKGROUND SLIDES
@@ -840,8 +834,6 @@ export default function Hero() {
             )}
           </div>
         </div>
-
-        <HeroStats />
       </div>
     </section>
   );

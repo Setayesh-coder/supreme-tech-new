@@ -13,8 +13,8 @@ export default function Header() {
     { name: "خانه", href: "/" },
     { name: "خدمات", href: "/services" },
     { name: "رویداد", href: "/events" },
+    { name: "دوره ها", href: "/courses" },
     { name: "وبلاگ", href: "/blog" },
-    // { name: "رویکرد ما", href: "/approach" },
     { name: "درباره ما", href: "/about" },
     { name: "تماس با ما", href: "/contact" },
   ];

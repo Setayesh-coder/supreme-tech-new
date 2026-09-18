@@ -940,7 +940,7 @@ export default function Profile() {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" id="profile-tab-content">
             {activeTab === "enrollments" && (
               <EnrollmentsTab
                 enrollments={enrollments}

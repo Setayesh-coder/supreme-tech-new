@@ -1,4 +1,4 @@
-import Approach from "../components/sections/Approach";
+import Approach from "./public/Courses";
 
 export default function ApproachPage() {
   return (

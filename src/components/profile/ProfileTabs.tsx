@@ -33,12 +33,27 @@ export function ProfileTabs({
     }
   };
 
+  const handleTabClick = (tabId: "enrollments" | "cart" | "tickets") => {
+    onTabChange(tabId);
+
+    // ✅ اسکرول نرم به بخش محتوا
+    const contentSection = document.getElementById("profile-tab-content");
+    if (contentSection) {
+      const yOffset = -100; // مقدار هدر ثابت (header) برای فاصله
+      const y =
+        contentSection.getBoundingClientRect().top +
+        window.pageYOffset +
+        yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="flex gap-2 mb-6 border-b border-white/10 pb-2">
       {tabs.map((tab) => (
         <button
           key={tab.id}
-          onClick={() => onTabChange(tab.id as any)}
+          onClick={() => handleTabClick(tab.id as any)}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
             activeTab === tab.id
               ? `bg-${getTabColor(tab.id)}-500/20 text-${getTabColor(tab.id)}-400 border border-${getTabColor(tab.id)}-400/30`

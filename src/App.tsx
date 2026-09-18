@@ -70,6 +70,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Stats from "./pages/admin/Stats";
 import { SonnerProvider } from "./components/ui/sonner-provider";
+import Courses from "./pages/public/Courses";
 
 // ✅ تنظیم QueryClient
 const queryClient = new QueryClient({
@@ -110,6 +111,7 @@ function App() {
                 <Route path="/blog" element={<BlogList />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/courses" element={<Courses />} />
                 <Route path="/events/:slug" element={<EventDetail />} />
                 <Route path="/courses/:slug" element={<CourseDetail />} />
                 <Route path="/access-denied" element={<AccessDenied />} />

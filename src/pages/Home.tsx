@@ -6,12 +6,14 @@ import Contact from "./../components/sections/Contact";
 
 import Partners from "../components/sections/Partners";
 import EmployeesSection from "../components/sections/EmployeesSection";
+import HeroStats from "../components/sections/HeroStats";
 
 export default function Home() {
   return (
     <div className="min-h-screen ">
       <main>
         <Hero />
+        <HeroStats />
         <Services />
         {/* <About /> */}
         {/* <Approach /> */}
