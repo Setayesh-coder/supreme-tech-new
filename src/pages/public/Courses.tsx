@@ -97,7 +97,7 @@ const formatPrice = (price?: number) => {
 export default function Courses() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [events, setEvents] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
@@ -117,13 +117,11 @@ export default function Courses() {
 
         // ۱. همه‌ی دوره‌ها رو بگیر
         const coursesData = await coursesAPI.getAll({
-          is_active: true,
+          isActive: true,
         });
 
         const coursesList: Course[] = (
-          Array.isArray(coursesData)
-            ? coursesData
-            : coursesData.items || coursesData.courses || []
+          Array.isArray(coursesData) ? coursesData : coursesData.items || []
         ).map((course: any) => ({
           ...course,
           image: course.cover_image || course.image,
