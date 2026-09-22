@@ -818,9 +818,10 @@ export default function CourseDetail() {
                   ) : isFull ? (
                     <span className="text-red-400">تکمیل ظرفیت</span>
                   ) : isActive ? (
-                    <span className="text-green-400">در حال برگزاری</span>
+                     <span className="text-yellow-400">در انتظار شروع</span>
+                    
                   ) : (
-                    <span className="text-yellow-400">در انتظار شروع</span>
+                   <span className="text-green-400">در حال برگزاری</span>
                   )}
                 </div>
 

@@ -19,6 +19,7 @@ import {
   Clock,
   DollarSign,
   Percent,
+  Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +49,7 @@ export default function CourseCreate() {
     registration_start_date: "",
     registration_end_date: "",
     class_start_date: "",
+    sort_order: 0,
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -147,7 +149,7 @@ export default function CourseCreate() {
         }
       }
 
-      // ✅ ساخت داده - بدون محاسبه قیمت در فرانت‌اند
+    
       const courseData = {
         title: formData.title.trim(),
         price: 0,
@@ -175,7 +177,7 @@ export default function CourseCreate() {
         }),
         ...(formData.class_start_date && {
           class_start_date: formData.class_start_date,
-        }),
+        }),sort_order: Number(formData.sort_order) || 0,
       };
 
       console.log("📤 ارسال داده به بک‌اند:", courseData);
@@ -534,7 +536,24 @@ export default function CourseCreate() {
                 دوره فعال باشد
               </label>
             </div>
-
+<div>
+  <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+    <Hash className="w-4 h-4 text-blue-400" />
+    ترتیب نمایش (عدد کوچکتر = بالاتر)
+  </label>
+  <input
+    type="number"
+    name="sort_order"
+    value={formData.sort_order}
+    onChange={handleChange}
+    min="0"
+    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+    placeholder="مثلاً: 1"
+  />
+  <p className="text-xs text-gray-500 mt-1">
+    عدد کمتر = نمایش بالاتر در لیست
+  </p>
+</div>
             {/* دکمه‌ها */}
             <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton

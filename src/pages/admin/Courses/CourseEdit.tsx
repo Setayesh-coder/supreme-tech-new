@@ -18,7 +18,7 @@ import {
   User,
   Clock,
   DollarSign,
-  Percent,
+  Percent,Hash
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,11 +57,13 @@ export default function CourseEdit() {
     event_id: "",
     registration_start_date: "",
     registration_end_date: "",
-    class_start_date: "",
+    class_start_date: "",sort_order: 0,
   });
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [existingImage, setExistingImage] = useState<string>("");
+  // ✅ پرچم حذف تصویر
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   // دریافت اطلاعات دوره
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function CourseEdit() {
           event_id: course.event_id || "",
           registration_start_date: course.registration_start_date || "",
           registration_end_date: course.registration_end_date || "",
-          class_start_date: course.class_start_date || "",
+          class_start_date: course.class_start_date || "",sort_order: (course as any).sort_order || 0,
         });
 
         if (course.cover_image) {
@@ -147,12 +149,17 @@ export default function CourseEdit() {
       }
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
+      // ✅ اگر عکس جدید انتخاب شد، پرچم حذف برداشته شود
+      setImageRemoved(false);
     }
   };
 
   const handleRemoveImage = () => {
     setImage(null);
-    setImagePreview(existingImage || "");
+    setImagePreview("");
+    setExistingImage("");
+    // ✅ پرچم حذف تصویر
+    setImageRemoved(true);
     const input = document.getElementById("image-input") as HTMLInputElement;
     if (input) input.value = "";
   };
@@ -181,8 +188,11 @@ export default function CourseEdit() {
         return;
       }
 
-      let imageUrl = existingImage;
+      // ✅ منطق اصلاح‌شده برای تصویر
+      let imageUrl: string | undefined = existingImage || undefined;
+
       if (image) {
+        // عکس جدید آپلود شده
         try {
           imageUrl = await uploadImage(image);
         } catch (uploadError: any) {
@@ -190,13 +200,15 @@ export default function CourseEdit() {
           setLoading(false);
           return;
         }
+      } else if (imageRemoved) {
+        // کاربر عکس را حذف کرده
+        imageUrl = undefined;
       }
 
-      const courseData = {
+      const courseData: any = {
         title: formData.title.trim(),
         slug: generateSlug(formData.title.trim()),
         description: formData.description?.trim() || undefined,
-        cover_image: imageUrl || undefined,
         original_price: Number(formData.original_price) || 0,
         price: Number(formData.price) || 0,
         discount_value: Number(formData.discount_value) || 0,
@@ -208,11 +220,19 @@ export default function CourseEdit() {
         registration_start_date: formData.registration_start_date || undefined,
         registration_end_date: formData.registration_end_date || undefined,
         class_start_date: formData.class_start_date || undefined,
+        sort_order: Number(formData.sort_order) || 0,
       };
+
+      // ✅ اگر عکس حذف شده، رشته خالی بفرست تا در بک‌اند پاک شود
+      if (imageRemoved) {
+        courseData.cover_image = "";
+      } else if (imageUrl) {
+        courseData.cover_image = imageUrl;
+      }
 
       console.log("📤 ارسال داده:", courseData);
       await coursesAPI.update(id!, courseData);
-      toast.success(" دوره با موفقیت بروزرسانی شد!");
+      toast.success("دوره با موفقیت بروزرسانی شد!");
       navigate("/admin/courses");
     } catch (err: any) {
       console.error(" خطا:", err);
@@ -319,6 +339,7 @@ export default function CourseEdit() {
                     type="button"
                     onClick={handleRemoveImage}
                     className="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                    title="حذف تصویر"
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
@@ -383,8 +404,9 @@ export default function CourseEdit() {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                rows={3}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                rows={6}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                style={{ whiteSpace: "pre-wrap" }}
                 placeholder="توضیحات کامل دوره را وارد کنید..."
               />
             </div>
@@ -581,7 +603,24 @@ export default function CourseEdit() {
                 دوره فعال باشد
               </label>
             </div>
-
+<div>
+  <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
+    <Hash className="w-4 h-4 text-blue-400" />
+    ترتیب نمایش (عدد کوچکتر = بالاتر)
+  </label>
+  <input
+    type="number"
+    name="sort_order"
+    value={formData.sort_order}
+    onChange={handleChange}
+    min="0"
+    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+    placeholder="مثلاً: 1"
+  />
+  <p className="text-xs text-gray-500 mt-1">
+    عدد کمتر = نمایش بالاتر در لیست
+  </p>
+</div>
             {/* دکمه‌ها */}
             <div className="flex gap-3 pt-4 border-t border-white/10">
               <GlassButton

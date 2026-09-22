@@ -15,7 +15,6 @@ import {
   Mail,
   Phone,
   Calendar,
-  User,
   CheckCircle,
   XCircle,
   Clock,
@@ -27,7 +26,6 @@ import {
 import { toast } from "sonner";
 import { showConfirmToast } from "../../../components/ui/confirm-toast";
 
-// ✅ تایپ کاربر
 interface User {
   id: string;
   name: string;
@@ -35,7 +33,6 @@ interface User {
   phone?: string;
 }
 
-// ✅ تایپ ثبت‌نام (مطابق با بک‌اند)
 interface Enrollment {
   id: string;
   user_id: string;
@@ -52,7 +49,6 @@ interface Enrollment {
   payment_method?: string;
 }
 
-// ✅ تایپ دوره
 interface Course {
   id: string;
   title: string;
@@ -74,6 +70,28 @@ interface Course {
   enrolledCount?: number;
 }
 
+// ✅ تشخیص UUID
+const isUUID = (str: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+// ✅ استخراج عنوان معتبر از هر آبجکت
+const extractTitle = (obj: any): string => {
+  if (!obj) return "";
+  const candidates = [
+    obj.title,
+    obj.name,
+    obj.course_title,
+    obj.courseTitle,
+    obj.event?.title,
+    obj.event_title,
+    obj.eventName,
+  ];
+  for (const c of candidates) {
+    if (c && typeof c === "string" && !isUUID(c)) return c;
+  }
+  return "";
+};
+
 export default function CourseEnrollments() {
   const { courseId } = useParams<{ courseId: string }>();
   const [course, setCourse] = useState<Course | null>(null);
@@ -84,7 +102,6 @@ export default function CourseEnrollments() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [, setUpdating] = useState<string | null>(null);
 
-  // ✅ State برای مودال
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] =
     useState<Enrollment | null>(null);
@@ -98,7 +115,27 @@ export default function CourseEnrollments() {
     }
   }, [courseId]);
 
-  // ✅ تابع دریافت اطلاعات کاربر
+  // ✅ دریافت عنوان رویداد از API
+  const fetchEventTitle = async (eventId: string): Promise<string> => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `https://supremetech.ir/api/v1/events/${eventId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!res.ok) return "";
+      const data = await res.json();
+      return extractTitle(data);
+    } catch {
+      return "";
+    }
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -111,9 +148,7 @@ export default function CourseEnrollments() {
           },
         },
       );
-      if (!response.ok) {
-        throw new Error("خطا در دریافت اطلاعات کاربر");
-      }
+      if (!response.ok) throw new Error("خطا در دریافت اطلاعات کاربر");
       return await response.json();
     } catch (error) {
       console.error(`❌ خطا در دریافت اطلاعات کاربر ${userId}:`, error);
@@ -126,7 +161,6 @@ export default function CourseEnrollments() {
     }
   };
 
-  // ✅ تابع تایید پرداخت
   const handleConfirmPayment = async (enrollmentId: string) => {
     showConfirmToast({
       title: "آیا از تایید پرداخت این کاربر مطمئن هستید؟",
@@ -149,7 +183,7 @@ export default function CourseEnrollments() {
       },
     });
   };
-  // ✅ تابع رد پرداخت
+
   const handleRejectPayment = async (enrollmentId: string) => {
     showConfirmToast({
       title: "آیا از رد پرداخت این کاربر مطمئن هستید؟",
@@ -173,25 +207,22 @@ export default function CourseEnrollments() {
     });
   };
 
-  // ✅ تابع مشاهده جزئیات پرداخت
   const handleViewPaymentDetails = (enrollment: Enrollment) => {
     setSelectedEnrollment(enrollment);
     setShowPaymentModal(true);
   };
 
-  // ✅ تابع تایید از مودال
   const handleConfirmFromModal = async (enrollmentId: string) => {
     await handleConfirmPayment(enrollmentId);
     setShowPaymentModal(false);
   };
 
-  // ✅ تابع رد از مودال
   const handleRejectFromModal = async (enrollmentId: string) => {
     await handleRejectPayment(enrollmentId);
     setShowPaymentModal(false);
   };
 
-  // ✅ اصلاح fetchData - فقط نمایش کاربران با پرداخت کامل
+  // ✅ fetchData اصلاح‌شده
   const fetchData = async () => {
     if (!courseId) return;
 
@@ -199,11 +230,31 @@ export default function CourseEnrollments() {
       setLoading(true);
       setError("");
 
-      const courseData = await coursesAPI.getById(courseId);
+      const courseData: any = await coursesAPI.getById(courseId);
+      console.log("🔍 داده کامل دوره:", courseData);
+
+      // ✅ استخراج عنوان
+      let finalTitle = extractTitle(courseData);
+
+      // اگر title نبود یا UUID بود، از event_id بخون
+      if (!finalTitle) {
+        const eventId = courseData.event_id || courseData.eventId;
+        if (eventId) {
+          finalTitle = await fetchEventTitle(eventId);
+        }
+      }
+
+      // اگر باز هم نبود، slug رو نمایش بده
+      if (!finalTitle) {
+        finalTitle = courseData.slug || "دوره بدون نام";
+      }
+
       const courseWithFields: Course = {
         ...courseData,
-        capacity: (courseData as any).capacity || 0,
-        enrolledCount: (courseData as any).enrolledCount || 0,
+        title: finalTitle,
+        slug: courseData.slug || "",
+        capacity: courseData.capacity || 0,
+        enrolledCount: courseData.enrolledCount || 0,
       };
       setCourse(courseWithFields);
 
@@ -228,7 +279,6 @@ export default function CourseEnrollments() {
               }
             }
 
-            // ✅ تنظیم paymentStatus بر اساس status
             let paymentStatus =
               item.payment_status || item.paymentStatus || "PENDING";
 
@@ -264,7 +314,6 @@ export default function CourseEnrollments() {
           }),
         );
 
-        // ✅ فقط کاربرانی که پرداخت کامل کرده‌اند (CONFIRMED یا PAID)
         const confirmedEnrollments = mappedEnrollments.filter(
           (enrollment) =>
             enrollment.status === "CONFIRMED" ||
@@ -446,13 +495,14 @@ export default function CourseEnrollments() {
             icon={<Download className="w-4 h-4" />}
             iconPosition="left"
             onClick={() => {
-              toast.info(" قابلیت خروجی گرفتن در حال توسعه است...");
+              toast.info("قابلیت خروجی گرفتن در حال توسعه است...");
             }}
           >
             خروجی Excel
           </GlassButton>
         </div>
       </div>
+
       {/* اطلاعات دوره */}
       <LiquidGlassCard
         className="p-4 mb-6"
@@ -488,6 +538,7 @@ export default function CourseEnrollments() {
           </div>
         </div>
       </LiquidGlassCard>
+
       {/* فیلترها */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -510,6 +561,7 @@ export default function CourseEnrollments() {
           <option value="COMPLETED">📌 تکمیل شده</option>
         </select>
       </div>
+
       {/* لیست ثبت‌نام‌ها */}
       {filteredEnrollments.length === 0 ? (
         <LiquidGlassCard
@@ -541,7 +593,6 @@ export default function CourseEnrollments() {
                 glowIntensity="sm"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  {/* اطلاعات کاربر */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
@@ -567,7 +618,6 @@ export default function CourseEnrollments() {
                     </div>
                   </div>
 
-                  {/* وضعیت و تاریخ */}
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 border ${getStatusColor(enrollment.status)}`}
@@ -592,9 +642,7 @@ export default function CourseEnrollments() {
                     </span>
                   </div>
 
-                  {/* ✅ دکمه‌های اقدام */}
                   <div className="flex items-center gap-2">
-                    {/* دکمه جزئیات - باز کردن مودال */}
                     <GlassButton
                       variant="secondary"
                       size="sm"
