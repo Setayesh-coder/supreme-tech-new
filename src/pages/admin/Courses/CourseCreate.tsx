@@ -348,8 +348,9 @@ export default function CourseCreate() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-colors resize-none whitespace-pre-wrap"
                 placeholder="توضیحات کامل دوره را وارد کنید..."
+                  style={{ whiteSpace: "pre-wrap" }}
               />
             </div>
 

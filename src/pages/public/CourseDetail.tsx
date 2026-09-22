@@ -32,6 +32,7 @@ import {
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
 import CoursePreRegisterModal from "../../components/course/CoursePreRegisterModal";
+import { linkify } from "../../lib/linkify";
 
 // ✅ تایپ Course با فیلدهای صحیح
 interface Course {
@@ -500,17 +501,17 @@ export default function CourseDetail() {
                     درباره دوره
                   </h2>
                 </div>
-                <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4">
-                    {course.description}
-                  </p>
-                  {course.content && (
-                    <div
-                      className="text-gray-300 leading-relaxed text-sm md:text-base"
-                      dangerouslySetInnerHTML={{ __html: course.content }}
-                    />
-                  )}
-                </div>
+            <div className="prose prose-invert max-w-none">
+ <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4 whitespace-pre-line break-words">
+  {linkify(course.description)}
+</p>
+  {course.content && (
+    <div
+      className="text-gray-300 leading-relaxed text-sm md:text-base whitespace-pre-line break-words"
+      dangerouslySetInnerHTML={{ __html: course.content }}
+    />
+  )}
+</div>
 
                 {/* اطلاعات تکمیلی دوره */}
                 <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
