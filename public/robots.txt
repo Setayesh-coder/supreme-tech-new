@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /profile
+Disallow: /cart
+Disallow: /tickets/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /access-denied
+
+Sitemap: https://supremetech.ir/sitemap.xml

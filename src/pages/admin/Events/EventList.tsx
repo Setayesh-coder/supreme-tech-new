@@ -42,15 +42,14 @@ interface Event {
   };
 }
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "https://supremetech.ir";
 
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
   if (imagePath.startsWith("/")) {
-    return `${BASE_URL}${imagePath}`;
+    return imagePath;
   }
-  return `${BASE_URL}/${imagePath}`;
+  return `/${imagePath}`;
 };
 
 // ✅ تابع formatDate

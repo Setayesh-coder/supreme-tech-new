@@ -1,7 +1,8 @@
 // src/components/auth/ProtectedRoute.tsx
 import { Navigate } from "react-router-dom";
-import AccessDenied from "../../pages/AccessDenied";
+import { lazy, Suspense } from "react";
 
+const AccessDenied = lazy(() => import("../../pages/AccessDenied"));
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: "ADMIN" | "SUPER_ADMIN" | "EMPLOYEE" | "MANAGER";
@@ -74,8 +75,11 @@ export function ProtectedRoute({
 
       if (!allowedRoles.includes(userRole as any)) {
         console.warn(`⚠️ دسترسی غیرمجاز: نقش ${userRole} مجاز نیست`);
-        return <AccessDenied />;
-      }
+        return (
+  <Suspense fallback={null}>
+    <AccessDenied />
+  </Suspense>
+);    }
     }
 
     // چک کردن requiredRole
@@ -99,8 +103,11 @@ export function ProtectedRoute({
         console.warn(
           `⚠️ دسترسی غیرمجاز: نقش ${role} برای ${requiredRole} لازم است`,
         );
-        return <AccessDenied />;
-      }
+        return (
+  <Suspense fallback={null}>
+    <AccessDenied />
+  </Suspense>
+);      }
     }
 
     return <>{children}</>;

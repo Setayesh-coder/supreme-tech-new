@@ -11,10 +11,7 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
-// @ts-ignore
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// @ts-ignore
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { MarkdownCodeBlock } from "../../components/ui/MarkdownCodeBlock";
 import {
   Calendar,
   Eye,
@@ -334,14 +331,7 @@ export default function BlogPost() {
               )}
             </button>
           </div>
-          <SyntaxHighlighter
-            style={vscDarkPlus}
-            language={match[1]}
-            PreTag="div"
-            className="!m-0 !bg-black/40"
-          >
-            {value}
-          </SyntaxHighlighter>
+          <MarkdownCodeBlock value={value} language={match[1]} />
         </div>
       ) : (
         <code className={className} {...props}>

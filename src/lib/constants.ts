@@ -22,16 +22,13 @@
 // };// src/lib/constants.ts
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "https://supremetech.ir/api/v1";
-export const STATIC_URL =
-  import.meta.env.VITE_STATIC_URL || "https://supremetech.ir";
-
 export const getImageUrl = (url: string | null | undefined): string => {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
   }
   if (url.startsWith("/")) {
-    return `${STATIC_URL}${url}`;
+    return url;
   }
-  return `${STATIC_URL}/${url}`;
+  return `/${url}`;
 };

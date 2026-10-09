@@ -55,15 +55,6 @@ export function OptimizedImage({
       
       // اگه از public یا static هست
       if (url.startsWith('/')) {
-        const lastDot = url.lastIndexOf('.');
-        if (lastDot !== -1) {
-          const baseName = url.substring(0, lastDot);
-          const ext = url.substring(lastDot + 1).toLowerCase();
-          // فقط برای فرمت‌های قابل تبدیل
-          if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff'].includes(ext)) {
-            return `${baseName}.webp`;
-          }
-        }
         return url;
       }
       

@@ -252,7 +252,7 @@ export default function Hero() {
                   object-center
 
                   transition-transform
-                  duration-[7000ms]
+                  duration-[time:7000ms]
 
                   group-hover:scale-[1.02]
                 "
