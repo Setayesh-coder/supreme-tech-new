@@ -1,5 +1,5 @@
 // src/pages/public/CourseDetail.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { coursesAPI } from "../../lib/api/courses";
 import { enrollmentsAPI } from "../../lib/api/enrollments";
@@ -27,7 +27,13 @@ import {
   Timer,
   Lock,
   User,
-  // Percent,
+  // AlertTriangle,
+  Hourglass,
+  Ban,
+  AlarmClock,
+  HourglassIcon,
+  Frown,
+  XCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventDetailSkeleton } from "../../components/skeletons/EventDetailSkeleton";
@@ -92,7 +98,6 @@ interface File {
   type: string;
 }
 
-
 const getImageUrl = (imagePath?: string) => {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
@@ -102,17 +107,38 @@ const getImageUrl = (imagePath?: string) => {
   return `/${imagePath}`;
 };
 
-const formatDate = (dateString: string) => {
+// ✅ تشخیص وجود ساعت در رشته تاریخ
+const hasTimeComponent = (dateString?: string) => {
+  if (!dateString) return false;
+  return /[T\s]\d{1,2}:\d{2}/.test(dateString) || /^\d{1,2}:\d{2}/.test(dateString);
+};
+
+// ✅ فرمت تاریخ + ساعت (با پشتیبانی از منطقه زمانی تهران)
+const formatDate = (dateString?: string) => {
   if (!dateString) return "نامشخص";
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString("fa-IR", {
+    if (isNaN(date.getTime())) return "نامشخص";
+
+    const datePart = date.toLocaleDateString("fa-IR", {
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: "Asia/Tehran",
+    });
+
+    if (!hasTimeComponent(dateString)) {
+      return datePart;
+    }
+
+    const timePart = date.toLocaleTimeString("fa-IR", {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Tehran",
     });
+
+    return `${datePart} - ساعت ${timePart}`;
   } catch {
     return "نامشخص";
   }
@@ -165,7 +191,7 @@ export default function CourseDetail() {
       }
       return { enrolled: false };
     } catch (error) {
-      console.error("❌ خطا در بررسی ثبت‌نام:", error);
+      console.error("خطا در بررسی ثبت‌نام:", error);
       return { enrolled: false };
     }
   };
@@ -181,34 +207,23 @@ export default function CourseDetail() {
       try {
         const foundCourse = await coursesAPI.getBySlug(slug);
 
-        // ✅ دیباگ برای دیدن داده‌های دریافتی
-        console.log("📦 داده‌های دریافتی از بک‌اند:", foundCourse);
-        console.log(
-          "💰 قیمت اصلی (original_price):",
-          (foundCourse as any).original_price,
-        );
-        console.log("💰 قیمت (price):", foundCourse.price);
-        console.log(
-          "💰 تخفیف (discount_value):",
-          (foundCourse as any).discount_value,
-        );
-        console.log("🔍 تمام کلیدها:", Object.keys(foundCourse));
+        console.log("داده‌های دریافتی از بک‌اند:", foundCourse);
+        console.log("قیمت اصلی (original_price):", (foundCourse as any).original_price);
+        console.log("قیمت (price):", foundCourse.price);
+        console.log("تخفیف (discount_value):", (foundCourse as any).discount_value);
+        console.log("تمام کلیدها:", Object.keys(foundCourse));
 
         if (foundCourse) {
-          const { enrolled, status } = await checkUserEnrollment(
-            foundCourse.id,
-          );
+          const { enrolled, status } = await checkUserEnrollment(foundCourse.id);
 
-          // ✅ اصلاح: دریافت درست original_price از بک‌اند
           const originalPrice =
             (foundCourse as any).original_price ||
-            (foundCourse as any).orginal_price || // املای اشتباه
-            foundCourse.price || // اگر نبود از price استفاده کن
+            (foundCourse as any).orginal_price ||
+            foundCourse.price ||
             0;
 
           const discountValue = (foundCourse as any).discount_value || 0;
 
-          // ✅ محاسبه خودکار تخفیف اگر در بک‌اند نبود
           const calculatedDiscount =
             foundCourse.price > 0
               ? Math.max(0, originalPrice - foundCourse.price)
@@ -252,17 +267,12 @@ export default function CourseDetail() {
               : undefined,
           };
 
-          // console.log("✅ دوره mapping شده:", mappedCourse);
-          // console.log("💰 قیمت اصلی نهایی:", mappedCourse.original_price);
-          // console.log("💰 قیمت نهایی:", mappedCourse.price);
-          // console.log("💰 تخفیف:", mappedCourse.discount_value);
-
           setCourse(mappedCourse);
         } else {
           setError("دوره یافت نشد");
         }
       } catch (err) {
-        console.error("❌ خطا:", err);
+        console.error("خطا:", err);
         setError("دوره مورد نظر یافت نشد");
       } finally {
         setLoading(false);
@@ -271,8 +281,43 @@ export default function CourseDetail() {
     fetchCourse();
   }, [slug]);
 
+  // ✅ محاسبه وضعیت‌های دوره (یکپارچه)
+  const status = useMemo(() => {
+    if (!course) return null;
+    const now = new Date();
+
+    const regEnd = course.registration_end_date
+      ? new Date(course.registration_end_date)
+      : null;
+    const regStart = course.registration_start_date
+      ? new Date(course.registration_start_date)
+      : null;
+    const courseEnd = course.endDate ? new Date(course.endDate) : null;
+
+    return {
+      isFull:
+        (course.enrolledCount || 0) >= (course.capacity || 0) &&
+        course.capacity > 0,
+      isPast: !!courseEnd && courseEnd < now,
+      isActive:
+        course.is_active && !(courseEnd && courseEnd < now),
+      isRegistrationClosed: !!regEnd && regEnd < now,
+      isRegistrationNotStarted: !!regStart && regStart > now,
+    };
+  }, [course]);
+
   const handleOpenPreRegister = () => {
-    if (!course) return;
+    if (!course || !status) return;
+
+    if (status.isRegistrationClosed) {
+      toast.error("مهلت ثبت‌نام این دوره به پایان رسیده است");
+      return;
+    }
+
+    if (status.isRegistrationNotStarted) {
+      toast.error("ثبت‌نام این دوره هنوز آغاز نشده است");
+      return;
+    }
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -288,17 +333,17 @@ export default function CourseDetail() {
     if (!course) return;
 
     try {
-      const { enrolled, status } = await checkUserEnrollment(course.id);
+      const { enrolled, status: enrollStatus } = await checkUserEnrollment(course.id);
       setCourse({
         ...course,
         userEnrolled: enrolled,
-        enrollmentStatus: status as any,
+        enrollmentStatus: enrollStatus as any,
         enrolledCount: (course.enrolledCount || 0) + 1,
       });
 
-      toast.success(" پیش‌ثبت‌نام با موفقیت انجام شد!");
+      toast.success("پیش‌ثبت‌نام با موفقیت انجام شد");
     } catch (error) {
-      console.error(" خطا در به‌روزرسانی وضعیت:", error);
+      console.error("خطا در به‌روزرسانی وضعیت:", error);
       toast.error("خطا در ثبت‌نام");
     }
   };
@@ -311,7 +356,7 @@ export default function CourseDetail() {
     return <EventDetailSkeleton />;
   }
 
-  if (error || !course) {
+  if (error || !course || !status) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] px-4">
         <LiquidGlassCard
@@ -320,7 +365,9 @@ export default function CourseDetail() {
           blurIntensity="lg"
           glowIntensity="md"
         >
-          <div className="text-6xl mb-4">😕</div>
+          <div className="flex justify-center mb-4">
+            <Frown className="w-16 h-16 text-gray-400" />
+          </div>
           <h3 className="text-xl font-bold text-white mb-2">
             {error || "دوره یافت نشد"}
           </h3>
@@ -336,17 +383,12 @@ export default function CourseDetail() {
   }
 
   const imageUrl = getImageUrl(course.image || course.cover_image);
-  const isFull =
-    (course.enrolledCount || 0) >= (course.capacity || 0) &&
-    course.capacity > 0;
-  const isPast = course.endDate && new Date(course.endDate) < new Date();
-  const isActive = course.is_active && !isPast;
+  const { isFull, isPast, isActive, isRegistrationClosed, isRegistrationNotStarted } = status;
 
   const isPending = course.enrollmentStatus === "PENDING";
   const isWaiting = course.enrollmentStatus === "WAITING";
   const isConfirmed = course.enrollmentStatus === "CONFIRMED";
 
-  // ✅ محاسبه تخفیف با استفاده از original_price
   const discountAmount = Math.max(
     0,
     (course.original_price || 0) - (course.price || 0),
@@ -430,7 +472,8 @@ export default function CourseDetail() {
 
               <div className="absolute top-3 right-3 md:top-4 md:right-4 flex flex-wrap gap-1.5 md:gap-2">
                 {course.isFeatured && (
-                  <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium bg-yellow-500/90 text-white backdrop-blur-sm shadow-lg">
+                  <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-medium bg-yellow-500/90 text-white backdrop-blur-sm shadow-lg flex items-center gap-1">
+                    <Award size={12} />
                     ویژه
                   </span>
                 )}
@@ -471,10 +514,6 @@ export default function CourseDetail() {
                       {course.duration}
                     </span>
                   )}
-                  <span className="flex items-center gap-1 md:gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
-                    <Users size={14} className="md:w-4 md:h-4" />
-                    {course.enrolledCount || 0} / {course.capacity || 0} نفر
-                  </span>
                 </div>
               </div>
             </div>
@@ -500,19 +539,18 @@ export default function CourseDetail() {
                     درباره دوره
                   </h2>
                 </div>
-            <div className="prose prose-invert max-w-none">
- <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4 whitespace-pre-line break-words">
-  {linkify(course.description)}
-</p>
-  {course.content && (
-    <div
-      className="text-gray-300 leading-relaxed text-sm md:text-base whitespace-pre-line break-words"
-      dangerouslySetInnerHTML={{ __html: course.content }}
-    />
-  )}
-</div>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-gray-300 leading-relaxed text-sm md:text-base mb-4 whitespace-pre-line break-words">
+                    {linkify(course.description)}
+                  </p>
+                  {course.content && (
+                    <div
+                      className="text-gray-300 leading-relaxed text-sm md:text-base whitespace-pre-line break-words"
+                      dangerouslySetInnerHTML={{ __html: course.content }}
+                    />
+                  )}
+                </div>
 
-                {/* اطلاعات تکمیلی دوره */}
                 <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
                   {course.registration_start_date && (
                     <div>
@@ -651,12 +689,12 @@ export default function CourseDetail() {
                                 </span>
                               ) : isSessionToday ? (
                                 <span className="text-orange-400 text-xs flex items-center gap-1">
-                                  <Clock size={12} />
+                                  <AlarmClock size={12} />
                                   امروز
                                 </span>
                               ) : (
                                 <span className="text-blue-400 text-xs flex items-center gap-1">
-                                  <Clock size={12} />
+                                  <Hourglass size={12} />
                                   آینده
                                 </span>
                               )}
@@ -667,7 +705,13 @@ export default function CourseDetail() {
                                 <Calendar size={12} />
                                 {formatDate(session.date)}
                               </span>
-                              {session.time && <span>⏰ {session.time}</span>}
+                              {session.time &&
+                                !hasTimeComponent(session.date) && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock size={12} />
+                                    {session.time}
+                                  </span>
+                                )}
                             </div>
 
                             {!isLocked && (
@@ -710,8 +754,8 @@ export default function CourseDetail() {
                             {isLocked &&
                               session.files &&
                               session.files.length > 0 && (
-                                <div className="mt-2 text-xs text-gray-500">
-                                  <FileText size={12} className="inline mr-1" />
+                                <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                                  <FileText size={12} />
                                   {session.files.length} فایل (پس از تایید قابل
                                   مشاهده است)
                                 </div>
@@ -747,7 +791,7 @@ export default function CourseDetail() {
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500 text-center py-8">
-                      این دوره به زودی آغاز میشود...
+                      این دوره به زودی آغاز می‌شود...
                     </p>
                   )}
                 </LiquidGlassCard>
@@ -780,7 +824,6 @@ export default function CourseDetail() {
                   )}
                   {discountAmount > 0 && (
                     <div className="flex items-center gap-1 text-xs text-green-400">
-                      {/* <Percent size={12} /> */}
                       {course.discount_type === "PERCENT"
                         ? `${discountPercent}% تخفیف`
                         : `${formatPrice(discountAmount)} تخفیف`}
@@ -813,14 +856,35 @@ export default function CourseDetail() {
                       در سبد خرید
                     </span>
                   ) : isPast ? (
-                    <span className="text-gray-500">به پایان رسیده</span>
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle size={16} />
+                      به پایان رسیده
+                    </span>
+                  ) : isRegistrationClosed ? (
+                    <span className="text-red-400 flex items-center gap-1">
+                      <Ban size={16} />
+                      مهلت ثبت‌نام به پایان رسیده
+                    </span>
+                  ) : isRegistrationNotStarted ? (
+                    <span className="text-orange-400 flex items-center gap-1">
+                      <HourglassIcon size={16} />
+                      ثبت‌نام آغاز نشده
+                    </span>
                   ) : isFull ? (
-                    <span className="text-red-400">تکمیل ظرفیت</span>
+                    <span className="text-red-400 flex items-center gap-1">
+                      <Users size={16} />
+                      تکمیل ظرفیت
+                    </span>
                   ) : isActive ? (
-                     <span className="text-yellow-400">در انتظار شروع</span>
-                    
+                    <span className="text-yellow-400 flex items-center gap-1">
+                      <Hourglass size={16} />
+                      در انتظار شروع
+                    </span>
                   ) : (
-                   <span className="text-green-400">در حال برگزاری</span>
+                    <span className="text-green-400 flex items-center gap-1">
+                      <PlayCircle size={16} />
+                      در حال برگزاری
+                    </span>
                   )}
                 </div>
 
@@ -858,22 +922,71 @@ export default function CourseDetail() {
                     </span>
                   </div>
                 )}
+
+                {course.registration_end_date && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">پایان ثبت‌نام</span>
+                    <span
+                      className={
+                        isRegistrationClosed ? "text-red-400" : "text-white"
+                      }
+                    >
+                      {formatDate(course.registration_end_date)}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {!course.userEnrolled && isActive && !isFull && !isPast && (
-                <div className="mt-4 pt-4 border-t border-white/5">
-                  <GlassButton
-                    variant="primary"
-                    size="lg"
-                    fullWidth
-                    onClick={handleOpenPreRegister}
-                    icon={<ShoppingBag className="w-5 h-5" />}
-                    iconPosition="left"
-                  >
-                    افزودن به سبد خرید
-                  </GlassButton>
-                </div>
-              )}
+              {/* دکمه افزودن به سبد خرید - با چک مهلت ثبت‌نام */}
+              {!course.userEnrolled &&
+                isActive &&
+                !isFull &&
+                !isPast &&
+                !isRegistrationClosed &&
+                !isRegistrationNotStarted && (
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <GlassButton
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onClick={handleOpenPreRegister}
+                      icon={<ShoppingBag className="w-5 h-5" />}
+                      iconPosition="left"
+                    >
+                      افزودن به سبد خرید
+                    </GlassButton>
+                  </div>
+                )}
+
+              {/* پیام بسته بودن ثبت‌نام */}
+              {!course.userEnrolled &&
+                !isPast &&
+                (isRegistrationClosed || isRegistrationNotStarted) && (
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+                      <p className="text-red-400 text-sm flex items-center justify-center gap-2">
+                        {isRegistrationClosed ? (
+                          <>
+                            <Ban size={16} />
+                            مهلت ثبت‌نام به پایان رسیده است
+                          </>
+                        ) : (
+                          <>
+                            <HourglassIcon size={16} />
+                            ثبت‌نام این دوره هنوز آغاز نشده است
+                          </>
+                        )}
+                      </p>
+                      {isRegistrationNotStarted &&
+                        course.registration_start_date && (
+                          <p className="text-gray-500 text-xs mt-1">
+                            شروع ثبت‌نام:{" "}
+                            {formatDate(course.registration_start_date)}
+                          </p>
+                        )}
+                    </div>
+                  </div>
+                )}
 
               {isPending && (
                 <div className="mt-4 pt-4 border-t border-white/5">
