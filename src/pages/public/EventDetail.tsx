@@ -81,7 +81,6 @@ const getDaysDiff = (targetDate: string) => {
   const diffMs = new Date(targetDate).getTime() - Date.now();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
-//
 
 export default function EventDetail() {
   const { slug } = useParams<{ slug: string }>();
